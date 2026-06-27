@@ -1,0 +1,480 @@
+---
+description: Complete guide for implementing every auth flow in this Tradly boilerplate
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Auth Flows — Tradly Boilerplate
+
+## Architecture
+
+```
+Component
+  → useSignInMutation / useSignUpMutation / etc.   (state/auth/api.ts)
+      → authAPI.signIn / signUp / etc.             (api/auth.ts)
+          → TradlySDK.user.*                       (Tradly JS SDK)
+      → dispatch(setCredentials(user))             (state/auth/slice.ts)
+          → state.auth.* updated + cookies written
+```
+
+**State updated automatically — never manually:**
+- `signIn`, `verifyOtp`, `socialSignIn` → `dispatch(setCredentials(user))` → all auth fields populated + cookies set
+- `signUp`, `resendOtp` → `dispatch(setVerifyId(verify_id))` → `state.auth.verifyId` set
+- `refreshAuth` → `dispatch(updateTokens(...))` → `authKey`, `refreshKey`, `tokenSetAt` refreshed
+- `logout` → `Object.assign(state, initialState)` + cookies cleared + **cart cache reset** + **listing cache reset**
+
+**SDK payload builder:** `buildSdkPayload` (wraps in `data`, sends `pkKey`) — only for `TradlySDK.user.*`
+
+---
+
+## Types Reference
+
+```ts
+// @/types/auth.types.ts
+
+type AccountType = 'customer' | 'store'
+type AuthProvider = 'google' | 'facebook' | 'apple'
+type AuthPlatform = 'web' | 'ios' | 'android'
+
+// What components pass in
+interface SignInEmailInput  { email: string; password: string; type: AccountType }
+interface SignInPhoneInput  { mobile: string; dial_code: string; password: string; type: AccountType }
+type SignInInput = SignInEmailInput | SignInPhoneInput
+
+interface SignUpEmailInput  { first_name: string; last_name: string; email: string; password: string; type: AccountType }
+interface SignUpPhoneInput  { first_name: string; last_name: string; mobile: string; dial_code: string; password: string; type: AccountType }
+type SignUpInput = SignUpEmailInput | SignUpPhoneInput
+
+interface VerifyOtpInput    { verify_id: string; code: string }
+interface ForgotPasswordInput { email?: string; mobile?: string; dial_code?: string }
+interface SetPasswordInput  { verify_id: string; code: string; password: string }
+type ResendOtpInput = SignUpEmailInput | SignUpPhoneInput
+interface SocialSignInInput { provider: AuthProvider; token: string; platform: AuthPlatform; type: AccountType }
+
+// What components receive from result.data
+interface SignInResponse    { user: User }
+interface SignUpResponse    { verify_id: string }
+interface VerifyOtpResponse { user: User }
+interface ForgotPasswordResponse { verify_id: string }
+interface ResendOtpResponse { verify_id: string }
+// setPassword → void
+
+// Real API shape — matches actual Tradly sign-in / verify-OTP response
+interface UserMetadata {
+  stripe_connected: boolean
+  stripe_connect_onboarding: boolean
+  mangopay_kyc_submission: boolean
+  mangopay_payouts_enabled: boolean
+}
+
+interface User {
+  id: string                  // UUID string e.g. "81ada464-c85c-..."
+  first_name: string
+  last_name: string
+  email: string               // always present, may be empty string
+  mobile: string              // always present, may be empty string
+  dial_code: string           // always present, may be empty string
+  profile_pic?: string
+  birth_date: string | null
+  email_verified: boolean
+  otp_enabled: boolean
+  metadata: UserMetadata      // payment provider flags
+  key: {
+    auth_key: string
+    refresh_key: string
+    firebase_token?: string   // absent when not using Firebase
+  }
+}
+```
+
+---
+
+## Reading Auth State
+
+All fields are flat on `state.auth` — use `useAuthSelector` to read any of them.
+Only read what the component actually needs.
+
+```tsx
+import { useAuthSelector } from '@/state/auth/selectors'
+
+// Gate — most common
+const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+
+// Identity — profile screens, header avatar, greetings
+const userId      = useAuthSelector(s => s.userId)       // "81ada464-c85c-..."
+const firstName   = useAuthSelector(s => s.firstName)    // "Tradly"
+const lastName    = useAuthSelector(s => s.lastName)     // "Team"
+const profilePic  = useAuthSelector(s => s.profilePic)  // URL or empty string
+const email       = useAuthSelector(s => s.email)        // "jk@istrata.co" or empty
+const mobile      = useAuthSelector(s => s.mobile)       // "+60123456789" or empty
+const dialCode    = useAuthSelector(s => s.dialCode)     // "+60" or empty
+
+// Verification flags — 2FA flows, verified badge, settings screen
+const emailVerified = useAuthSelector(s => s.emailVerified) // true / false
+const otpEnabled    = useAuthSelector(s => s.otpEnabled)    // 2FA active?
+
+// Tokens — rarely needed in components; API calls read authKey from state internally
+const authKey   = useAuthSelector(s => s.authKey)
+const verifyId  = useAuthSelector(s => s.verifyId)  // set after signUp, cleared after verifyOtp
+```
+
+### Common patterns
+
+```tsx
+// Show full name
+const firstName = useAuthSelector(s => s.firstName)
+const lastName  = useAuthSelector(s => s.lastName)
+<span>{firstName} {lastName}</span>
+
+// Conditional display — email vs phone account
+const email    = useAuthSelector(s => s.email)
+const mobile   = useAuthSelector(s => s.mobile)
+const dialCode = useAuthSelector(s => s.dialCode)
+<span>{email || `${dialCode} ${mobile}`}</span>
+
+// Email verified badge
+const emailVerified = useAuthSelector(s => s.emailVerified)
+{!emailVerified && <span className="badge">Unverified</span>}
+
+// 2FA / OTP settings toggle
+const otpEnabled = useAuthSelector(s => s.otpEnabled)
+<Toggle checked={otpEnabled} onChange={handleToggle2FA} />
+
+// Auth gate in any component
+const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+if (!isAuthenticated) return router.push('/sign-in')
+```
+
+---
+
+## Sign In
+
+```tsx
+import { useSignInMutation } from '@/state/auth/api'
+import type { SignInInput } from '@/types/auth.types'
+
+const [signIn, { isLoading }] = useSignInMutation()
+
+const handleSignIn = async () => {
+  const input: SignInInput = { email, password, type: 'customer' }
+  // OR phone: { mobile, dial_code: '+1', password, type: 'customer' }
+
+  const result = await signIn(input)
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  // State after success (setCredentials called internally):
+  // state.auth.isAuthenticated = true
+  // state.auth.userId          = user.id               (UUID string)
+  // state.auth.firstName/lastName/email/mobile/dialCode populated
+  // state.auth.profilePic      = user.profile_pic
+  // state.auth.emailVerified   = user.email_verified
+  // state.auth.otpEnabled      = user.otp_enabled
+  // state.auth.authKey         = user.key.auth_key     ← used by all subsequent API calls
+  // state.auth.refreshKey      = user.key.refresh_key
+  // state.auth.tokenSetAt      = Date.now()
+  // state.auth.verifyId        = null
+  // Cookies: domain_auth_key, domain_refresh_key, domain_login, domain_logged_in_user_id set
+  // Cart + Listing caches invalidated → re-fetch with authenticated user's data
+
+  router.push('/home')
+}
+```
+
+---
+
+## Sign Up → Verify OTP — Full Flow
+
+This is a two-screen flow. The `verifyId` connects them.
+
+```
+sign-up screen → signUp() → verifyId stored in Redux → navigate to verify-otp screen
+verify-otp screen → reads verifyId from Redux → verifyOtp() → user authenticated
+```
+
+### Screen 1 — Sign Up
+
+The sign-up input must be persisted in **sessionStorage** (not just component state) so it's
+available on the verify-otp screen for resendOtp. Store it immediately before navigating.
+
+```tsx
+import { useSignUpMutation } from '@/state/auth/api'
+import type { SignUpInput } from '@/types/auth.types'
+
+const [signUp, { isLoading }] = useSignUpMutation()
+
+// form state
+const [firstName, setFirstName] = useState('')
+const [lastName, setLastName]   = useState('')
+const [email, setEmail]         = useState('')
+const [password, setPassword]   = useState('')
+
+const handleSignUp = async () => {
+  const input: SignUpInput = {
+    first_name: firstName,
+    last_name: lastName,
+    email,
+    password,
+    type: 'customer',
+  }
+
+  const result = await signUp(input)
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  // What happens internally (automatic — no action needed):
+  // dispatch(setVerifyId(result.data.verify_id)) → state.auth.verifyId is set
+  // verifyId is persisted via redux-persist (auth is whitelisted) — survives reload
+
+  // Store the original sign-up input so the OTP screen can call resendOtp
+  // without asking the user to re-enter their details
+  sessionStorage.setItem('signup_input', JSON.stringify(input))
+
+  // User is NOT authenticated yet — isAuthenticated is still false
+  router.push('/verify-otp')
+}
+```
+
+### Screen 2 — Verify OTP
+
+Reads `verifyId` from Redux state. Guards against direct navigation (if verifyId is null,
+the user hasn't signed up yet — redirect them back).
+
+```tsx
+import { useVerifyOtpMutation, useResendOtpMutation } from '@/state/auth/api'
+import { useAuthSelector } from '@/state/auth/selectors'
+import type { ResendOtpInput } from '@/types/auth.types'
+
+const [verifyOtp, { isLoading: isVerifying }] = useVerifyOtpMutation()
+const [resendOtp, { isLoading: isResending }] = useResendOtpMutation()
+const verifyId = useAuthSelector(s => s.verifyId)
+
+const [code, setCode] = useState('')
+
+// Guard — if verifyId is null the user hasn't signed up or already verified
+useEffect(() => {
+  if (!verifyId) router.replace('/sign-up')
+}, [verifyId])
+
+// Submit OTP code
+const handleVerify = async () => {
+  if (!verifyId || !code) return
+
+  const result = await verifyOtp({ verify_id: verifyId, code })
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  // What happens internally (automatic):
+  // dispatch(setCredentials(user)) → isAuthenticated = true, authKey set, cookies written
+  // state.auth.verifyId = null ← cleared
+  // cartApi + listingApi caches invalidated → re-fetch with authenticated user's data
+
+  sessionStorage.removeItem('signup_input')  // clean up
+  router.push('/home')
+}
+
+// Resend OTP — requires the original sign-up input
+const handleResend = async () => {
+  // Retrieve the original input stored during sign-up
+  const raw = sessionStorage.getItem('signup_input')
+  if (!raw) {
+    // Fallback: send user back to sign-up to start over
+    router.replace('/sign-up')
+    return
+  }
+
+  const input = JSON.parse(raw) as ResendOtpInput
+
+  const result = await resendOtp(input)
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  // What happens internally:
+  // dispatch(setVerifyId(result.data.verify_id)) → state.auth.verifyId updated with new code id
+  // The verify-otp screen continues — no navigation needed
+  showToast('New code sent')
+}
+```
+
+---
+
+## Forgot Password — Step 1 (request OTP)
+
+```tsx
+import { useForgotPasswordMutation } from '@/state/auth/api'
+import { useState } from 'react'
+
+const [forgotPassword, { isLoading }] = useForgotPasswordMutation()
+const [localVerifyId, setLocalVerifyId] = useState<string | null>(null)
+
+const handleForgot = async () => {
+  const result = await forgotPassword({ email })
+  // OR phone: { mobile, dial_code: '+1' }
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  // NOTE: verify_id is NOT stored in Redux for forgot password (unlike sign-up)
+  // Keep it in local component state to pass to step 2
+  setLocalVerifyId(result.data.verify_id)
+  router.push('/reset-password')
+}
+```
+
+## Forgot Password — Step 2 (set new password)
+
+```tsx
+import { useSetPasswordMutation } from '@/state/auth/api'
+
+const [setPassword, { isLoading }] = useSetPasswordMutation()
+
+const handleSetPassword = async () => {
+  const result = await setPassword({ verify_id: localVerifyId!, code, password })
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  // State: unchanged — user still not authenticated, must sign in
+  router.push('/sign-in')
+}
+```
+
+---
+
+## Social Sign In
+
+```tsx
+import { useSocialSignInMutation } from '@/state/auth/api'
+import type { SocialSignInInput } from '@/types/auth.types'
+
+const [socialSignIn, { isLoading }] = useSocialSignInMutation()
+
+const handleGoogleSignIn = async (googleToken: string) => {
+  const input: SocialSignInInput = {
+    provider: 'google',
+    token: googleToken,
+    platform: 'web',
+    type: 'customer',
+  }
+
+  const result = await socialSignIn(input)
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  // State: same as sign in
+  router.push('/home')
+}
+```
+
+---
+
+## Token Refresh
+
+Skips the API call if `tokenSetAt` < 1 hour ago. Dispatches `logout()` on failure (which also resets cart + listing caches).
+
+### On app load (every page reload)
+
+```tsx
+import { useEffect, useState } from 'react'
+import { useRefreshAuthMutation } from '@/state/auth/api'
+import { useAuthSelector } from '@/state/auth/selectors'
+
+const [refreshAuth] = useRefreshAuthMutation()
+const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+const [ready, setReady] = useState(false)
+
+useEffect(() => {
+  const init = async () => {
+    if (isAuthenticated) {
+      await refreshAuth()
+      // Success → state.auth.authKey + refreshKey + tokenSetAt updated
+      // Failure → logout() dispatched → auth state cleared + cart/listing cache reset
+    }
+    setReady(true)
+  }
+  init()
+}, [])
+
+if (!ready) return <SplashScreen />
+return <App />
+```
+
+### In protected route guard
+
+```tsx
+const [checked, setChecked] = useState(false)
+const [refreshAuth] = useRefreshAuthMutation()
+const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+
+useEffect(() => {
+  const guard = async () => {
+    if (!isAuthenticated) { router.push('/sign-in'); return }
+    const result = await refreshAuth()
+    if ('error' in result) { router.push('/sign-in'); return }
+    setChecked(true)
+  }
+  guard()
+}, [])
+
+if (!checked) return <LoadingSpinner />
+return <>{children}</>
+```
+
+---
+
+## Logout
+
+```tsx
+import { logout } from '@/state/auth/slice'
+import { useDispatch } from 'react-redux'
+import type { AppDispatch } from '@/state/store'
+
+const dispatch = useDispatch<AppDispatch>()
+
+const handleLogout = () => {
+  dispatch(logout())
+  // State after:
+  // state.auth → reset to initialState (isAuthenticated: false, authKey: '', etc.)
+  // All auth cookies deleted
+  // cartApi cache reset → useGetCartQuery will re-fetch as guest on next call
+  // listingApi cache reset → liked/in_cart fields re-fetch correctly
+
+  router.push('/sign-in')
+}
+```
+
+---
+
+## What NOT to do
+
+```ts
+// Never pass uuid from a component — added automatically in api/auth.ts
+signIn({ email, password, uuid: deviceId, type: 'customer' })
+
+// Never set auth state manually
+dispatch(setCredentials(user))  // only authApi does this
+
+// Never write cookies from a component
+document.cookie = 'auth_key=...'
+
+// Never navigate inside a queryFn — component decides
+```

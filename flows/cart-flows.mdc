@@ -1,0 +1,492 @@
+---
+description: Guide for implementing cart flows in this Tradly boilerplate
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Cart Flows — Tradly Boilerplate
+
+## Architecture
+
+```
+Component
+  → useGetCartQuery / useAddToCartMutation / useDeleteCartItemMutation / useClearCartMutation
+      → cartAPI.getCart / addToCart / deleteCartItem / clearCart  (api/cart.ts)
+          → TradlySDK.app.*  with buildAppQueryPayload / buildAppMutationPayload
+```
+
+**SDK payload builders used:**
+- `getCart` → `buildAppQueryPayload` → `{ bodyParam, pkKey, authKey, currency, language }`
+- `addToCart` → `buildAppMutationPayload` → `{ data: { cart: {...} }, pkKey, authKey, currency, language }`
+- `deleteCartItem` → `buildAppMutationPayload` → `{ data: { cart: { id } }, pkKey, authKey, currency, language }`
+- `clearCart` → `buildAppMutationPayload` → `{ data: {}, pkKey, authKey, currency, language }`
+
+**State alignment — automatic, no manual updates needed:**
+- `addToCart` success → invalidates `['Cart']` + invalidates `['Listing']` (in_cart re-fetches)
+- `deleteCartItem` success → invalidates `['Cart']` + invalidates `['Listing']`
+- `clearCart` success → invalidates `['Cart']` + invalidates `['Listing']` (in_cart → false on all)
+- `signIn` / `verifyOtp` / `socialSignIn` → invalidates `['Cart']` + `['Listing']` (clears guest cache)
+- `logout` → cart cache fully reset → re-fetches as guest on next call
+- Guest (no authKey) → `uuid` injected automatically in `api/cart.ts` — never from a component
+
+---
+
+## Order Type Reference
+
+Every listing has an `order_type` field. The cart flow differs per type.
+Always read `listing.order_type` to decide which action handler to call.
+
+| `order_type` | Button label | Auth required | Clear cart first | custom_price | Notes |
+|---|---|---|---|---|---|
+| `listings` | Add to Cart / Buy Now | No | No (480 handles conflict) | No | Physical goods, multi-item cart ok |
+| `digital` | Buy Now | No | No (480 handles conflict) | No | Digital download, no shipping display |
+| `events` | Book Now | **Yes** | **Yes** | No | One event per cart, clear before add |
+| `appointments` | Book Appointment | **Yes** | **Yes** | No | Same as events |
+| `donation` | Fund Now | No | **Yes** | **Yes** | Requires `custom_price` from user input |
+| `information_listing` | Contact / Enquire | No | — | — | No cart — lead/enquiry only |
+| `video_listing` | Watch / Subscribe | No | — | — | No cart — content access only |
+| `requests` | Submit Request | **Yes** | — | — | Reverse marketplace — buyer posts a need |
+
+```tsx
+// Always branch on order_type at the detail page level
+const orderType = listing.order_type  // "listings" | "events" | "appointments" | "donation" | ...
+
+// Helper — determines if this listing type uses cart at all
+const usesCart = ['listings', 'digital', 'events', 'appointments', 'donation'].includes(orderType)
+
+// Helper — requires auth before any action
+const requiresAuth = ['events', 'appointments', 'requests'].includes(orderType)
+```
+
+---
+
+## Types Reference
+
+```ts
+// @/types/cart.types.ts
+
+interface AddToCartInput {
+  listing_id: number
+  quantity: number
+  variant_id?: number    // required when listing.variants.length > 0
+  custom_price?: number  // donations only — from user's input field
+}
+
+interface DeleteCartItemInput {
+  listing_id: number  // cart_details[].listing.id — sent as array by the SDK wrapper
+}
+
+interface CartItem {
+  id: number
+  quantity: number
+  custom_price: string              // "0.0000" — string from API
+  quantity_total_price: Money       // list_price × quantity
+  quantity_total_offer_price: Money // offer_price × quantity ← use for display
+  listing: CartListing
+  variant?: CartVariant | null
+}
+
+interface CartListing {
+  id: number; title: string; slug: string; images: string[]
+  list_price: Money; offer_price: Money
+  stock: number; max_quantity: number; in_cart: boolean
+  account: { id: number; name: string; slug: string; images: string[] }
+}
+
+interface CartSummary {
+  id: number
+  total: Money; list_total: Money; offer_total: Money
+  shipping_total: Money
+  grand_total: Money    // ← use this as the final checkout total
+  pricing_items: PricingItem[]
+}
+
+interface PricingItem {
+  name: string; type: string; short_code: string
+  display: boolean  // ← only render rows where display: true
+  buying: Money; note?: string
+}
+```
+
+---
+
+## Get Cart
+
+Fetch once at app root or cart page. All child components read from cache via selectors.
+
+```tsx
+import { useGetCartQuery } from '@/state/cart/api'
+
+const { data, isLoading } = useGetCartQuery()
+
+const items      = data?.cart_details ?? []
+const summary    = data?.cart
+const grandTotal = summary?.grand_total.formatted   // "$ 109.89"
+const itemCount  = items.reduce((sum, item) => sum + item.quantity, 0)
+
+// Pricing breakdown — only render rows where display: true
+const priceRows = summary?.pricing_items.filter(p => p.display) ?? []
+
+// Per item
+items.forEach(item => {
+  item.listing.title
+  item.listing.images[0]
+  item.listing.offer_price.formatted        // unit price
+  item.quantity_total_offer_price.formatted // line total
+  item.listing.account.name
+  item.variant?.name                        // e.g. "Red / L"
+})
+```
+
+### Cart count in header (no extra fetch)
+
+```tsx
+import { useCartItemCount } from '@/state/cart/selectors'
+
+const count = useCartItemCount()  // reads from cache — zero network cost
+{count > 0 && <span className="badge">{count}</span>}
+```
+
+---
+
+## Shared Validation
+
+Run before any addToCart call regardless of order_type.
+
+```tsx
+import type { Listing } from '@/types/listing.types'
+
+const validateBeforeAdd = (listing: Listing, selectedVariantId: number | null): string | null => {
+  if (listing.stock === 0) return 'Out of stock'
+  if (listing.sold) return 'This item has been sold'
+  if ((listing.variants as unknown[]).length > 0 && !selectedVariantId) return 'Please select a variant'
+  return null
+}
+```
+
+---
+
+## listings / digital — Add to Cart
+
+Physical products and digital goods. Multi-item cart allowed.
+Guest checkout supported — no auth required.
+
+```tsx
+import { useAddToCartMutation, useClearCartMutation } from '@/state/cart/api'
+import type { AddToCartInput } from '@/types/cart.types'
+
+const [addToCart, { isLoading }] = useAddToCartMutation()
+const [clearCart] = useClearCartMutation()
+const [showClearModal, setShowClearModal] = useState(false)
+const [pendingInput, setPendingInput] = useState<AddToCartInput | null>(null)
+
+const handleAddToCart = async () => {
+  const err = validateBeforeAdd(listing, selectedVariantId)
+  if (err) { showToast(err); return }
+
+  const input: AddToCartInput = {
+    listing_id: listing.id,
+    quantity: selectedQuantity,
+    // Only include variant_id when the listing actually has variants AND one is selected.
+    // Never pass variant_id: 0 or variant_id: undefined — omit the key entirely.
+    ...((listing.variants as unknown[]).length > 0 && selectedVariantId
+      ? { variant_id: selectedVariantId }
+      : {}),
+  }
+
+  const result = await addToCart(input)
+
+  if ('error' in result) {
+    const e = result.error as { status: string; error: string; data?: { code: number } }
+
+    if (e.data?.code === 480) {
+      // Cart has items from a different seller — prompt user to clear
+      setPendingInput(input)
+      setShowClearModal(true)
+      return
+    }
+    if (e.data?.code === 489) {
+      // Cart conflict — clear silently and retry once
+      await clearCart()
+      await addToCart(input)
+      return
+    }
+
+    showToast(e.error)
+    return
+  }
+
+  // cartApi cache invalidated → cart re-fetches with new item
+  // listingApi cache invalidated → listing.in_cart becomes true
+  showToast('Added to cart')
+}
+
+// Buy Now — same as Add to Cart but navigates to checkout immediately
+const handleBuyNow = async () => {
+  const err = validateBeforeAdd(listing, selectedVariantId)
+  if (err) { showToast(err); return }
+
+  const result = await addToCart({
+    listing_id: listing.id,
+    quantity: selectedQuantity,
+    ...((listing.variants as unknown[]).length > 0 && selectedVariantId
+      ? { variant_id: selectedVariantId }
+      : {}),
+  })
+
+  if ('error' in result) { /* same 480/489 handling */ return }
+  router.push('/checkout')
+}
+```
+
+### Multi-Seller Modal (error 480)
+
+```tsx
+const handleConfirmClear = async () => {
+  setShowClearModal(false)
+  if (!pendingInput) return
+  await clearCart()
+  await addToCart(pendingInput)
+  setPendingInput(null)
+}
+
+{showClearModal && (
+  <Modal>
+    <p>Your cart has items from another seller. Clear cart and add this item?</p>
+    <button onClick={() => setShowClearModal(false)}>Cancel</button>
+    <button onClick={handleConfirmClear}>Clear & Add</button>
+  </Modal>
+)}
+```
+
+---
+
+## events / appointments — Book Now
+
+One booking at a time — cart must be cleared before adding.
+Auth required — guests must sign in first.
+
+```tsx
+import { useAuthSelector } from '@/state/auth/selectors'
+
+const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+const [addToCart] = useAddToCartMutation()
+const [clearCart] = useClearCartMutation()
+
+const handleBookNow = async () => {
+  // Auth gate — events/appointments always require sign-in
+  if (!isAuthenticated) {
+    router.push('/sign-in')
+    return
+  }
+
+  const err = validateBeforeAdd(listing, selectedVariantId)
+  if (err) { showToast(err); return }
+
+  // For events: show schedule picker if listing.schedules.length > 0
+  // selectedVariantId here may be a schedule/slot id
+
+  // Clear first — only one event/appointment allowed in cart at a time
+  const clearResult = await clearCart()
+  if ('error' in clearResult) { showToast('Failed to clear cart'); return }
+
+  const result = await addToCart({
+    listing_id: listing.id,
+    quantity: 1,  // events/appointments are always qty 1
+    // Only include variant_id when a slot/ticket type is actually selected
+    ...((listing.variants as unknown[]).length > 0 && selectedVariantId
+      ? { variant_id: selectedVariantId }
+      : {}),
+  })
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  router.push('/checkout')
+}
+```
+
+---
+
+## donation — Fund Now
+
+User enters a custom amount. Cart cleared first — only one donation per checkout.
+
+```tsx
+const [donationAmount, setDonationAmount] = useState<number>(0)
+const [addToCart] = useAddToCartMutation()
+const [clearCart] = useClearCartMutation()
+
+const handleFundNow = async () => {
+  if (donationAmount <= 0) { showToast('Enter a valid amount'); return }
+
+  // Goal progress display
+  // listing.goal_price.amount → total goal
+  // donationAmount → user's contribution
+
+  // Clear first — only one donation per checkout
+  const clearResult = await clearCart()
+  if ('error' in clearResult) { showToast('Failed to prepare checkout'); return }
+
+  const result = await addToCart({
+    listing_id: listing.id,
+    quantity: 1,
+    custom_price: donationAmount,   // ← required for donations
+  })
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+
+  router.push('/checkout')
+}
+
+// Goal progress bar
+const goalAmount = listing.goal_price.amount
+const progressPercent = goalAmount > 0
+  ? Math.min((raisedAmount / goalAmount) * 100, 100)
+  : 0
+```
+
+---
+
+## information_listing — No Cart
+
+No purchase flow. Show a contact form, lead capture, or external link.
+
+```tsx
+// No addToCart call — this type is for enquiries / lead generation
+const handleEnquire = () => {
+  router.push(`/contact?listing=${listing.id}`)
+  // OR open a modal with a contact form
+  // OR link to listing.account details for direct contact
+}
+
+// Hide: Add to Cart, Buy Now, price display (or show as "Contact for pricing")
+// Show: Enquire button, seller contact info, listing.description
+```
+
+---
+
+## video_listing — No Cart
+
+Content access flow — not a purchase. May require auth for premium content.
+
+```tsx
+// No addToCart call — this type is for video/media access
+const handleWatch = () => {
+  if (requiresAuth && !isAuthenticated) {
+    router.push('/sign-in')
+    return
+  }
+  // Navigate to video player page or open modal with listing.videos[0]
+  router.push(`/watch/${listing.slug}`)
+}
+
+// Show: Play button, listing.videos[0] preview
+// Hide: price, Add to Cart, shipping info
+```
+
+---
+
+## requests — Reverse Marketplace
+
+Buyer posts a need. Sellers respond with offers. No addToCart — this creates a request.
+
+```tsx
+// "requests" is a reverse marketplace flow — buyers post what they need,
+// sellers bid or respond. This does NOT use the cart system.
+// Auth required — guests cannot post requests.
+
+const handleSubmitRequest = () => {
+  if (!isAuthenticated) {
+    router.push('/sign-in')
+    return
+  }
+  // Navigate to request submission form, passing any pre-fill from this listing
+  router.push(`/requests/new?category=${listing.category_id[0]}`)
+}
+
+// Show: "Post a Request" button, category, description as inspiration
+// Hide: Add to Cart, price add-to-cart flow entirely
+```
+
+---
+
+## Delete Cart Item
+
+```tsx
+import { useDeleteCartItemMutation } from '@/state/cart/api'
+
+const [deleteCartItem, { isLoading }] = useDeleteCartItemMutation()
+
+const handleDelete = async (item: CartItem) => {
+  // Pass listing_id from cart_details[].listing.id — NOT the cart detail's own id.
+  // The API receives: { cart: { listing_id: [507598] } }
+  const result = await deleteCartItem({ listing_id: item.listing.id })
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+    return
+  }
+  // cartApi invalidated → cart re-fetches without the item
+  // listingApi invalidated → listing.in_cart becomes false
+}
+```
+
+---
+
+## Clear Entire Cart
+
+```tsx
+import { useClearCartMutation } from '@/state/cart/api'
+
+const [clearCart, { isLoading }] = useClearCartMutation()
+
+const handleClearCart = async () => {
+  const result = await clearCart()
+  if ('error' in result) { showToast('Failed to clear cart'); return }
+  // Cart cache invalidated → re-fetches empty
+  // Listing cache invalidated → all in_cart → false
+}
+```
+
+---
+
+## Reading Cart in Deep Components
+
+```tsx
+import { useCartItems, useCartSummary, useCartItemCount } from '@/state/cart/selectors'
+
+const items   = useCartItems()      // CartItem[] — from cache, no fetch
+const summary = useCartSummary()    // CartSummary | null
+const count   = useCartItemCount()  // total quantity across all items
+```
+
+---
+
+## What NOT to do
+
+```ts
+// Never check order_type with a hardcoded number — it's a string
+if (listing.type === 2) // ❌
+if (listing.order_type === 'events') // ✓
+
+// Never skip the clearCart step for events/appointments/donations
+await addToCart({ listing_id: id, quantity: 1 })  // ❌ for events
+await clearCart(); await addToCart(...)            // ✓
+
+// Never call addToCart for information_listing or video_listing — they have no cart flow
+
+// Never pass custom_price for listings/events — only for donation
+addToCart({ listing_id: id, quantity: 1, custom_price: 50 })  // ❌ for listings
+
+// Never pass uuid — injected automatically for guests
+addToCart({ listing_id: 1, quantity: 1, uuid: deviceId })  // ❌
+
+// Never manually update in_cart or cart count — cache invalidation handles it
+setIsInCart(true)  // ❌
+```

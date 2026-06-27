@@ -1,0 +1,31 @@
+{
+  "name": "tradly-boilerplate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tradly Master Boilerplate — foundation for building Tradly-powered marketplaces",
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.3.0",
+    "react-redux": "^9.1.2",
+    "redux-persist": "^6.0.0",
+    "tradly": "^1.2.11"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/redux-persist": "^4.3.1",
+    "typescript": "^5.6.3"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    }
+  }
+}

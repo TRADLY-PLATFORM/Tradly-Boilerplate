@@ -1,0 +1,331 @@
+---
+description: Master guide for setting up, understanding, and extending this Tradly boilerplate
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Project Setup & Architecture — Tradly Boilerplate
+
+## What This Boilerplate Is
+
+A ready-to-use foundation for building Tradly-powered marketplace apps (product, event, service, donation).
+Duplicate this repo for each new project — do not modify the boilerplate in place.
+
+It handles: auth (sign-in/up/OTP/social/refresh/logout), listing (list/detail/like/unlike),
+and cart (get/add/delete/clear) — with all caching, state sync, and SDK wiring already done.
+
+---
+
+## Package Installation
+
+### Required — boilerplate core
+
+```bash
+npm install @reduxjs/toolkit react-redux redux-persist tradly
+```
+
+| Package | Purpose |
+|---|---|
+| `@reduxjs/toolkit` | Redux store + RTK Query (data fetching + caching) |
+| `react-redux` | React bindings — `useSelector`, `useDispatch`, `Provider` |
+| `redux-persist` | Persists `auth` + `app` slices to localStorage across reloads |
+| `tradly` | Tradly JS SDK — all marketplace API calls go through this |
+
+### Required — types only (devDependencies)
+
+```bash
+npm install -D typescript @types/react @types/react-dom
+```
+
+### Framework — choose one (not included)
+
+```bash
+# Next.js (recommended for marketplaces — SSR + routing built-in)
+npx create-next-app@latest
+
+# Vite + React (lighter, SPA-only)
+npm create vite@latest -- --template react-ts
+```
+
+### Optional — commonly needed in marketplace UIs
+
+```bash
+# UUID for guest cart (already bundled in config/uuid.ts — no package needed)
+
+# Form handling
+npm install react-hook-form zod
+
+# Toast notifications (used in flow examples)
+npm install react-hot-toast
+# OR
+npm install sonner
+
+# Routing (if not using Next.js)
+npm install react-router-dom
+```
+
+---
+
+## Project Structure
+
+```
+tradly-boilerplate/
+│
+├── api/                        # Layer 1 — Raw SDK calls only
+│   ├── sdk-context.ts          # Four payload builders for the Tradly SDK
+│   ├── auth.ts                 # TradlySDK.user.* wrappers
+│   ├── listing.ts              # TradlySDK.app.getListings / getListingDetail / like / unlike
+│   └── cart.ts                 # TradlySDK.app.getCarts / addToCart / deleteFromCart / clearCart
+│
+├── state/                      # Layer 2 — RTK Query + Redux slices
+│   ├── store.ts                # configureStore — all reducers + middleware wired
+│   ├── auth/
+│   │   ├── api.ts              # authApi — all auth mutations (signIn, signUp, OTP, social, refresh, logout)
+│   │   ├── slice.ts            # authSlice — isAuthenticated, authKey, tokens, cookies
+│   │   └── selectors.ts        # useAuthSelector — read any auth field cleanly
+│   ├── listing/
+│   │   ├── api.ts              # listingApi — getListings, getListingDetail, like, unlike
+│   │   └── selectors.ts        # useListingsResult, useListingDetailResult — cache-only reads
+│   ├── cart/
+│   │   ├── api.ts              # cartApi — getCart, addToCart, deleteCartItem, clearCart
+│   │   └── selectors.ts        # useCartItems, useCartSummary, useCartItemCount — cache-only reads
+│   └── app/
+│       └── slice.ts            # appSlice — currency, language (persisted)
+│
+├── config/
+│   ├── app.config.ts           # AppConfig — domain, pkKey, env, defaultCurrency, defaultLanguage
+│   └── uuid.ts                 # getDeviceUUID() — guest cart identifier, persisted to localStorage
+│
+├── types/
+│   ├── auth.types.ts           # All auth input/response types + AuthSliceState
+│   ├── listing.types.ts        # Listing, GetListingsParams, GetListingDetailInput, etc.
+│   └── cart.types.ts           # CartItem, CartSummary, AddToCartInput, etc.
+│
+└── flows/                      # Layer 3 — AI skill guides (.mdc)
+    ├── project-setup.mdc       # ← this file
+    ├── auth-flows.mdc          # Every auth pattern with copy-paste component examples
+    ├── listing-flows.mdc       # Listing list, detail, like/unlike patterns
+    └── cart-flows.mdc          # Cart get, add, delete, clear, multi-seller patterns
+```
+
+---
+
+## Three-Layer Architecture
+
+```
+Component
+  ↓  uses hooks from
+state/*/api.ts  (RTK Query — caching, invalidation, state sync)
+  ↓  calls functions from
+api/*.ts        (pure SDK wrappers — no state, no cache, just network)
+  ↓  calls
+TradlySDK       (Tradly JS SDK)
+```
+
+**Rule:** Components never import from `api/`. Components never import from `state/*/slice.ts` except for action dispatchers (`logout`). All data flows through RTK Query hooks.
+
+---
+
+## Environment Setup
+
+Create `.env` in your project root:
+
+```env
+VITE_TRADLY_DOMAIN=yourworkspace.tradly.co
+VITE_TRADLY_PK_KEY=your_public_key_here
+VITE_TRADLY_ENV=production
+VITE_DEFAULT_CURRENCY=USD
+VITE_DEFAULT_LANGUAGE=en
+```
+
+For Next.js rename vars to `NEXT_PUBLIC_*` and update `config/app.config.ts`:
+
+```ts
+// config/app.config.ts — Next.js version
+domain: process.env.NEXT_PUBLIC_TRADLY_DOMAIN ?? '',
+pkKey:  process.env.NEXT_PUBLIC_TRADLY_PK_KEY  ?? '',
+```
+
+---
+
+## Wiring the Store
+
+Wrap your app root once. Everything else just works via hooks.
+
+```tsx
+// app/layout.tsx (Next.js) OR src/main.tsx (Vite)
+import { Provider } from 'react-redux'
+import { PersistGate } from 'redux-persist/integration/react'
+import { store, persistor } from '@/state/store'
+
+export default function RootLayout({ children }) {
+  return (
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        {children}
+      </PersistGate>
+    </Provider>
+  )
+}
+```
+
+---
+
+## Path Alias
+
+All internal imports use `@/`. Configure this in your framework:
+
+### Next.js — `tsconfig.json`
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["./*"] }
+  }
+}
+```
+
+### Vite — `vite.config.ts`
+
+```ts
+import path from 'path'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+})
+```
+
+---
+
+## On App Load — Token Refresh
+
+Call this once from your root layout/page. It refreshes the token if expired
+and resets auth state (+ all caches) if the refresh fails.
+
+```tsx
+import { useEffect, useState } from 'react'
+import { useRefreshAuthMutation } from '@/state/auth/api'
+import { useAuthSelector } from '@/state/auth/selectors'
+
+export function AppInitializer({ children }) {
+  const [ready, setReady] = useState(false)
+  const [refreshAuth] = useRefreshAuthMutation()
+  const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+
+  useEffect(() => {
+    const init = async () => {
+      if (isAuthenticated) await refreshAuth()
+      setReady(true)
+    }
+    init()
+  }, [])
+
+  if (!ready) return <SplashScreen />
+  return <>{children}</>
+}
+```
+
+---
+
+## Reading State — Quick Reference
+
+```tsx
+// Auth
+import { useAuthSelector } from '@/state/auth/selectors'
+const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+const authKey         = useAuthSelector(s => s.authKey)
+const firstName       = useAuthSelector(s => s.firstName)
+
+// Listings — triggers fetch
+import { useGetListingsQuery, useGetListingDetailQuery } from '@/state/listing/api'
+const { data, isLoading } = useGetListingsQuery({ page: 1 })
+const { data }            = useGetListingDetailQuery({ slug: 'my-product' })
+
+// Listings — cache only (deep components, no extra fetch)
+import { useListingsResult, useListingDetailResult } from '@/state/listing/selectors'
+const { data } = useListingDetailResult({ slug: 'my-product' })
+
+// Cart — triggers fetch
+import { useGetCartQuery } from '@/state/cart/api'
+const { data } = useGetCartQuery()
+
+// Cart — cache only (deep components, no extra fetch)
+import { useCartItems, useCartSummary, useCartItemCount } from '@/state/cart/selectors'
+const items   = useCartItems()     // CartItem[]
+const summary = useCartSummary()   // CartSummary | null
+const count   = useCartItemCount() // total quantity for badge
+```
+
+---
+
+## Cache Invalidation Map — Full Picture
+
+This is what happens automatically — no manual `setState` ever needed.
+
+| Action | Cart cache | Listing cache (`liked` / `in_cart`) |
+|---|---|---|
+| `signIn` / `verifyOtp` / `socialSignIn` | invalidate → re-fetch with auth | invalidate → re-fetch with auth |
+| `addToCart` | invalidate | invalidate (`in_cart → true`) |
+| `deleteCartItem` | invalidate | invalidate (`in_cart → false`) |
+| `clearCart` | invalidate | invalidate (`in_cart → false` on all) |
+| `likeListing` / `unlikeListing` | — | invalidate (`liked` toggles) |
+| `logout` | **full reset** | **full reset** |
+| `refreshAuth` fail | **full reset** | **full reset** |
+
+**invalidate** = RTK Query marks the tag stale → re-fetches while any subscriber is mounted
+**full reset** = entire API cache wiped → next mount starts from scratch (guest state)
+
+---
+
+## Adding a New Domain (e.g. Orders)
+
+Follow this checklist to add a new feature domain to the boilerplate:
+
+1. **`api/orders.ts`** — wrap SDK calls, use the correct payload builder from `api/sdk-context.ts`
+2. **`types/order.types.ts`** — define input/response types
+3. **`state/orders/api.ts`** — create RTK Query `createApi` with `LocalState` interface, `queryFn` pattern
+4. **`state/orders/selectors.ts`** — `useQueryState` helpers for deep components
+5. **`state/store.ts`** — add `[ordersApi.reducerPath]: ordersApi.reducer` to `combineReducers` and `.concat(ordersApi.middleware)`
+6. **`flows/orders-flows.mdc`** — copy structure from `cart-flows.mdc`, document invalidation
+
+---
+
+## SDK Payload Builder Reference
+
+All four builders live in `api/sdk-context.ts`. Pick the right one — wrong builder = SDK error.
+
+| Builder | Use when | SDK call shape |
+|---|---|---|
+| `buildSdkPayload` | `TradlySDK.user.*` (auth only) | `{ data: {...}, pkKey, currency, language }` |
+| `buildAppQueryPayload` | `getListings`, `getCarts` | `{ bodyParam: {...}, pkKey, authKey, currency, language }` |
+| `buildAppMutationPayload` | `addToCart`, `deleteFromCart`, `clearCart` | `{ data: {...}, pkKey, authKey, currency, language }` |
+| `buildAppDirectPayload` | `likeListing`, `unlikeListing`, `getListingDetail` | `{ ...params, pkKey, authKey, currency, language }` |
+
+---
+
+## What NOT to do
+
+```ts
+// Never call api/*.ts directly from a component
+import { getListings } from '@/api/listing'
+
+// Never set auth state manually from a component
+dispatch(setCredentials(user))
+
+// Never manually update liked / in_cart / cart count
+setIsInCart(true)
+setLiked(false)
+
+// Never pass authKey, currency, or language from a component to a hook
+// — they are read from Redux state inside every queryFn automatically
+
+// Never add RTK Query caches to redux-persist whitelist
+// state/store.ts whitelist: ['auth', 'app']  ← only these two, never 'cartApi' or 'listingApi'
+
+// Never use uuid from a component — injected automatically for guest users in api/cart.ts
+addToCart({ listing_id: 1, quantity: 1, uuid: deviceId }, ...)
+```

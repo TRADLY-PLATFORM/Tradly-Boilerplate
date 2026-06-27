@@ -1,0 +1,557 @@
+---
+description: Guide for implementing listing flows in this Tradly boilerplate
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Listing Flows — Tradly Boilerplate
+
+## Architecture
+
+```
+Component
+  → useGetListingsQuery / useGetListingDetailQuery / useLikeListingMutation / etc.
+      → listingAPI.getListings / getListingDetail / likeListing / unlikeListing  (api/listing.ts)
+          → TradlySDK.app.*  with buildAppQueryPayload / buildAppDirectPayload
+```
+
+**SDK payload builders used:**
+- `getListings` → `buildAppQueryPayload` → `{ bodyParam, pkKey, authKey, currency, language }`
+- `getListingDetail` → `buildAppDirectPayload` → `{ id | slug, pkKey, authKey, currency, language }`
+- `likeListing` / `unlikeListing` → `buildAppDirectPayload` → `{ id, isLiked | isUnLiked, pkKey, authKey, currency, language }`
+
+**State alignment:**
+- `authKey` / `currency` / `language` are read from Redux state inside every queryFn automatically
+- `likeListing` / `unlikeListing` → **optimistic update** (no invalidation, no re-fetch) — `liked`/`likes` flipped in cache instantly, rolled back on API error
+- `addToCart` / `deleteCartItem` / `clearCart` (cartApi) invalidate `['Listing']` → `in_cart` updates via re-fetch
+- Listing cache reset on logout → `liked` / `in_cart` clear correctly for guest view
+- Sign-in invalidates listing cache → re-fetches with user's `liked`/`in_cart`
+- Cache lifetime: **5 minutes** (`keepUnusedDataFor: 300`) — navigating away and back does NOT re-fetch within that window
+
+---
+
+## Order Type — What Each Means
+
+`listing.order_type` drives which CTA to show and which cart flow to use.
+
+| `order_type` | What it is | CTA | Cart flow |
+|---|---|---|---|
+| `listings` | Physical product | Add to Cart + Buy Now | Standard — multi-item ok |
+| `digital` | Downloadable file / software | Buy Now | Standard — no shipping display |
+| `events` | Time-based event / ticket | Book Now | Auth required + clear cart first |
+| `appointments` | Bookable time slot | Book Appointment | Auth required + clear cart first |
+| `donation` | Fundraising / charity | Fund Now | Clear cart first + custom_price |
+| `information_listing` | Lead gen / enquiry only | Contact / Enquire | No cart |
+| `video_listing` | Video content access | Watch / Subscribe | No cart |
+| `requests` | Reverse marketplace (buyer posts need) | Submit Request | No cart — different flow entirely |
+
+---
+
+## Types Reference
+
+```ts
+// @/types/listing.types.ts
+
+interface Money {
+  amount: number; currency: string
+  formatted: string    // e.g. "$ 23.00" ← always use this for display
+}
+
+interface CategoryHierarchy {
+  id: number; name: string; level: number; slug: string
+}
+
+interface Category {
+  id: number; name: string; slug: string
+  parent: number       // 0 if root category
+  active: boolean; image_path: string
+  hierarchy: CategoryHierarchy[]
+  sub_category: Category[]
+}
+
+interface RatingData {
+  rating_average: number    // ← "rating_average" not "average_rating"
+  rating_count: number; review_count: number
+  rating_count_data: { rating_1: number; rating_2: number; rating_3: number; rating_4: number; rating_5: number }
+}
+
+interface ShippingMethod {
+  id: number; name: string
+  type: string    // "pickup" | "delivery" | "storage_hub"
+  active: boolean; default: boolean; order_by: number
+}
+
+interface ListingAccount {
+  id: number; name: string; slug: string; description: string
+  images: string[]         // ← images[] not profile_pic
+  following: boolean
+  total_followers: number; total_listings: number
+  location: AccountLocation
+  shipping_methods: ShippingMethod[]
+  rating_data: AccountRatingData
+  categories: Category[]
+}
+
+interface Listing {
+  id: number; slug: string; title: string
+  description: string      // may contain HTML
+  order_type: string       // "listings" | "events" | "appointments" | "donation" |
+                           // "digital" | "information_listing" | "video_listing" | "requests"
+  type: string             // same value as order_type — use order_type for branching
+
+  // Pricing
+  list_price: Money        // ← "list_price" not "price" — show as strikethrough
+  offer_price: Money       // main display price
+  goal_price: Money        // fundraising target (donation type)
+  offer_percent: number    // e.g. 2 (%)
+  shipping_charges: Money
+
+  // Inventory
+  stock: number
+  max_quantity: number     // cap quantity picker at this value
+  sold: boolean; active: boolean
+
+  // Media
+  images: string[]; videos: string[]
+
+  // Engagement (update via cache — never setState)
+  liked: boolean           // ← "liked" not "is_liked"
+  unliked: boolean; likes: number; unlikes: number
+  in_cart: boolean
+
+  // Dates (unix timestamps — relevant for events/appointments)
+  start_at: number; end_at: number; created_at: number
+
+  // Relationships
+  account_id: number; account: ListingAccount
+  categories: Category[]
+
+  // Extended
+  rating_data: RatingData
+  attributes: ListingAttribute[]
+  variants: unknown[]      // show variant selector when length > 0
+  schedules: unknown[]     // event time slots / appointment availability
+}
+```
+
+---
+
+## Listings List
+
+```tsx
+import { useGetListingsQuery } from '@/state/listing/api'
+import type { GetListingsParams } from '@/types/listing.types'
+
+const { data, isLoading, isError } = useGetListingsQuery({ page: 1, limit: 20 })
+
+// data.listings      → Listing[]
+// data.page          → number
+// data.total_records → number
+
+if (isLoading) return <Spinner />
+return data?.listings.map(listing => <ListingCard key={listing.id} listing={listing} />)
+```
+
+### Listing card — key fields
+
+```tsx
+listing.images[0]                          // hero image
+listing.title
+listing.order_type                         // use to show correct badge or CTA hint
+listing.list_price.formatted               // "$ 23.00" — strikethrough (original)
+listing.offer_price.formatted              // "$ 22.54" — main price
+listing.offer_percent                      // 2 — "2% OFF" badge, hide when 0
+listing.stock                              // 0 = show "Out of stock" badge
+listing.sold                               // true = permanently sold
+listing.liked                              // heart icon state
+listing.in_cart                            // cart icon indicator
+listing.account.name                       // "Super Shop"
+listing.account.images[0]                 // seller avatar
+listing.account.following                  // follow button state
+listing.rating_data.rating_average        // 4.5
+listing.rating_data.review_count          // 42
+listing.categories[0]?.hierarchy          // breadcrumb data
+// For events/appointments — show date badge
+listing.start_at                           // unix timestamp → format as date
+```
+
+### Pagination
+
+```tsx
+const [page, setPage] = useState(1)
+const { data } = useGetListingsQuery({ page, limit: 20 })
+const totalPages = Math.ceil((data?.total_records ?? 0) / 20)
+```
+
+### Filter by order_type
+
+```tsx
+// Physical products only
+useGetListingsQuery({ page: 1, type: 'listings' })
+
+// Events only
+useGetListingsQuery({ page: 1, type: 'events' })
+
+// Donations only
+useGetListingsQuery({ page: 1, type: 'donation' })
+
+// By category + type
+useGetListingsQuery({ page: 1, category_id: 6794, type: 'listings' })
+
+// Search
+useGetListingsQuery({ page: 1, search_query: keyword })
+
+// By seller/account
+useGetListingsQuery({ page: 1, account_id: 7069 })
+
+// Near me
+useGetListingsQuery({ page: 1, lat: 3.139, lon: 101.6869, radius: 5000 })
+```
+
+---
+
+## Listing Detail
+
+```tsx
+import { useGetListingDetailQuery } from '@/state/listing/api'
+
+// By slug (most common)
+const { data, isLoading } = useGetListingDetailQuery({ slug: 'my-product' })
+
+// By numeric ID (when slug starts with digits e.g. "727753-dsf")
+const { data } = useGetListingDetailQuery({ slug: '727753-dsf', id: true })
+
+// From router — skip until slug is available
+const { data, isLoading } = useGetListingDetailQuery(
+  { slug: router.query.slug as string, id: router.query.id as string },
+  { skip: !router.query.slug }
+)
+
+const listing = data?.listing
+```
+
+### Detail page — full field reference
+
+```tsx
+// Core identity
+listing.title
+listing.description          // may contain HTML → dangerouslySetInnerHTML
+listing.order_type           // ← branch all CTA logic on this
+
+// Pricing
+listing.list_price.formatted          // original price (strikethrough)
+listing.offer_price.formatted         // discounted price (main)
+listing.offer_percent                 // hide when 0
+listing.shipping_charges.formatted    // "$ 0.00" = free shipping
+listing.goal_price.formatted          // donation goal (donation type only)
+
+// Inventory
+listing.stock                         // 0 = disable add-to-cart
+listing.max_quantity                  // cap quantity picker
+listing.sold                          // permanently sold — show sold banner
+
+// Media
+listing.images                        // string[] — image gallery
+listing.videos                        // string[] — video player
+
+// Engagement
+listing.liked                         // heart button state
+listing.likes                         // like count display
+listing.in_cart                       // cart button state
+
+// Dates — relevant for events/appointments
+listing.start_at                      // event start (unix ts) → format & display
+listing.end_at                        // event end
+listing.schedules                     // [] for products, time slots for events
+
+// Seller
+listing.account.name
+listing.account.slug                  // → link to store page
+listing.account.images[0]            // seller avatar/banner
+listing.account.description
+listing.account.total_followers
+listing.account.total_listings
+listing.account.following             // follow/unfollow button state
+listing.account.rating_data.rating_average
+listing.account.location.formatted_address
+listing.account.shipping_methods      // ShippingMethod[] — show delivery options
+
+// Categories — breadcrumb
+listing.categories[0]?.hierarchy.map(h => h.name).join(' > ')  // "Men > Hoodies"
+
+// Rating
+listing.rating_data.rating_average
+listing.rating_data.review_count
+listing.rating_data.rating_count_data // { rating_1..5 } for breakdown bar
+
+// Attributes — show only visible ones
+const visibleAttrs = listing.attributes.filter(a => a.visible)
+
+// Variants — show selector when length > 0
+listing.variants.length > 0  // → render variant picker
+```
+
+---
+
+## Detail CTA — Branch by order_type
+
+The action area of the detail page should branch entirely on `listing.order_type`.
+
+```tsx
+import type { Listing } from '@/types/listing.types'
+
+function ListingDetailCTA({ listing }: { listing: Listing }) {
+  const { order_type } = listing
+
+  // Physical & digital — standard cart flow
+  if (order_type === 'listings' || order_type === 'digital') {
+    return <ProductCTA listing={listing} />
+  }
+
+  // Events & appointments — auth + clear cart + book
+  if (order_type === 'events' || order_type === 'appointments') {
+    return <EventCTA listing={listing} />
+  }
+
+  // Donation — custom price + clear cart
+  if (order_type === 'donation') {
+    return <DonationCTA listing={listing} />
+  }
+
+  // Information — no cart, enquiry only
+  if (order_type === 'information_listing') {
+    return <EnquiryCTA listing={listing} />
+  }
+
+  // Video — content access
+  if (order_type === 'video_listing') {
+    return <VideoCTA listing={listing} />
+  }
+
+  // Reverse marketplace — post a request
+  if (order_type === 'requests') {
+    return <RequestCTA listing={listing} />
+  }
+
+  return null
+}
+```
+
+### listings / digital — ProductCTA
+
+```tsx
+// Show: quantity picker, variant selector, Add to Cart, Buy Now
+// No auth gate — guests can add to cart (uuid injected automatically)
+// digital: hide shipping_methods and shipping_charges display
+
+function ProductCTA({ listing }: { listing: Listing }) {
+  const isDigital = listing.order_type === 'digital'
+
+  return (
+    <div>
+      {!isDigital && <ShippingDisplay methods={listing.account.shipping_methods} />}
+      {(listing.variants as unknown[]).length > 0 && <VariantPicker variants={listing.variants} />}
+      <QuantityPicker max={listing.max_quantity} stock={listing.stock} />
+      <AddToCartButton listing={listing} />
+      <BuyNowButton listing={listing} />
+    </div>
+  )
+}
+```
+
+### events / appointments — EventCTA
+
+```tsx
+// Show: schedule/slot picker, Book Now (single button)
+// Auth required before booking
+// Always clears cart before adding — see cart-flows.mdc → events/appointments section
+
+function EventCTA({ listing }: { listing: Listing }) {
+  const isAppointment = listing.order_type === 'appointments'
+
+  return (
+    <div>
+      <DateDisplay startAt={listing.start_at} endAt={listing.end_at} />
+      {(listing.schedules as unknown[]).length > 0 && (
+        <SchedulePicker schedules={listing.schedules} />
+      )}
+      {(listing.variants as unknown[]).length > 0 && (
+        <VariantPicker variants={listing.variants} label={isAppointment ? 'Select slot' : 'Select ticket'} />
+      )}
+      <BookNowButton listing={listing} label={isAppointment ? 'Book Appointment' : 'Book Now'} />
+    </div>
+  )
+}
+```
+
+### donation — DonationCTA
+
+```tsx
+// Show: goal progress bar, custom amount input, Fund Now
+// No auth gate — guests can donate
+// Clears cart before adding — see cart-flows.mdc → donation section
+
+function DonationCTA({ listing }: { listing: Listing }) {
+  const [amount, setAmount] = useState<number>(0)
+  const goalAmount = listing.goal_price.amount
+
+  return (
+    <div>
+      {goalAmount > 0 && (
+        <GoalProgressBar
+          goal={listing.goal_price.formatted}
+          progressPercent={Math.min((raisedAmount / goalAmount) * 100, 100)}
+        />
+      )}
+      <input
+        type="number"
+        placeholder="Enter amount"
+        value={amount}
+        onChange={e => setAmount(Number(e.target.value))}
+      />
+      <FundNowButton listing={listing} donationAmount={amount} />
+    </div>
+  )
+}
+```
+
+### information_listing — EnquiryCTA
+
+```tsx
+// No cart — this is a lead capture or information page
+// Show: seller contact info, enquiry form link
+
+function EnquiryCTA({ listing }: { listing: Listing }) {
+  return (
+    <div>
+      <p>{listing.account.name}</p>
+      <p>{listing.account.location.formatted_address}</p>
+      <button onClick={() => router.push(`/contact?listing=${listing.id}`)}>
+        Enquire Now
+      </button>
+    </div>
+  )
+}
+```
+
+### video_listing — VideoCTA
+
+```tsx
+// No cart — content access
+// listing.videos[0] is the video URL/embed
+
+function VideoCTA({ listing }: { listing: Listing }) {
+  return (
+    <div>
+      {(listing.videos as string[]).length > 0 && (
+        <VideoPlayer url={(listing.videos as string[])[0]} />
+      )}
+      <button onClick={() => router.push(`/watch/${listing.slug}`)}>
+        Watch Now
+      </button>
+    </div>
+  )
+}
+```
+
+### requests — RequestCTA
+
+```tsx
+// Reverse marketplace — buyer posts a need, sellers respond
+// Auth required — guests cannot post requests
+
+function RequestCTA({ listing }: { listing: Listing }) {
+  const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+
+  const handleSubmitRequest = () => {
+    if (!isAuthenticated) { router.push('/sign-in'); return }
+    router.push(`/requests/new?category=${listing.category_id[0]}&ref=${listing.id}`)
+  }
+
+  return (
+    <div>
+      <p>Looking for something like this? Post a request and sellers will reach out.</p>
+      <button onClick={handleSubmitRequest}>Post a Request</button>
+    </div>
+  )
+}
+```
+
+---
+
+## Like / Unlike
+
+Both mutations invalidate the listing cache — list and detail re-fetch with updated `liked`.
+Like/unlike is available on all order types.
+
+```tsx
+import { useLikeListingMutation, useUnlikeListingMutation } from '@/state/listing/api'
+import { useAuthSelector } from '@/state/auth/selectors'
+import type { Listing } from '@/types/listing.types'
+
+const [likeListing, { isLoading: isLiking }] = useLikeListingMutation()
+const [unlikeListing, { isLoading: isUnliking }] = useUnlikeListingMutation()
+const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
+
+const handleToggleLike = async (listing: Listing) => {
+  if (!isAuthenticated) { router.push('/sign-in'); return }
+
+  const result = listing.liked
+    ? await unlikeListing({ id: listing.id })
+    : await likeListing({ id: listing.id })
+
+  if ('error' in result) {
+    showToast((result.error as { error: string }).error)
+  }
+  // listing.liked updates automatically via cache invalidation — no setState needed
+}
+
+<button onClick={() => handleToggleLike(listing)} disabled={isLiking || isUnliking}>
+  {listing.liked ? '♥' : '♡'} {listing.likes}
+</button>
+```
+
+---
+
+## Reading Cache in Deep Components
+
+```tsx
+import { useListingDetailResult } from '@/state/listing/selectors'
+
+// Parent already called useGetListingDetailQuery — child gets cache hit, no fetch
+const { data } = useListingDetailResult({ slug: 'my-product' })
+const listing = data?.listing
+```
+
+---
+
+## What NOT to do
+
+```ts
+// Never branch on type as number — it's a string
+if (listing.type === 2) // ❌
+if (listing.order_type === 'events') // ✓
+
+// Never use "price" — the real field is "list_price"
+listing.price.formatted        // ❌ undefined
+listing.list_price.formatted   // ✓
+
+// Never use "is_liked" — the real field is "liked"
+listing.is_liked  // ❌
+listing.liked     // ✓
+
+// Never use "rating_average" directly
+listing.rating_average               // ❌
+listing.rating_data.rating_average   // ✓
+
+// Never use "account.profile_pic"
+listing.account.profile_pic  // ❌
+listing.account.images[0]    // ✓
+
+// Never show Add to Cart for information_listing, video_listing, or requests
+
+// Never skip clearCart for events / appointments / donations
+
+// Never manually update liked or in_cart — cache invalidation handles it
+setIsInCart(true)  // ❌
+```
