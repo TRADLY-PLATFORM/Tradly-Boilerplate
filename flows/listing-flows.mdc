@@ -199,7 +199,7 @@ useGetListingsQuery({ page: 1, type: 'donation' })
 useGetListingsQuery({ page: 1, category_id: 6794, type: 'listings' })
 
 // Search
-useGetListingsQuery({ page: 1, search_query: keyword })
+useGetListingsQuery({ page: 1, search_key: keyword })
 
 // By seller/account
 useGetListingsQuery({ page: 1, account_id: 7069 })

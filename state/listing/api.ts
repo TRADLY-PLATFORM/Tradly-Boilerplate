@@ -20,6 +20,56 @@ const getContext = (state: LocalState) => ({
   language: state.app.language,
 })
 
+// Scans every cached query entry and patches liked/unliked/likes/unlikes in place.
+// selectInvalidatedBy(broad tag) misses detail entries that use specific tags
+// {type:'Listing', id:slug}, so we read the raw queries map instead.
+function patchLikeInCache(
+  dispatch: (action: unknown) => { undo: () => void },
+  getState: () => unknown,
+  listingId: number,
+  liked: boolean,
+) {
+  const queries = ((getState() as Record<string, unknown>)['listingApi'] as { queries: Record<string, { endpointName: string; originalArgs: unknown }> }).queries
+  const patches: Array<{ undo: () => void }> = []
+
+  Object.values(queries).forEach(entry => {
+    if (!entry) return
+
+    if (entry.endpointName === 'getListings') {
+      patches.push(
+        dispatch(
+          listingApi.util.updateQueryData('getListings', entry.originalArgs as GetListingsParams, draft => {
+            const l = draft.listings.find(l => l.id === listingId)
+            if (!l) return
+            if (liked) {
+              l.liked = true; l.unliked = false; l.likes += 1
+            } else {
+              l.liked = false; l.unliked = true; l.likes = Math.max(0, l.likes - 1); l.unlikes += 1
+            }
+          }),
+        ),
+      )
+    }
+
+    if (entry.endpointName === 'getListingDetail') {
+      patches.push(
+        dispatch(
+          listingApi.util.updateQueryData('getListingDetail', entry.originalArgs as GetListingDetailInput, draft => {
+            if (draft.listing.id !== listingId) return
+            if (liked) {
+              draft.listing.liked = true; draft.listing.unliked = false; draft.listing.likes += 1
+            } else {
+              draft.listing.liked = false; draft.listing.unliked = true; draft.listing.likes = Math.max(0, draft.listing.likes - 1); draft.listing.unlikes += 1
+            }
+          }),
+        ),
+      )
+    }
+  })
+
+  return patches
+}
+
 export const listingApi = createApi({
   reducerPath: 'listingApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/' }),
@@ -82,39 +132,9 @@ export const listingApi = createApi({
           return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
         }
       },
-      // Optimistically update every cached list and the detail entry for this listing.
-      // On failure the patch is rolled back automatically by RTK Query.
       onQueryStarted: async ({ id }, { dispatch, queryFulfilled, getState }) => {
-        // Patch all getListings cache entries that contain this listing
-        const listPatches = listingApi.util.selectInvalidatedBy(getState(), ['Listing'])
-          .filter(({ endpointName }) => endpointName === 'getListings')
-          .map(({ originalArgs }) =>
-            dispatch(
-              listingApi.util.updateQueryData('getListings', originalArgs as GetListingsParams, (draft) => {
-                const listing = (draft as GetListingsResponse).listings.find(l => l.id === id)
-                if (listing) { listing.liked = true; listing.unliked = false; listing.likes += 1 }
-              }),
-            ),
-          )
-
-        // Patch detail cache entry if it exists (keyed by slug — we scan all detail entries)
-        const detailPatches = listingApi.util.selectInvalidatedBy(getState(), ['Listing'])
-          .filter(({ endpointName }) => endpointName === 'getListingDetail')
-          .map(({ originalArgs }) =>
-            dispatch(
-              listingApi.util.updateQueryData('getListingDetail', originalArgs as GetListingDetailInput, (draft) => {
-                const l = (draft as GetListingDetailResponse).listing
-                if (l.id === id) { l.liked = true; l.unliked = false; l.likes += 1 }
-              }),
-            ),
-          )
-
-        try {
-          await queryFulfilled
-        } catch {
-          listPatches.forEach(p => p.undo())
-          detailPatches.forEach(p => p.undo())
-        }
+        const patches = patchLikeInCache(dispatch, getState, id, true)
+        try { await queryFulfilled } catch { patches.forEach(p => p.undo()) }
       },
     }),
 
@@ -132,34 +152,8 @@ export const listingApi = createApi({
         }
       },
       onQueryStarted: async ({ id }, { dispatch, queryFulfilled, getState }) => {
-        const listPatches = listingApi.util.selectInvalidatedBy(getState(), ['Listing'])
-          .filter(({ endpointName }) => endpointName === 'getListings')
-          .map(({ originalArgs }) =>
-            dispatch(
-              listingApi.util.updateQueryData('getListings', originalArgs as GetListingsParams, (draft) => {
-                const listing = (draft as GetListingsResponse).listings.find(l => l.id === id)
-                if (listing) { listing.liked = false; listing.unliked = true; listing.unlikes += 1; listing.likes = Math.max(0, listing.likes - 1) }
-              }),
-            ),
-          )
-
-        const detailPatches = listingApi.util.selectInvalidatedBy(getState(), ['Listing'])
-          .filter(({ endpointName }) => endpointName === 'getListingDetail')
-          .map(({ originalArgs }) =>
-            dispatch(
-              listingApi.util.updateQueryData('getListingDetail', originalArgs as GetListingDetailInput, (draft) => {
-                const l = (draft as GetListingDetailResponse).listing
-                if (l.id === id) { l.liked = false; l.unliked = true; l.unlikes += 1; l.likes = Math.max(0, l.likes - 1) }
-              }),
-            ),
-          )
-
-        try {
-          await queryFulfilled
-        } catch {
-          listPatches.forEach(p => p.undo())
-          detailPatches.forEach(p => p.undo())
-        }
+        const patches = patchLikeInCache(dispatch, getState, id, false)
+        try { await queryFulfilled } catch { patches.forEach(p => p.undo()) }
       },
     }),
 
