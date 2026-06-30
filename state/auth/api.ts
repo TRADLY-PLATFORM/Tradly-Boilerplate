@@ -171,7 +171,8 @@ export const authApi = createApi({
         const state = getState() as LocalState
         const { authKey, refreshKey, tokenSetAt } = state.auth
 
-        if (authKey && tokenSetAt && Date.now() - tokenSetAt < ONE_HOUR_MS)
+        // tokenSetAt is null on first load (forced refresh) — explicit null check avoids NaN
+        if (authKey && tokenSetAt !== null && Date.now() - tokenSetAt < ONE_HOUR_MS)
           return { data: { auth_key: authKey, refresh_key: refreshKey } }
 
         if (!refreshKey) {
@@ -183,11 +184,13 @@ export const authApi = createApi({
 
         try {
           const res = await authAPI.refreshAuth(refreshKey)
-          if (!res?.status) {
+          // SDK returns { status: true, data: { auth_key, refresh_key } } on success
+          // or { error: { code, message } } / falsy status on failure
+          if (!res?.status || res?.error) {
             dispatch(logout())
             dispatch(cartApi.util.resetApiState())
             dispatch(listingApi.util.resetApiState())
-            return { error: { status: 'CUSTOM_ERROR', error: 'Token refresh failed' } }
+            return { error: { status: 'CUSTOM_ERROR', error: (res as any)?.error?.message ?? 'Token refresh failed' } }
           }
           const tokens: UserTokens = {
             auth_key: res.data?.auth_key ?? '',

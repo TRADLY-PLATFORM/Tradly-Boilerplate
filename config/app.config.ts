@@ -15,6 +15,15 @@ export const AppConfig = {
 
 	// Default language — hardcoded fallback, can be swapped at runtime via state/app.slice.ts
 	defaultLanguage: import.meta.env.VITE_DEFAULT_LANGUAGE ?? "en",
+
+	// Where users land after completing external (web-channel) payment.
+	// Defaults to app origin at runtime. Set VITE_REDIRECT_URI in .env for production.
+	redirectUri: import.meta.env.VITE_REDIRECT_URI ?? "",
+
+	// When true, shipping methods are fetched per-seller (account_id from first cart item)
+	// instead of platform-wide tenant methods. Match your Tradly workspace's account config.
+	enableShippingMethodsPreference:
+		import.meta.env.VITE_ENABLE_ACCOUNT_SHIPPING === "true",
 } as const;
 
 export type AppConfigType = typeof AppConfig;

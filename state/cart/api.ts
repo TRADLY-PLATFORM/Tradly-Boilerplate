@@ -109,6 +109,73 @@ export const cartApi = createApi({
       invalidatesTags: ['Cart'],
     }),
 
+
+    // Apply coupon — invalidates Cart so totals re-fetch
+    applyCoupon: builder.mutation<void, { cartId: number; code: string }>({
+      queryFn: async ({ cartId, code }, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = await cartAPI.applyCouponToCart(cartId, code, authKey, currency, language)
+          if (res?.error)
+            return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Coupon invalid' } }
+          return { data: undefined }
+        } catch (err) {
+          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+        }
+      },
+      invalidatesTags: ['Cart'],
+    }),
+
+    // Remove coupon — invalidates Cart
+    removeCoupon: builder.mutation<void, { cartId: number }>({
+      queryFn: async ({ cartId }, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = await cartAPI.removeCouponFromCart(cartId, authKey, currency, language)
+          if (res?.error)
+            return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Remove coupon failed' } }
+          return { data: undefined }
+        } catch (err) {
+          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+        }
+      },
+      invalidatesTags: ['Cart'],
+    }),
+
+    // Refetch cart with commissions applied — triggers live price update in checkout sidebar
+    // arg is the array of { id, amount } entries; skip when empty
+    getCartWithCommissions: builder.query<import('@/types/cart.types').GetCartResponse, { id: number; amount: number }[]>({
+      queryFn: async (commissions, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = await cartAPI.getCartWithCommissions(commissions, authKey, currency, language)
+          if (res?.error)
+            return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch cart' } }
+          return { data: { cart: res.data!.cart, cart_details: res.data!.cart_details } }
+        } catch (err) {
+          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+        }
+      },
+      providesTags: ['Cart'],
+    }),
+
+    // Refetch cart with a specific shipping method applied (updates pricing rows)
+    // Use this after user selects a shipping method on checkout page
+    getCartWithShipping: builder.query<import('@/types/cart.types').GetCartResponse, number>({
+      queryFn: async (shippingMethodId, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = await cartAPI.getCartWithShipping(shippingMethodId, authKey, currency, language)
+          if (res?.error)
+            return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch cart' } }
+          return { data: { cart: res.data!.cart, cart_details: res.data!.cart_details } }
+        } catch (err) {
+          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+        }
+      },
+      providesTags: ['Cart'],
+    }),
+
   }),
 })
 
@@ -117,4 +184,8 @@ export const {
   useAddToCartMutation,
   useDeleteCartItemMutation,
   useClearCartMutation,
+  useApplyCouponMutation,
+  useRemoveCouponMutation,
+  useGetCartWithCommissionsQuery,
+  useGetCartWithShippingQuery,
 } = cartApi

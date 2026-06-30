@@ -21,28 +21,29 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: 'system-ui, sans-serif' }}>
       {/* Navbar */}
-      <nav style={{ background: '#fff', borderBottom: '1px solid #e5e5e5', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56 }}>
-        <Link to="/" style={{ fontWeight: 700, fontSize: 18, color: '#111', textDecoration: 'none' }}>Tradly</Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <nav style={nav.bar}>
+        <Link to="/" style={nav.logo}>Tradly</Link>
+
+        <div style={nav.right}>
           {isAuthenticated ? (
             <>
-              <span style={{ fontSize: 14, color: '#555' }}>Hi, {firstName}</span>
+              <span style={nav.greeting}>Hi, {firstName}</span>
+
+              <Link to="/orders" style={nav.link}>Orders</Link>
+
               <Link to="/cart" style={{ position: 'relative', textDecoration: 'none', color: '#111', fontSize: 14 }}>
                 Cart
                 {cartCount > 0 && (
-                  <span style={{ position: 'absolute', top: -8, right: -12, background: '#2563eb', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {cartCount}
-                  </span>
+                  <span style={nav.cartBadge}>{cartCount}</span>
                 )}
               </Link>
-              <button onClick={handleLogout} style={{ background: 'none', border: '1px solid #e5e5e5', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 14, color: '#555' }}>
-                Sign out
-              </button>
+
+              <button onClick={handleLogout} style={nav.signOutBtn}>Sign out</button>
             </>
           ) : (
             <>
-              <Link to="/sign-in" style={{ fontSize: 14, color: '#555', textDecoration: 'none' }}>Sign in</Link>
-              <Link to="/sign-up" style={{ fontSize: 14, background: '#2563eb', color: '#fff', borderRadius: 6, padding: '6px 16px', textDecoration: 'none' }}>Sign up</Link>
+              <Link to="/sign-in" style={nav.link}>Sign in</Link>
+              <Link to="/sign-up" style={nav.signUpBtn}>Sign up</Link>
             </>
           )}
         </div>
@@ -54,4 +55,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
     </div>
   )
+}
+
+const nav: Record<string, React.CSSProperties> = {
+  bar: { background: '#fff', borderBottom: '1px solid #e5e5e5', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 56, position: 'sticky', top: 0, zIndex: 100 },
+  logo: { fontWeight: 700, fontSize: 18, color: '#111', textDecoration: 'none' },
+  right: { display: 'flex', alignItems: 'center', gap: 16 },
+  greeting: { fontSize: 14, color: '#555' },
+  link: { fontSize: 14, color: '#555', textDecoration: 'none' },
+  cartBadge: { position: 'absolute', top: -8, right: -12, background: '#2563eb', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  signOutBtn: { background: 'none', border: '1px solid #e5e5e5', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 14, color: '#555' },
+  signUpBtn: { fontSize: 14, background: '#2563eb', color: '#fff', borderRadius: 6, padding: '6px 16px', textDecoration: 'none' },
 }

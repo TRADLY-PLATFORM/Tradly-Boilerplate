@@ -47,14 +47,14 @@ function ListingCard({ listing }: { listing: Listing }) {
 				{/* Info */}
 				<div style={cardStyles.body}>
 					<p style={cardStyles.seller}>
-						{listing.account.name}
+						{listing.account?.name}
 					</p>
 					<p style={cardStyles.title}>
 						{listing.title}
 					</p>
 					<div style={cardStyles.priceRow}>
 						<span style={cardStyles.price}>
-							{listing.offer_price.formatted}
+							{listing.offer_price?.formatted}
 						</span>
 						{listing.offer_percent > 0 && (
 							<span
@@ -62,11 +62,7 @@ function ListingCard({ listing }: { listing: Listing }) {
 									cardStyles.listPrice
 								}
 							>
-								{
-									listing
-										.list_price
-										.formatted
-								}
+								{listing.list_price?.formatted}
 							</span>
 						)}
 					</div>

@@ -23,6 +23,7 @@ export default function ListingDetailPage() {
 	const [clearCart] = useClearCartMutation();
 
 	const [selectedQty, setSelectedQty] = useState(1);
+	const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
 	const [donationAmount, setDonationAmount] = useState(0);
 	const [toast, setToast] = useState("");
 	const [clearModal, setClearModal] = useState(false);
@@ -70,7 +71,7 @@ export default function ListingDetailPage() {
 		}
 	};
 
-	const doAddToCart = async (input: AddToCartInput) => {
+	const doAddToCart = async (input: AddToCartInput): Promise<boolean> => {
 		const result = await addToCart(input);
 		if ("error" in result) {
 			const e = result.error as {
@@ -81,28 +82,31 @@ export default function ListingDetailPage() {
 			if (e.data?.code === 480) {
 				setPendingInput(input);
 				setClearModal(true);
-				return;
+				return false;
 			}
 			if (e.data?.code === 489) {
 				await clearCart();
-				await addToCart(input);
-				return;
+				const r2 = await addToCart(input);
+				if ("error" in r2) { showToast((r2.error as { error: string }).error); return false; }
+				showToast("Added to cart");
+				return true;
 			}
 			showToast(e.error);
-			return;
+			return false;
 		}
 		showToast("Added to cart");
+		return true;
 	};
 
-	const handleAddToCart = async () => {
+	const handleAddToCart = async (): Promise<boolean> => {
 		if (listing.stock === 0 || listing.sold) {
 			showToast("Item not available");
-			return;
+			return false;
 		}
-		await doAddToCart({
+		return doAddToCart({
 			listing_id: listing.id,
 			quantity: selectedQty,
-			...(hasVariants ? {} : {}), // variant selection handled externally when variants exist
+			...(selectedVariantId ? { variant_id: selectedVariantId } : {}),
 		});
 	};
 
@@ -157,7 +161,7 @@ export default function ListingDetailPage() {
 	const mainImage = listing.images[0];
 	const raisedPercent =
 		listing.goal_price.amount > 0
-			? Math.min((0 / listing.goal_price.amount) * 100, 100)
+			? Math.min(((listing as any).raised_amount?.amount ?? 0) / listing.goal_price.amount * 100, 100)
 			: 0;
 
 	return (
@@ -464,13 +468,9 @@ export default function ListingDetailPage() {
 									style={{
 										...s.secondaryBtn,
 									}}
-									onClick={() => {
-										handleAddToCart().then(
-											() =>
-												navigate(
-													"/cart",
-												),
-										);
+									onClick={async () => {
+										const ok = await handleAddToCart();
+										if (ok) navigate("/cart");
 									}}
 								>
 									Buy now
@@ -481,13 +481,9 @@ export default function ListingDetailPage() {
 							<button
 								style={s.primaryBtn}
 								disabled={isAdding}
-								onClick={() => {
-									handleAddToCart().then(
-										() =>
-											navigate(
-												"/cart",
-											),
-									);
+								onClick={async () => {
+									const ok = await handleAddToCart();
+									if (ok) navigate("/cart");
 								}}
 							>
 								Buy now

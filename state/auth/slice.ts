@@ -19,6 +19,42 @@ const deleteCookie = (name: string) => {
   document.cookie = `${name}=; path=/; max-age=0`
 }
 
+// Read a single cookie value by name — returns '' if not found
+const readCookie = (name: string): string => {
+  if (typeof document === 'undefined') return ''
+  const match = document.cookie.match(new RegExp(`(?:^|; )${encodeURIComponent(name)}=([^;]*)`))
+  return match ? decodeURIComponent(match[1]) : ''
+}
+
+const PROFILE_STORAGE_KEY = key('user_profile')
+
+const saveProfile = (user: User) => {
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      mobile: user.mobile,
+      dial_code: user.dial_code,
+      profile_pic: user.profile_pic ?? '',
+      email_verified: user.email_verified,
+      otp_enabled: user.otp_enabled,
+    }))
+  } catch { /* storage unavailable */ }
+}
+
+const clearProfile = () => {
+  try { localStorage.removeItem(PROFILE_STORAGE_KEY) } catch { /* noop */ }
+}
+
+const loadProfile = () => {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
 const setAuthCookies = (user: User) => {
   setCookie(key('auth_key'), user.key.auth_key, ONE_HOUR)
   setCookie(key('refresh_key'), user.key.refresh_key)
@@ -38,20 +74,28 @@ const clearAuthCookies = () => {
   deleteCookie(key('new_user_verify_id'))
 }
 
+// Hydrate from cookies + localStorage on startup so page reloads keep the user logged in.
+// tokenSetAt is null to force a fresh token refresh on first AppInitializer run.
+const storedAuthKey = readCookie(key('auth_key'))
+const storedRefreshKey = readCookie(key('refresh_key'))
+const storedLoginFlag = readCookie(key('login')) === 'true'
+const storedFirebaseToken = readCookie(key('firebase_token'))
+const storedProfile = loadProfile()
+
 const initialState: AuthSliceState = {
-  isAuthenticated: false,
-  userId: '',
-  email: '',
-  firstName: '',
-  lastName: '',
-  profilePic: '',
-  mobile: '',
-  dialCode: '',
-  emailVerified: false,
-  otpEnabled: false,
-  authKey: '',
-  refreshKey: '',
-  firebaseToken: '',
+  isAuthenticated: storedLoginFlag && !!storedRefreshKey,
+  userId: storedProfile?.id ?? readCookie(key('logged_in_user_id')),
+  email: storedProfile?.email ?? '',
+  firstName: storedProfile?.first_name ?? '',
+  lastName: storedProfile?.last_name ?? '',
+  profilePic: storedProfile?.profile_pic ?? '',
+  mobile: storedProfile?.mobile ?? '',
+  dialCode: storedProfile?.dial_code ?? '',
+  emailVerified: storedProfile?.email_verified ?? false,
+  otpEnabled: storedProfile?.otp_enabled ?? false,
+  authKey: storedAuthKey,
+  refreshKey: storedRefreshKey,
+  firebaseToken: storedFirebaseToken,
   tokenSetAt: null,
   verifyId: null,
   countries: [],
@@ -80,6 +124,7 @@ export const authSlice = createSlice({
       state.tokenSetAt = Date.now()
       state.verifyId = null
       setAuthCookies(user)
+      saveProfile(user)
     },
 
     setVerifyId: (state, action: PayloadAction<string>) => {
@@ -105,8 +150,16 @@ export const authSlice = createSlice({
     },
 
     logout: (state) => {
-      Object.assign(state, initialState)
+      Object.assign(state, {
+        isAuthenticated: false,
+        userId: '', email: '', firstName: '', lastName: '',
+        profilePic: '', mobile: '', dialCode: '',
+        emailVerified: false, otpEnabled: false,
+        authKey: '', refreshKey: '', firebaseToken: '',
+        tokenSetAt: null, verifyId: null,
+      })
       clearAuthCookies()
+      clearProfile()
     },
   },
 })

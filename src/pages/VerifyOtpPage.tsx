@@ -69,7 +69,7 @@ export default function VerifyOtpPage() {
             required
           />
 
-          <button style={{ ...styles.btn, opacity: isVerifying ? 0.7 : 1 }} disabled={isVerifying || code.length < 4}>
+          <button style={{ ...styles.btn, opacity: isVerifying ? 0.7 : 1 }} disabled={isVerifying || code.length < 6}>
             {isVerifying ? 'Verifying…' : 'Verify'}
           </button>
         </form>

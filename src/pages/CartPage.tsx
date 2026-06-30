@@ -103,7 +103,7 @@ export default function CartPage() {
                 <span style={{ fontSize: 18, color: '#111' }}>{summary.grand_total.formatted}</span>
               </div>
 
-              <button style={s.checkoutBtn}>
+              <button onClick={() => navigate("/checkout")} style={s.checkoutBtn}>
                 Proceed to checkout
               </button>
 
