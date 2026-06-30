@@ -3,11 +3,16 @@ import { persistStore, persistReducer } from 'redux-persist'
 import { authApi } from './auth/api'
 import { listingApi } from './listing/api'
 import { cartApi } from './cart/api'
+import { ordersApi } from './orders/api'
+import { categoriesApi } from './categories/api'
+import { addressesApi } from './addresses/api'
+import { shippingMethodsApi } from './shipping-methods/api'
+import { paymentMethodsApi } from './payment-methods/api'
+import { commissionsApi } from './commissions/api'
+import { schedulesApi } from './schedules/api'
 import { authSlice } from './auth/slice'
 import { appSlice } from './app/slice'
 
-// Direct localStorage wrapper — avoids redux-persist/lib/storage CJS/ESM interop issues in Vite.
-// Falls back to no-ops on the server (Next.js SSR) where window is undefined.
 const storage = typeof window !== 'undefined'
   ? {
       getItem:    (key: string) => Promise.resolve(localStorage.getItem(key)),
@@ -32,9 +37,15 @@ const rootReducer = combineReducers({
   [authApi.reducerPath]: authApi.reducer,
   [listingApi.reducerPath]: listingApi.reducer,
   [cartApi.reducerPath]: cartApi.reducer,
+  [ordersApi.reducerPath]: ordersApi.reducer,
+  [categoriesApi.reducerPath]: categoriesApi.reducer,
+  [addressesApi.reducerPath]: addressesApi.reducer,
+  [shippingMethodsApi.reducerPath]: shippingMethodsApi.reducer,
+  [paymentMethodsApi.reducerPath]: paymentMethodsApi.reducer,
+  [commissionsApi.reducerPath]: commissionsApi.reducer,
+  [schedulesApi.reducerPath]: schedulesApi.reducer,
 })
 
-// Derive RootState from rootReducer — not from store.getState — to avoid circular dependency
 export type RootState = ReturnType<typeof rootReducer>
 
 const persistedReducer = persistReducer(persistConfig, rootReducer)
@@ -45,7 +56,14 @@ export const store = configureStore({
     getDefaultMiddleware({ serializableCheck: false })
       .concat(authApi.middleware)
       .concat(listingApi.middleware)
-      .concat(cartApi.middleware),
+      .concat(cartApi.middleware)
+      .concat(ordersApi.middleware)
+      .concat(categoriesApi.middleware)
+      .concat(addressesApi.middleware)
+      .concat(shippingMethodsApi.middleware)
+      .concat(paymentMethodsApi.middleware)
+      .concat(commissionsApi.middleware)
+      .concat(schedulesApi.middleware),
 })
 
 export const persistor = persistStore(store)

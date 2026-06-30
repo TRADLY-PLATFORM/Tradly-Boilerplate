@@ -103,9 +103,10 @@ export const authApi = createApi({
 
     // result.data → { verify_id: string }
     forgotPassword: builder.mutation<ForgotPasswordResponse, ForgotPasswordInput>({
-      queryFn: async (input) => {
+      queryFn: async (input, { getState }) => {
+        const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.forgotPassword(input)
+          const res = await authAPI.forgotPassword(input, currency, language)
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Request failed' } }
           return { data: { verify_id: res.data!.verify_id } }
@@ -117,9 +118,10 @@ export const authApi = createApi({
 
     // result.data → void
     setPassword: builder.mutation<void, SetPasswordInput>({
-      queryFn: async (input) => {
+      queryFn: async (input, { getState }) => {
+        const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.setPassword(input)
+          const res = await authAPI.setPassword(input, currency, language)
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Password reset failed' } }
           return { data: undefined }
@@ -171,7 +173,8 @@ export const authApi = createApi({
         const state = getState() as LocalState
         const { authKey, refreshKey, tokenSetAt } = state.auth
 
-        if (authKey && tokenSetAt && Date.now() - tokenSetAt < ONE_HOUR_MS)
+        // tokenSetAt is null on first load (forced refresh) — explicit null check avoids NaN
+        if (authKey && tokenSetAt !== null && Date.now() - tokenSetAt < ONE_HOUR_MS)
           return { data: { auth_key: authKey, refresh_key: refreshKey } }
 
         if (!refreshKey) {
@@ -183,11 +186,13 @@ export const authApi = createApi({
 
         try {
           const res = await authAPI.refreshAuth(refreshKey)
-          if (!res?.status) {
+          // SDK returns { status: true, data: { auth_key, refresh_key } } on success
+          // or { error: { code, message } } / falsy status on failure
+          if (!res?.status || res?.error) {
             dispatch(logout())
             dispatch(cartApi.util.resetApiState())
             dispatch(listingApi.util.resetApiState())
-            return { error: { status: 'CUSTOM_ERROR', error: 'Token refresh failed' } }
+            return { error: { status: 'CUSTOM_ERROR', error: (res as any)?.error?.message ?? 'Token refresh failed' } }
           }
           const tokens: UserTokens = {
             auth_key: res.data?.auth_key ?? '',

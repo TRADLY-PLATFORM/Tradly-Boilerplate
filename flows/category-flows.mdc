@@ -1,0 +1,480 @@
+---
+description: Guide for implementing category flows in this Tradly boilerplate
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Category Flows — Tradly Boilerplate
+
+## Architecture
+
+```
+Component
+  → useGetCategoriesQuery / useGetCategoryBySlugQuery / useGetCategoryListingsQuery / etc.
+      → categoriesAPI.getCategories / getCategoryBySlug / getCategoryById / getCategoryListings  (api/categories.ts)
+          → TradlySDK.app.*  with buildAppQueryPayload / buildAppDirectPayload
+```
+
+**SDK payload builders used:**
+- `getCategories` → `buildAppQueryPayload` → `{ bodyParam, pkKey, authKey, currency, language }`
+- `getCategoryBySlug` → `buildAppDirectPayload` → `{ slug, pkKey, authKey, currency, language }`
+- `getCategoryById` → `buildAppDirectPayload` → `{ categoryID, pkKey, authKey, currency, language }`
+- `getCategoryListings` → `buildAppQueryPayload` → `{ bodyParam: { category_id, page, ... }, pkKey, authKey, currency, language }`
+
+**State alignment:**
+- Category list and detail are cached for **5 minutes** (`keepUnusedDataFor: 300`) — no re-fetch on navigate-back
+- Category listings (filtered via `category_id`) are a separate cache entry per category + page — paginating does NOT evict previous pages
+- Both listing and account categories use the same `getCategories` endpoint — differentiated by `type` param
+- `getCategoryBySlug` has built-in slug → ID fallback inside `state/categories/api.ts` — no fallback needed in components
+
+---
+
+## Types Reference
+
+```ts
+// @/types/category.types.ts
+
+interface CategoryHierarchy {
+  id: string | number
+  name: string
+  slug?: string
+}
+
+interface Category {
+  id: string | number
+  name: string
+  slug?: string
+  description?: string
+  image?: string
+  parent_id?: string | number | null
+  sub_category?: Category[]       // nested children — may be empty []
+  hierarchy?: CategoryHierarchy[] // ancestors from root to current — for breadcrumbs
+  type?: 'listing' | 'account'
+}
+
+interface GetCategoriesParams {
+  page?: number
+  type?: 'listing' | 'account'  // omit for listing categories (default)
+}
+
+interface GetCategoryListingsParams {
+  category_id: number | string   // required
+  page?: number
+  limit?: number
+  [key: string]: unknown         // any additional listing filters (price, sort, etc.)
+}
+```
+
+---
+
+## Slug Generation
+
+Categories use URL slugs for routing. When a category has no slug, generate one from its ID and name.
+
+```tsx
+import { slug as toSlug } from 'github-slugger'
+
+// Pattern: use slug if available, fallback to "id-name"
+const getCategorySlug = (category: Category): string =>
+  category.slug ?? `${category.id}-${toSlug(String(category.name))}`
+
+// Examples:
+// { id: 123, name: "Electronics", slug: "electronics" } → "electronics"
+// { id: 123, name: "Electronics", slug: undefined }     → "123-electronics"
+// { id: 123, name: "Café & Restaurant" }                → "123-caf-restaurant"
+
+// Route path
+const href = { pathname: '/lc/[slug]', query: { slug: getCategorySlug(category) } }
+```
+
+---
+
+## Fetch Listing Categories (type: 'listing')
+
+```tsx
+import { useGetCategoriesQuery } from '@/state/categories/api'
+
+// Omit type for listing categories (it's the default)
+const { data, isLoading } = useGetCategoriesQuery({ page: 1 })
+
+const categories = data?.categories ?? []
+
+// Root-level categories (no parent)
+const rootCategories = categories.filter(c => !c.parent_id)
+
+// Subcategories of a given root (via sub_category on the parent object)
+// The SDK returns nested sub_category arrays directly — no separate fetch needed
+rootCategories[0]?.sub_category  // Category[] — children of first root category
+
+// Category card / menu item
+categories.map(category => ({
+  id:          category.id,
+  name:        category.name,
+  image:       category.image,
+  href:        `/lc/${getCategorySlug(category)}`,
+  hasChildren: (category.sub_category?.length ?? 0) > 0,
+}))
+```
+
+---
+
+## Fetch Account Categories (type: 'account')
+
+Account categories power store/seller browsing — different from listing categories.
+
+```tsx
+const { data } = useGetCategoriesQuery({ type: 'account', page: 1 })
+
+const accountCategories = data?.categories ?? []
+
+// Route for account category browsing (uses /a/ prefix by convention)
+const href = { pathname: '/a/[slug]', query: { slug: getCategorySlug(category) } }
+```
+
+---
+
+## Fetch Category Detail by Slug
+
+Used on the category listings page (`/lc/[slug]`) to get category name, description, image, and hierarchy.
+
+```tsx
+import { useGetCategoryBySlugQuery } from '@/state/categories/api'
+
+const slug = router.query.slug as string
+
+const { data, isLoading, isError } = useGetCategoryBySlugQuery(slug, {
+  skip: !slug,
+})
+
+const category = data?.category
+
+// If isError after loading — slug is invalid, redirect to /not-found
+if (!isLoading && isError) {
+  router.replace('/not-found')
+}
+
+// Category detail fields
+category?.name                    // page title
+category?.description             // page description
+category?.image                   // hero image / banner
+category?.hierarchy               // CategoryHierarchy[] — ancestors for breadcrumb
+category?.sub_category            // Category[] — child categories (show as filter chips)
+```
+
+**Slug → ID fallback is automatic** inside `state/categories/api.ts`:
+1. Tries `getSingleCategoryBySlug`
+2. If that fails, extracts the leading number from the slug (`"123-electronics"` → `"123"`) and tries `getSingleCategoryByID`
+3. If both fail, returns an error — component handles redirect
+
+---
+
+## Fetch Category Detail by ID
+
+When you already have the numeric ID (e.g. from a listing's `categories` field).
+
+```tsx
+import { useGetCategoryByIdQuery } from '@/state/categories/api'
+
+const { data } = useGetCategoryByIdQuery(category.id, {
+  skip: !category?.id,
+})
+```
+
+---
+
+## Fetch Listings in a Category
+
+Category listings page: show all listings that belong to the selected category.
+
+```tsx
+import { useGetCategoryListingsQuery } from '@/state/categories/api'
+import type { GetCategoryListingsParams } from '@/types/category.types'
+
+const [page, setPage] = useState(1)
+const categoryId = data?.category?.id  // from useGetCategoryBySlugQuery above
+
+const { data: listingsData, isLoading, isFetching } = useGetCategoryListingsQuery(
+  { category_id: categoryId!, page, limit: 30 },
+  { skip: !categoryId },
+)
+
+const listings      = listingsData?.listings ?? []
+const totalRecords  = listingsData?.total_records ?? 0
+const totalPages    = Math.ceil(totalRecords / 30)
+const currentPage   = listingsData?.page ?? 1
+
+// Pagination
+<ReactPaginate
+  pageCount={totalPages}
+  forcePage={currentPage - 1}
+  onPageChange={({ selected }) => setPage(selected + 1)}
+/>
+
+// Empty state
+{!isLoading && listings.length === 0 && (
+  <p>No listings found in this category.</p>
+)}
+```
+
+### With extra filters
+
+Pass any listing filter param alongside `category_id` — they all go into the same `bodyParam`.
+
+```tsx
+const params: GetCategoryListingsParams = {
+  category_id: categoryId!,
+  page,
+  limit: 30,
+  // Optional filters — append as needed from URL query or filter UI
+  ...(router.query.min_price  ? { min_price:  Number(router.query.min_price)  } : {}),
+  ...(router.query.max_price  ? { max_price:  Number(router.query.max_price)  } : {}),
+  ...(router.query.sort_by    ? { sort_by:    router.query.sort_by            } : {}),
+  ...(router.query.order_type ? { type:       router.query.order_type         } : {}),
+}
+
+const { data } = useGetCategoryListingsQuery(params, { skip: !categoryId })
+```
+
+---
+
+## Category Listings Page — Full Pattern
+
+Combines `useGetCategoryBySlugQuery` + `useGetCategoryListingsQuery` on a single page.
+
+```tsx
+import { useGetCategoryBySlugQuery, useGetCategoryListingsQuery } from '@/state/categories/api'
+import { useLikeListingMutation, useUnlikeListingMutation } from '@/state/listing/api'
+
+function CategoryListingsPage() {
+  const router = useRouter()
+  const slug   = router.query.slug as string
+  const [page, setPage] = useState(1)
+
+  // 1. Resolve category detail from slug
+  const { data: catData, isLoading: catLoading, isError: catError } =
+    useGetCategoryBySlugQuery(slug, { skip: !slug })
+
+  const category = catData?.category
+
+  // 2. Fetch listings once category id is known
+  const { data: listData, isLoading: listLoading, isFetching } =
+    useGetCategoryListingsQuery(
+      { category_id: category!.id, page },
+      { skip: !category?.id },
+    )
+
+  // 3. Redirect to 404 if category not found
+  useEffect(() => {
+    if (!catLoading && catError) router.replace('/not-found')
+  }, [catLoading, catError])
+
+  // 4. Reset to page 1 when slug changes (user navigated to different category)
+  useEffect(() => { setPage(1) }, [slug])
+
+  const listings     = listData?.listings ?? []
+  const totalPages   = Math.ceil((listData?.total_records ?? 0) / 30)
+  const currentPage  = listData?.page ?? 1
+
+  if (catLoading) return <PageSkeleton />
+
+  return (
+    <div>
+      {/* Breadcrumb — using hierarchy */}
+      <Breadcrumb
+        items={[
+          { name: 'Home', href: '/' },
+          { name: 'Categories', href: '/lc' },
+          ...(category?.hierarchy?.map(h => ({
+            name: h.name,
+            href: `/lc/${h.slug ?? `${h.id}-${toSlug(String(h.name))}`}`,
+          })) ?? []),
+          { name: category?.name ?? '', href: '' },
+        ]}
+      />
+
+      {/* Category header */}
+      {category?.image && <img src={category.image} alt={category.name} />}
+      <h1>{category?.name}</h1>
+      {category?.description && <p>{category.description}</p>}
+
+      {/* Subcategory chips — quick filter into child category */}
+      {(category?.sub_category?.length ?? 0) > 0 && (
+        <div className="flex gap-2">
+          {category!.sub_category!.map(sub => (
+            <Link key={sub.id} href={`/lc/${getCategorySlug(sub)}`}>
+              {sub.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* Listings grid */}
+      {listLoading ? (
+        <ListingsSkeleton />
+      ) : listings.length === 0 ? (
+        <EmptyState message="No listings in this category yet." />
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {listings.map(listing => (
+            <ListingCard key={listing.id} listing={listing} />
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <ReactPaginate
+          pageCount={totalPages}
+          forcePage={currentPage - 1}
+          onPageChange={({ selected }) => setPage(selected + 1)}
+        />
+      )}
+    </div>
+  )
+}
+```
+
+---
+
+## Category Dropdown / Navigation Menu
+
+Render the category tree in a header nav or sidebar. Use `sub_category` for nested rendering.
+
+```tsx
+import { useGetCategoriesQuery } from '@/state/categories/api'
+
+function CategoryNav() {
+  const { data } = useGetCategoriesQuery({ page: 1 })
+  const categories = data?.categories ?? []
+
+  return (
+    <nav>
+      {categories.map(category => (
+        <CategoryMenuItem key={category.id} category={category} />
+      ))}
+    </nav>
+  )
+}
+
+// Recursive — renders children when sub_category is non-empty
+function CategoryMenuItem({ category }: { category: Category }) {
+  const hasChildren = (category.sub_category?.length ?? 0) > 0
+  const slug = getCategorySlug(category)
+
+  if (!hasChildren) {
+    return (
+      <Link href={`/lc/${slug}`}>{category.name}</Link>
+    )
+  }
+
+  return (
+    <div className="group relative">
+      <Link href={`/lc/${slug}`}>{category.name}</Link>
+
+      {/* Dropdown — visible on hover via group-hover */}
+      <div className="hidden group-hover:block absolute top-full left-0 z-10 bg-white shadow-lg">
+        {category.sub_category!.map(child => (
+          <CategoryMenuItem key={child.id} category={child} />
+        ))}
+      </div>
+    </div>
+  )
+}
+```
+
+### Active state — highlight current category in nav
+
+```tsx
+const slug = router.query.slug as string
+
+const isActive = (category: Category): boolean =>
+  slug === getCategorySlug(category) ||
+  // Also active when viewing a child — check hierarchy
+  (category.sub_category?.some(child => getCategorySlug(child) === slug) ?? false)
+
+<Link
+  href={`/lc/${getCategorySlug(category)}`}
+  className={isActive(category) ? 'text-primary font-bold' : ''}
+>
+  {category.name}
+</Link>
+```
+
+---
+
+## Category on Listing Detail Page
+
+Display the category breadcrumb/hierarchy from a listing's `categories` field — no extra fetch needed.
+
+```tsx
+// listing.categories comes from useGetListingDetailQuery — already in cache
+// Each category has a `hierarchy` array from root → current
+
+import { slug as toSlug } from 'github-slugger'
+
+function ListingCategoryBreadcrumb({ listing }: { listing: Listing }) {
+  const firstCategory = listing.categories[0]
+  if (!firstCategory?.hierarchy?.length) return null
+
+  return (
+    <div className="flex items-center gap-1 text-sm text-gray-500">
+      {firstCategory.hierarchy.map((item, index, arr) => (
+        <span key={item.id} className="flex items-center gap-1">
+          <Link href={`/lc/${item.slug ?? `${item.id}-${toSlug(String(item.name))}`}`}>
+            {item.name}
+          </Link>
+          {index < arr.length - 1 && <span>›</span>}
+        </span>
+      ))}
+    </div>
+  )
+}
+```
+
+---
+
+## Prefetch Categories (App Startup)
+
+Prefetch the category list at app root so the nav renders instantly without a loading state.
+
+```tsx
+// In src/app/App.tsx or a top-level layout component
+
+import { useGetCategoriesQuery } from '@/state/categories/api'
+
+function AppInitializer() {
+  // Prefetch with no args — result is cached for 5 min and reused everywhere
+  useGetCategoriesQuery({ page: 1 })
+  return null
+}
+```
+
+---
+
+## What NOT to do
+
+```ts
+// Never fetch category listings without category_id — the param is required
+useGetCategoryListingsQuery({ page: 1 })  // ❌ category_id missing
+useGetCategoryListingsQuery({ category_id: categoryId, page: 1 }, { skip: !categoryId })  // ✓
+
+// Never hardcode slug construction as id + name without toSlug — spaces will break URLs
+const slug = `${category.id}-${category.name}`          // ❌ "123-My Category"
+const slug = `${category.id}-${toSlug(category.name)}`  // ✓ "123-my-category"
+
+// Never implement your own slug→ID fallback — it's already in state/categories/api.ts
+// useGetCategoryBySlugQuery handles the fallback internally
+
+// Never fetch category detail and category listings with two separate useEffect chains
+// Use skip: !category?.id to chain them declaratively
+
+// Never use all_categories from old Redux slice — use useGetCategoriesQuery instead
+
+// Never show sub_category children without checking length > 0 first
+category.sub_category.map(...)           // ❌ may be undefined or []
+(category.sub_category?.length ?? 0) > 0 // ✓ guard first
+
+// Never link to /lc/[id] directly — always go through slug generation
+href={`/lc/${category.id}`}              // ❌ — ID alone may not resolve
+href={`/lc/${getCategorySlug(category)}`} // ✓
+```

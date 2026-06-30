@@ -1,0 +1,545 @@
+---
+description: Guide for implementing checkout and order flows in this Tradly boilerplate
+globs: ["**/*.tsx", "**/*.ts"]
+alwaysApply: false
+---
+
+# Checkout & Orders Flows — Tradly Boilerplate
+
+## Architecture
+
+```
+CheckoutPage (src/pages/CheckoutPage.tsx)
+  │
+  ├── Cart & summary        → useGetCartQuery (cartApi)
+  ├── Addresses             → useGetAddressesQuery (addressesApi)       [auth only]
+  ├── Storage hubs          → useGetStorageHubAddressesQuery (addressesApi)
+  ├── Shipping methods      → useGetShippingMethodsQuery (shippingMethodsApi)  [two patterns]
+  ├── Sub-shipment methods  → useGetSendCloudShipmentMethodsQuery       [conditional]
+  │                           useGetExternalShipmentMethodsQuery        [conditional]
+  ├── Payment methods       → useGetPaymentMethodsQuery (paymentMethodsApi)
+  ├── Schedules             → useGetSchedulesQuery (schedulesApi)       [events/appointments only]
+  ├── Cart commissions      → useGetCartCommissionsQuery (commissionsApi)
+  ├── Demand commissions    → useGetDemandCommissionsQuery (commissionsApi) [auth only]
+  ├── Coupon                → useApplyCouponMutation / useRemoveCouponMutation (cartApi)
+  │
+  └── Submit
+        ↓ useCheckoutMutation (ordersApi) → builds { order: {...}, cart?: {...} } for SDK
+        ↓
+        Payment channel routing:
+          stripe         → usePaymentIntentMutation → navigate('/payment')
+          web gateways   → buildWebPaymentUrl → window.open(url)
+          wallet / cash  → navigate('/thank-you/[order_reference]')
+        ↓
+  ThankYouPage  → /thank-you/:reference
+  OrdersPage    → /orders
+  OrderDetailPage → /orders/:id  → useGetOrderDetailQuery
+```
+
+---
+
+## SDK Payload Structure
+
+The SDK `checkout` call expects **nested** structure, not flat:
+
+```
+tradly.app.checkout({
+  data: {
+    order: {
+      payment_method_id,
+      shipping_method_id?,
+      shipping_address_id?,     // authenticated delivery
+      shipping_address?,        // guest delivery object
+      external_shipping_method_id?,  // SendCloud / external
+      type?,                    // checkoutType
+      schedule_start_at?,       // "YYYY-MM-DD HH:MM:00"
+      schedule_end_at?,
+      cart_commission?,         // [{ id, amount }]
+      demand_commission?,       // [id, id, ...]
+      anonymous_donation?,
+      guest?,
+      guest_email?,
+      guest_name?,
+      guest_phone?,
+    },
+    cart?: { id?, uuid? }       // uuid auto-injected by api/checkout.ts for guests
+  },
+  pkKey, authKey, currency, language
+})
+```
+
+`api/checkout.ts` handles this transformation — it receives a flat `FullCheckoutPayload`
+and wraps it as `{ order: orderFields, cart: cartRef }` before calling `buildAppMutationPayload`.
+**Never manually construct `{ order: {...} }` in components — use `FullCheckoutPayload` instead.**
+
+---
+
+## FullCheckoutPayload (flat type used in components)
+
+```ts
+// @/types/checkout.types.ts → FullCheckoutPayload
+
+const payload: FullCheckoutPayload = {
+  // Cart reference
+  cart: { id: summary.id },              // omit for guest; uuid auto-injected
+
+  // Order type — comes from listing.order_type
+  type: 'listings',                      // 'listings' | 'events' | 'appointments' | 'donation' | 'digital'
+
+  // Shipping — omit entirely for 'digital' and special types
+  shipping_method_id: selectedShipping.id,
+
+  // Address
+  shipping_address_id: selectedAddress.id,         // authenticated delivery
+  // OR:
+  shipping_address: { name: 'Jane', email: 'j@co' }, // guest delivery
+  // OR:
+  shipping_address_id: selectedHub.id,             // storage_hub type
+
+  // Sub-shipment (SendCloud or external extension)
+  external_shipping_method_id: selectedShipment.id,
+
+  // Payment
+  payment_method_id: selectedPayment.id,
+
+  // Coupon — use cart.coupon.code (source of truth); applied via API, not passed manually
+  coupon_code: summary.coupon.code,
+
+  // Cart commissions — buyer-entered amounts
+  cart_commission: [{ id: 1, amount: 50 }, { id: 2, amount: 20 }],
+
+  // Demand commissions — ids of enabled optional commissions
+  demand_commission: [3, 5],
+
+  // Events / appointments — "YYYY-MM-DD HH:MM:00"
+  schedule_start_at: '2025-03-01 10:00:00',
+  schedule_end_at:   '2025-03-01 11:00:00',
+
+  // Donation
+  anonymous_donation: true,
+
+  // Guest (when !isAuthenticated)
+  guest: true,
+  guest_email: 'buyer@email.com',
+  guest_name:  'Jane Doe',
+  guest_phone: '+1 555 000 0000',
+}
+```
+
+---
+
+## Checkout Type Behavior Matrix
+
+| checkoutType | Shipping needed | Address needed | Schedule needed | SDK type field |
+|---|---|---|---|---|
+| `listings` | ✓ | ✓ (delivery) | ✗ | `listings` |
+| `events` | ✗ | ✗ | ✓ | `events` |
+| `appointments` | ✗ | ✗ | ✓ | `appointments` |
+| `donation` | ✗ | ✗ | ✗ | `donation` |
+| `digital` | ✗ | ✗ | ✗ | `digital` |
+
+```ts
+const SPECIAL_TYPES  = ['events', 'appointments', 'donation']
+const SCHEDULE_TYPES = ['events', 'appointments']
+
+const checkoutType   = items[0]?.listing?.order_type ?? 'listings'
+const needsShipping  = !SPECIAL_TYPES.includes(checkoutType) && checkoutType !== 'digital'
+const isScheduleType = SCHEDULE_TYPES.includes(checkoutType)
+```
+
+---
+
+## Shipping Methods — Two Patterns
+
+Controlled by `AppConfig.enableShippingMethodsPreference` (`VITE_ENABLE_ACCOUNT_SHIPPING=true`).
+
+```tsx
+const useAccountShipping = AppConfig.enableShippingMethodsPreference
+const sellerAccountId    = items[0]?.listing?.account?.id
+
+// Pattern A — platform-wide (default): fetched immediately, no cart needed
+const { data: tenantData } = useGetShippingMethodsQuery(
+  { type: 'tenant', account_id: 0 },
+  { skip: !needsShipping || useAccountShipping },
+)
+
+// Pattern B — seller-specific: fetched only after cart loads (needs sellerAccountId)
+const { data: accountData } = useGetShippingMethodsQuery(
+  { type: 'account', account_id: sellerAccountId },
+  { skip: !needsShipping || !useAccountShipping || !sellerAccountId },
+)
+
+const shippingMethods = (useAccountShipping ? accountData : tenantData)
+  ?.shipping_methods?.filter(m => m.active) ?? []
+```
+
+**Rules:**
+- Only ONE of these two hooks fetches at a time (skip conditions are mutually exclusive)
+- Pattern B waits for `sellerAccountId` — RTK Query auto-skips until it resolves
+- Single-seller assumption: always uses `items[0]`'s seller
+
+---
+
+## Addresses
+
+```tsx
+// Shipping addresses — authenticated users only
+const { data: addressData } = useGetAddressesQuery(undefined, { skip: !isAuthenticated })
+const addresses = addressData?.addresses ?? []
+
+// Storage hub pick-up locations — always fetch (needed when type = storage_hub)
+const { data: hubData } = useGetStorageHubAddressesQuery()
+const storageHubs = hubData?.addresses ?? []
+
+// Auto-select default
+const defaultAddress = addresses.find(a => a.default) ?? addresses[0]
+```
+
+**Rules:**
+- **Never** call `useGetAddressesQuery()` without `{ skip: !isAuthenticated }` — guest API call will error
+- Guest users enter address via `guest_name` / `guest_email` fields — no address selection UI
+- Storage hub selection replaces delivery address when `selectedShipping.type === 'storage_hub'`
+- Storage hub ID goes into `shipping_address_id` in payload (same field as delivery)
+
+---
+
+## Sub-Shipment Methods (SendCloud & External)
+
+Both fetched reactively — trigger after user selects shipping method AND delivery address.
+
+```tsx
+const isSendCloud = selectedShipping?.channel === 'sendcloud'
+const isExternal  = !!(
+  selectedShipping?.metadata?.extension_id &&
+  selectedShipping?.metadata?.price_list !== false
+)
+
+// SendCloud — needs country_code from selected address
+const { data: scData } = useGetSendCloudShipmentMethodsQuery(
+  { shipping_method_id: selectedShipping.id, country: selectedAddress.country_code },
+  { skip: !isSendCloud || !selectedAddress },
+)
+
+// External extension — needs address.id
+const { data: extData } = useGetExternalShipmentMethodsQuery(
+  { shipping_method_id: selectedShipping.id, shipping_address_id: selectedAddress.id },
+  { skip: !isExternal || !selectedAddress?.id },
+)
+
+// Always reset selectedShipment when either input changes
+useEffect(() => { setSelectedShipment(null) }, [selectedShipping?.id, selectedAddress?.id])
+```
+
+**In payload:** both use `external_shipping_method_id: selectedShipment.id`
+
+---
+
+## Schedules (Events & Appointments)
+
+```tsx
+import { useGetSchedulesQuery } from '@/state/schedules/api'
+import type { SchedulesPerDay, ScheduleSlot } from '@/api/schedules'
+
+const startDate = useMemo(() => dayjs().format('YYYY-MM-DD'), [])
+const [selectedDateIdx, setSelectedDateIdx] = useState(0)
+const [selectedSlotIdx, setSelectedSlotIdx] = useState<number | null>(null)
+
+const { data: scheduleData } = useGetSchedulesQuery(
+  { listingId: items[0]?.listing?.id, startAt: startDate, days: 30 },
+  { skip: !isScheduleType || !items[0] },
+)
+
+const schedulesPerDay: SchedulesPerDay[] = scheduleData?.schedules_per_day ?? []
+const dates = schedulesPerDay.map(s => s.day)
+
+// Reset slot when date changes
+useEffect(() => { setSelectedSlotIdx(null) }, [selectedDateIdx])
+
+// Build payload timestamps
+const buildSchedulePayload = () => {
+  if (!isScheduleType || selectedSlotIdx === null) return {}
+  const day  = schedulesPerDay[selectedDateIdx].day
+  const slot = schedulesPerDay[selectedDateIdx].schedules[selectedSlotIdx]
+  return {
+    schedule_start_at: `${day} ${slot.start_time}:00`,
+    schedule_end_at:   `${day} ${slot.end_time}:00`,
+  }
+}
+```
+
+**Validation:** `if (isScheduleType && selectedSlotIdx === null) return 'Select a date and time'`
+
+---
+
+## Cart Commissions
+
+```tsx
+import { useGetCartCommissionsQuery, useGetDemandCommissionsQuery } from '@/state/commissions/api'
+import type { CartCommissionEntry } from '@/types/checkout.types'
+
+// Cart commissions — buyer enters amounts, required ones block checkout
+const { data: cartCommData } = useGetCartCommissionsQuery()
+const cartCommissions = cartCommData?.commissions ?? []
+
+// Demand commissions — optional toggles, authenticated only
+const { data: demandCommData } = useGetDemandCommissionsQuery(undefined, { skip: !isAuthenticated })
+const demandCommissions = demandCommData?.commissions ?? []
+
+// State
+const [cartCommEntries, setCartCommEntries] = useState<CartCommissionEntry[]>([])
+const [demandCommIds,   setDemandCommIds]   = useState<number[]>([])
+
+// Apply a cart commission entry (amount must be within min/max bounds)
+const applyCartComm = (entry: CartCommissionEntry) =>
+  setCartCommEntries(prev => [...prev.filter(e => e.id !== entry.id), entry])
+
+// Toggle demand commission
+const toggleDemandComm = (id: number) =>
+  setDemandCommIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+// Validation — non-optional commissions must be applied before checkout
+const missingComm = cartCommissions.find(
+  c => !c.commission_data.optional && !cartCommEntries.find(e => e.id === c.id)
+)
+if (missingComm) return `Apply required commission: ${missingComm.title}`
+
+// In payload:
+// cart_commission:   cartCommEntries     → [{ id, amount }]
+// demand_commission: demandCommIds       → [id, id, ...]
+```
+
+---
+
+## Coupon
+
+```tsx
+import { useApplyCouponMutation, useRemoveCouponMutation } from '@/state/cart/api'
+
+const [applyCoupon,  { isLoading: applying  }] = useApplyCouponMutation()
+const [removeCoupon, { isLoading: removing  }] = useRemoveCouponMutation()
+
+// Apply
+const result = await applyCoupon({ cartId: summary.id, code: couponCode })
+// On success: cart re-fetches (tag invalidation) → summary.coupon.code is populated
+
+// Remove
+await removeCoupon({ cartId: summary.id })
+
+// In payload — use cart.coupon.code as source of truth (applied via API, not passed manually):
+const couponPayload = summary?.coupon?.code ? { coupon_code: summary.coupon.code } : {}
+```
+
+---
+
+## 11-Step Validation (exact order)
+
+```ts
+const validate = (): string | null => {
+  // 1. Schedule (events / appointments)
+  if (isScheduleType && selectedSlotIdx === null)
+    return 'Select a date and time for your booking.'
+
+  // 2. Shipping method required
+  if (needsShipping && !selectedShipping)
+    return 'Select a shipping method.'
+
+  // 3. Delivery address — authenticated
+  if (needsShipping && selectedShipping?.type === 'delivery' && isAuthenticated && !selectedAddress)
+    return 'Select a delivery address.'
+
+  // 4. Delivery address — guest
+  if (needsShipping && selectedShipping?.type === 'delivery' && !isAuthenticated && !guestName)
+    return 'Enter your delivery details.'
+
+  // 5. SendCloud sub-method
+  if (isSendCloud && !selectedShipment)
+    return 'Select a shipment method.'
+
+  // 6. External extension sub-method
+  if (isExternal && !selectedShipment)
+    return 'Select a shipment method.'
+
+  // 7. Storage hub address
+  if (selectedShipping?.type === 'storage_hub' && !selectedHub)
+    return 'Select a pick-up location.'
+
+  // 8. Payment method
+  if (!selectedPayment)
+    return 'Select a payment method.'
+
+  // 9. Required cart commissions
+  const missing = cartCommissions.find(
+    c => !c.commission_data.optional && !cartCommEntries.find(e => e.id === c.id)
+  )
+  if (missing) return `Apply required commission: ${missing.title}`
+
+  // 10. Guest email
+  if (!isAuthenticated && !guestEmail.includes('@'))
+    return 'Enter a valid email for guest checkout.'
+
+  // 11. Cart attributes — validated server-side; code 400 on submit
+  return null
+}
+```
+
+---
+
+## Payment Channel Routing
+
+After `useCheckoutMutation` succeeds, route based on `selectedPayment.channel` / `selectedPayment.type`:
+
+```ts
+import { buildWebPaymentUrl } from '@/api/checkout'
+import { usePaymentIntentMutation } from '@/state/orders/api'
+
+const [paymentIntent] = usePaymentIntentMutation()
+
+const routePayment = async (orderRef: string, pm: PaymentMethod) => {
+  // Stripe SDK — create payment intent → /payment page
+  if (pm.type === 'stripe') {
+    const result = await paymentIntent(orderRef)
+    if (!('error' in result)) {
+      navigate('/payment', {
+        state: { client_secret: result.data.client_secret, order_reference: orderRef }
+      })
+    }
+    return
+  }
+
+  // Web gateways — open paymentIntent URL in new window
+  // Covers: stripe_web, razorpay, billplz, payulatam, paydunya, mangopay, opp
+  const webTypes = ['stripe_web','razorpay','billplz','payulatam','paydunya','mangopay','opp']
+  if (pm.channel === 'web' || webTypes.includes(pm.type)) {
+    const url = buildWebPaymentUrl(orderRef, pm.id, authKey, guestEmail)
+    window.open(url)
+    navigate(`/thank-you/${orderRef}`)
+    return
+  }
+
+  // Native gateways (pawapay, korapay, paystack, flutterwave, checkoutcom, commercepay)
+  // → call respective deposit endpoint → open res.redirect_url
+  // These are payment-gateway-specific; see api/checkout.ts for buildWebPaymentUrl pattern
+
+  // Wallet, cash_on_delivery, default
+  navigate(`/thank-you/${orderRef}`)
+}
+```
+
+**Web payment URL format:**
+```
+https://{domain}/v1/payments/web/paymentIntent
+  ?order_reference={ref}
+  &payment_method_id={id}
+  &agent=web
+  &auth_key={key}         // authenticated users
+  &guest_email={email}    // guest users
+```
+Built by `buildWebPaymentUrl(ref, pmId, authKey, guestEmail?)` in `api/checkout.ts`.
+
+---
+
+## Error Codes
+
+| Code | Meaning | Action |
+|------|---------|--------|
+| `127` | Wallet amount not eligible for payment method | Show error, prompt user to pick different payment method |
+| `400` | Validation error (e.g. cart attribute) | Show server message |
+| `480` | Cart seller conflict | Clear cart |
+
+---
+
+## Order List & Detail
+
+```tsx
+import { useGetOrdersQuery, useGetOrderDetailQuery } from '@/state/orders/api'
+
+// Paginated order list
+const { data } = useGetOrdersQuery({ page: 1, limit: 20 })
+const orders = data?.orders ?? []
+
+// Order detail — by order reference or ID
+const { data } = useGetOrderDetailQuery(id)
+const order = data?.order
+
+// Status update (vendor)
+const [updateStatus] = useUpdateOrderStatusMutation()
+await updateStatus({ id: orderId, status: 'confirmed' })
+
+// Status badge colors
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  pending:       { bg: '#fef9c3', color: '#854d0e' },
+  confirmed:     { bg: '#dbeafe', color: '#1e40af' },
+  processing:    { bg: '#e0f2fe', color: '#0369a1' },
+  shipped:       { bg: '#ede9fe', color: '#6d28d9' },
+  delivered:     { bg: '#dcfce7', color: '#15803d' },
+  completed:     { bg: '#dcfce7', color: '#15803d' },
+  cancelled:     { bg: '#fee2e2', color: '#b91c1c' },
+  refunded:      { bg: '#f3f4f6', color: '#374151' },
+  failed:        { bg: '#fee2e2', color: '#b91c1c' },
+}
+```
+
+---
+
+## Direct Checkout (Buy Now)
+
+Bypasses cart entirely — purchase directly from listing detail page.
+
+```tsx
+import { useDirectCheckoutMutation } from '@/state/orders/api'
+
+const [directCheckout] = useDirectCheckoutMutation()
+
+const result = await directCheckout({
+  listingId: listing.id,
+  input: {
+    listing: {
+      id: listing.id,
+      quantity: 1,
+      ...(variantId ? { variant_id: variantId } : {}),
+      ...(listing.order_type === 'donation' ? { custom_price: donationAmount } : {}),
+    },
+    ...(selectedShippingId ? { shipping_method: { id: selectedShippingId } } : {}),
+    ...(selectedAddressId  ? { address: { id: selectedAddressId } } : {}),
+    ...(selectedPaymentId  ? { payment_method: { id: selectedPaymentId } } : {}),
+  },
+})
+
+if (!('error' in result)) {
+  navigate(`/thank-you/${result.data.order_reference}`)
+}
+```
+
+---
+
+## What NOT to do
+
+```ts
+// ❌ Never construct { order: {...} } in components — api/checkout.ts does the nesting
+const payload = { order: { payment_method_id: pm.id } }
+// ✓ Use flat FullCheckoutPayload — transformation is automatic
+
+// ❌ Never pass uuid from components — api/checkout.ts injects it for guests
+checkout({ cart: { uuid: deviceId } })
+// ✓ Omit cart.uuid — injected automatically when authKey is empty
+
+// ❌ Never skip { skip: !isAuthenticated } on address fetch
+useGetAddressesQuery()
+// ✓ Always: useGetAddressesQuery(undefined, { skip: !isAuthenticated })
+
+// ❌ Never hardcode order_reference in navigate
+navigate('/thank-you/123')
+// ✓ navigate(`/thank-you/${result.data.order_reference}`)
+
+// ❌ Never check selectedPayment.channel === 'stripe' — channel is 'sdk', type is 'stripe'
+if (pm.channel === 'stripe') { ... }
+// ✓ if (pm.type === 'stripe') { ... }
+
+// ❌ Never show shipping / address sections for events, appointments, donation, digital
+if (checkoutType === 'events') { /* still show shipping */ }
+// ✓ const needsShipping = !SPECIAL_TYPES.includes(checkoutType) && checkoutType !== 'digital'
+
+// ❌ Never pass coupon_code manually from user input — use cart.coupon.code (post-API apply)
+checkout({ coupon_code: userTypedCode })
+// ✓ Coupon is applied via useApplyCouponMutation first; payload reads summary.coupon.code
+```

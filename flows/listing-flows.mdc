@@ -555,3 +555,59 @@ listing.account.images[0]    // ✓
 // Never manually update liked or in_cart — cache invalidation handles it
 setIsInCart(true)  // ❌
 ```
+
+---
+
+## Listings by Category
+
+Use `category_id` to scope listings to a specific category. This is the same `useGetListingsQuery` hook — the cache entry is keyed by the full params object, so each `category_id` + `page` combo is cached independently.
+
+```tsx
+import { useGetListingsQuery } from '@/state/listing/api'
+
+// Listings for a specific category
+const { data, isLoading } = useGetListingsQuery({
+  category_id: category.id,
+  page: 1,
+  limit: 30,
+})
+
+// With additional filters
+const { data } = useGetListingsQuery({
+  category_id: category.id,
+  page: 1,
+  type: 'listings',       // filter by order_type inside the category
+  min_price: 10,
+  max_price: 500,
+  sort_by: 'price_asc',
+})
+```
+
+**For a full category listings page** — where you need the category name/description/hierarchy alongside the listings — use `useGetCategoryListingsQuery` from `@/state/categories/api` instead. That endpoint is dedicated to this flow and has its own tag for targeted invalidation. See `category-flows.mdc` → "Fetch Listings in a Category".
+
+---
+
+## Category Breadcrumb from Listing Detail
+
+No extra fetch needed — `listing.categories` is included in the detail response.
+
+```tsx
+// listing.categories[0].hierarchy → CategoryHierarchy[]
+// Each item: { id, name, slug?, level }
+
+import { slug as toSlug } from 'github-slugger'
+
+const firstCategory = listing.categories[0]
+firstCategory?.hierarchy?.map((item, index, arr) => (
+  <span key={item.id}>
+    <Link href={`/lc/${item.slug ?? `${item.id}-${toSlug(item.name)}`}`}>
+      {item.name}
+    </Link>
+    {index < arr.length - 1 && <span> › </span>}
+  </span>
+))
+
+// Flat breadcrumb string (for SEO / meta)
+const breadcrumb = firstCategory?.hierarchy?.map(h => h.name).join(' > ')
+// e.g. "Men > Clothing > Hoodies"
+```
