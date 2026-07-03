@@ -7,6 +7,15 @@ export default defineConfig(({ mode }) => ({
 	server: {
 		host: "0.0.0.0",
 		port: Number(process.env.PORT ?? 8080),
+		allowedHosts: true,
+		hmr: {
+			clientPort: 443,
+			protocol: "wss",
+		},
+	},
+	preview: {
+		host: "0.0.0.0",
+		port: Number(process.env.PORT ?? 8080),
 	},
 	plugins: [react()].filter(Boolean),
 	resolve: {
