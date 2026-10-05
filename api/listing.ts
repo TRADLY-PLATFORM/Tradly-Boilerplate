@@ -1,5 +1,5 @@
 import TradlySDK from "tradly";
-import { buildAppQueryPayload, buildAppDirectPayload } from "@/api/sdk-context";
+import { buildAppQueryPayload, buildAppDirectPayload } from "./sdk-context.ts";
 import type {
 	Listing,
 	GetListingsParams,
@@ -75,12 +75,11 @@ export const unlikeListing = (
 	currency: string,
 	language: string,
 ): Promise<TradlyListingSdkResponse<Record<string, never>>> =>
-	(TradlySDK as any).app.likeListing(
+	(TradlySDK as any).app.unlikeListing(
 		buildAppDirectPayload(
-			{ id, isLiked: true },
+			{ id, isUnLiked: true },
 			authKey,
 			currency,
 			language,
 		),
 	);
-

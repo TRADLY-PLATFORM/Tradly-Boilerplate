@@ -1,5 +1,5 @@
 import TradlySDK from 'tradly'
-import { AppConfig } from '@/config/app.config'
+import { AppConfig } from '../config/app.config.ts'
 
 export interface ScheduleSlot {
   id: number

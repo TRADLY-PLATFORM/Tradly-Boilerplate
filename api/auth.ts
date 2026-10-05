@@ -1,6 +1,6 @@
 import TradlySDK from "tradly";
-import { buildSdkPayload } from "@/api/sdk-context";
-import { getDeviceUUID } from "@/config/uuid";
+import { buildSdkPayload } from "./sdk-context.ts";
+import { getDeviceUUID } from "../config/uuid.ts";
 import type {
 	User,
 	SignInInput,
@@ -129,4 +129,3 @@ export const refreshAuth = (
 		firebase_token?: string;
 	}>
 > => TradlySDK.init.refreshAPI(refreshKey);
-

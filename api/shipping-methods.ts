@@ -1,5 +1,5 @@
 import TradlySDK from "tradly";
-import { buildAppDirectPayload, buildAppQueryPayload } from "@/api/sdk-context";
+import { buildAppDirectPayload, buildAppQueryPayload } from "./sdk-context.ts";
 import type {
 	GetShippingMethodsResponse,
 	GetShipmentMethodsResponse,
@@ -29,7 +29,7 @@ export const getSendCloudShipmentMethods = (
 	currency: string,
 	language: string,
 ): Promise<TradlyCheckoutSdkResponse<GetShipmentMethodsResponse>> =>
-	(TradlySDK as any).app.getSendCloudShipments(
+	(TradlySDK as any).app.getSendCloudShipmentsMethods(
 		buildAppQueryPayload(
 			params as Record<string, unknown>,
 			authKey,
@@ -45,12 +45,14 @@ export const getExternalShipmentMethods = (
 	currency: string,
 	language: string,
 ): Promise<TradlyCheckoutSdkResponse<GetShipmentMethodsResponse>> =>
-	(TradlySDK as any).app.getExternalShipments(
-		buildAppQueryPayload(
-			params as Record<string, unknown>,
-			authKey,
-			currency,
-			language,
-		),
+	(TradlySDK as any).app.getExternalShipmentMethods(
+		{
+			...buildAppQueryPayload(
+				{ shipping_address_id: params.shipping_address_id },
+				authKey,
+				currency,
+				language,
+			),
+			shipping_method_id: params.shipping_method_id,
+		},
 	);
-

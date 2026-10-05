@@ -1,5 +1,5 @@
 import TradlySDK from 'tradly'
-import { buildAppQueryPayload, buildAppMutationPayload, buildAppDirectPayload } from '@/api/sdk-context'
+import { buildAppQueryPayload, buildAppMutationPayload, buildAppDirectPayload } from './sdk-context.ts'
 import type {
   GetOrdersParams,
   GetOrdersResponse,

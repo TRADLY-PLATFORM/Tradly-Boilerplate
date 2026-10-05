@@ -1,6 +1,6 @@
 import TradlySDK from 'tradly'
-import { buildAppQueryPayload, buildAppMutationPayload } from '@/api/sdk-context'
-import { getDeviceUUID } from '@/config/uuid'
+import { buildAppQueryPayload, buildAppMutationPayload } from './sdk-context.ts'
+import { getDeviceUUID } from '../config/uuid.ts'
 import type {
   TradlyCartSdkResponse,
   GetCartResponse,

@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import * as authAPI from '@/api/auth'
 import { setCredentials, setVerifyId, updateTokens, logout } from './slice'
+import { parseSignUpResponse } from './signup-response'
 import { cartApi } from '@/state/cart/api'
 import { listingApi } from '@/state/listing/api'
 import type {
@@ -70,13 +71,20 @@ export const authApi = createApi({
         const { currency, language } = getLocale(getState() as LocalState)
         try {
           const res = await authAPI.signUp(input, currency, language)
-          if (res?.error)
-            return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Sign up failed' } }
-          const { verify_id } = res.data!
-          dispatch(setVerifyId(verify_id))
-          return { data: { verify_id } }
+          // The Tradly SDK can resolve with an Error when a request has no
+          // HTTP response. Parse the envelope before accessing its data.
+          const parsed = parseSignUpResponse(res)
+          if ('error' in parsed)
+            return { error: { status: 'CUSTOM_ERROR', error: parsed.error } }
+          dispatch(setVerifyId(parsed.verify_id))
+          return { data: { verify_id: parsed.verify_id } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return {
+            error: {
+              status: 'CUSTOM_ERROR',
+              error: err instanceof Error ? err.message : 'Sign up failed. Please try again.',
+            },
+          }
         }
       },
     }),

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.e2e/
 .env
 .env.local
 .env.*.local

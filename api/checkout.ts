@@ -3,9 +3,9 @@ import {
 	buildAppMutationPayload,
 	buildAppDirectPayload,
 	buildAppQueryPayload,
-} from "@/api/sdk-context";
-import { getDeviceUUID } from "@/config/uuid";
-import { AppConfig } from "@/config/app.config";
+} from "./sdk-context.ts";
+import { getDeviceUUID } from "../config/uuid.ts";
+import { AppConfig } from "../config/app.config.ts";
 import type { FullCheckoutPayload } from "@/types/checkout.types";
 import type {
 	DirectCheckoutInput,
@@ -126,7 +126,7 @@ export const buildExternalCheckoutUrl = (
 	guestEmail?: string,
 ): string => {
 	const redirectUri =
-		import.meta.env.VITE_REDIRECT_URI || window.location.origin;
+		AppConfig.redirectUri || window.location.origin;
 	const params = new URLSearchParams({
 		domain: AppConfig.domain,
 		redirect_uri: `${redirectUri}/payment-return`,

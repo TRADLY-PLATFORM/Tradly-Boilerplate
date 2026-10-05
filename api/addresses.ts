@@ -3,7 +3,7 @@ import {
 	buildAppQueryPayload,
 	buildAppMutationPayload,
 	buildAppDirectPayload,
-} from "@/api/sdk-context";
+} from "./sdk-context.ts";
 import type {
 	Address,
 	AddAddressInput,
@@ -69,4 +69,3 @@ export const getStorageHubAddresses = (
 			language,
 		),
 	);
-

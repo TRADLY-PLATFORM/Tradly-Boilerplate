@@ -1,5 +1,5 @@
 import TradlySDK from 'tradly'
-import { buildAppQueryPayload } from '@/api/sdk-context'
+import { buildAppQueryPayload } from './sdk-context.ts'
 import type { GetCommissionsResponse, TradlyCheckoutSdkResponse } from '@/types/checkout.types'
 
 // type: 'cart' for cart commissions, 'demand' + optional:true for demand commissions

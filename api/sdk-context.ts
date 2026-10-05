@@ -1,4 +1,4 @@
-import { AppConfig } from "@/config/app.config";
+import { AppConfig } from "../config/app.config.ts";
 
 // For auth SDK calls: TradlySDK.user.* — wraps in data + sends pkKey
 export const buildSdkPayload = <T extends object>(
@@ -46,4 +46,3 @@ export const buildAppDirectPayload = <T extends object>(
 	currency: string,
 	language: string,
 ) => ({ ...params, pkKey: AppConfig.pkKey, authKey, currency, language });
-

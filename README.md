@@ -55,6 +55,26 @@ VITE_DEFAULT_LANGUAGE=en
 
 Get your domain and public key from the [Tradly Dashboard](https://tradly.app/dashboard).
 
+## End-to-end checks
+
+This repo uses [TesterArmy e2e](https://github.com/tester-army/e2e). The contract suite covers every exported API wrapper (44 today), both payment URL routes, and every RTK Query endpoint (43 today), checking the SDK HTTP method and path each operation dispatches. It also scans the source for newly added wrappers or RTK endpoints, so the coverage check fails if one is added without a test mapping. The browser suite checks live listings and guest cart requests, plus the unauthenticated orders redirect.
+
+```bash
+pnpm install
+pnpm exec e2e-web install chromium
+pnpm test:e2e
+```
+
+Set `APP_URL` to test a running preview or deployed site instead of starting the local Vite server. The suite uses no AI model; it checks browser responses and page navigation directly.
+
+To probe all 44 SDK routes against a real Tradly workspace, configure `.env` with a dedicated sandbox domain, public key, and `VITE_TRADLY_ENV=sandbox`, then run:
+
+```bash
+E2E_RUN_LIVE_API_ENDPOINTS=1 pnpm test:e2e
+```
+
+The live probes use synthetic IDs, invalid credentials, and invalid payloads to avoid creating or changing commerce records. They check that each SDK route receives an HTTP response below 500. The contract suite is the check for exact method and path; a successful live business operation needs valid test account and record fixtures, which those probes intentionally do not supply.
+
 ### 3. Wrap your app with the store
 
 ```tsx

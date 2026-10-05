@@ -1,5 +1,5 @@
 import TradlySDK from 'tradly'
-import { buildAppQueryPayload, buildAppDirectPayload } from '@/api/sdk-context'
+import { buildAppQueryPayload, buildAppDirectPayload } from './sdk-context.ts'
 import type {
   Category,
   GetCategoriesParams,
