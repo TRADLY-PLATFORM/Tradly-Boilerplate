@@ -74,4 +74,23 @@
   .section-padding {
     @apply py-16 md:py-24 px-4;
   }
+  /* Subtle elevated surface for alternating sections */
+  .bg-surface {
+    @apply bg-coffee-secondary/20 rounded-2xl;
+  }
+  /* Full-bleed accent strip — use on a section wrapper for a colored band */
+  .section-accent {
+    @apply bg-coffee-primary text-coffee-primary-foreground;
+  }
+  /* Horizontal scroll row — use on a flex container for cards/tiles */
+  .scroll-row {
+    @apply flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide;
+  }
+  .scroll-row > * {
+    @apply snap-start shrink-0;
+  }
+  /* Badge pill */
+  .badge-category {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-coffee-secondary text-coffee-secondary-foreground border border-coffee-accent/20;
+  }
 }

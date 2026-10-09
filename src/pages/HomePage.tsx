@@ -7,7 +7,7 @@ import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { Search, ShoppingCart, Heart, ArrowRight } from "lucide-react";
+import { Search, ShoppingCart, Heart, ArrowRight, Check, Star, Users, Zap } from "lucide-react";
 import type { Listing } from "@/types/listing.types";
 
 function ListingCard({ listing }: { listing: Listing }) {
@@ -84,6 +84,59 @@ function ListingCardSkeleton() {
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="h-5 w-1/2" />
       </div>
+    </div>
+  );
+}
+
+/** Clickable category tile — pass emoji + name + optional count */
+function CategoryCard({ emoji, name, count, href = "#" }: { emoji: string; name: string; count?: number; href?: string }) {
+  return (
+    <Link to={href} className="group flex flex-col items-center gap-2 p-4 rounded-xl border border-border bg-card hover:bg-coffee-secondary/30 hover:border-coffee-accent/40 transition-all duration-200 text-center">
+      <span className="text-3xl">{emoji}</span>
+      <span className="text-sm font-medium text-foreground group-hover:text-coffee-accent transition-colors">{name}</span>
+      {count !== undefined && <span className="text-xs text-muted-foreground">{count.toLocaleString()}</span>}
+    </Link>
+  );
+}
+
+/** Trust / feature highlight badge — icon + title + one-line description */
+function TrustBadge({ icon: Icon, title, description }: { icon: React.ElementType; title: string; description: string }) {
+  return (
+    <div className="flex items-start gap-3 p-4">
+      <div className="shrink-0 w-9 h-9 rounded-lg bg-coffee-accent/10 flex items-center justify-center">
+        <Icon className="h-4 w-4 text-coffee-accent" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Section header with optional CTA link */
+function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: { label: string; href: string } }) {
+  return (
+    <div className="flex items-end justify-between mb-6">
+      <div>
+        <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground">{title}</h2>
+        {subtitle && <p className="text-muted-foreground text-sm mt-1">{subtitle}</p>}
+      </div>
+      {action && (
+        <Link to={action.href} className="text-sm font-medium text-coffee-accent hover:underline flex items-center gap-1 shrink-0">
+          {action.label} <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/** Stat / metric card — big number + label */
+function StatCard({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="text-center p-6">
+      <p className="font-display text-4xl font-bold text-coffee-accent">{value}</p>
+      <p className="text-sm text-muted-foreground mt-1">{label}</p>
     </div>
   );
 }
