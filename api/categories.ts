@@ -18,7 +18,8 @@ export const getCategories = (
   currency: string,
   language: string,
 ): Promise<TraldyCategorySdkResponse<GetCategoriesResponse>> => {
-  const bodyParam = params.page ? { ...params } : { ...params, page: 1 }
+  // parent=0 is required by the Tradly API to return top-level categories
+  const bodyParam = params.page ? { parent: 0, ...params } : { parent: 0, ...params, page: 1 }
   return (TradlySDK as any).app.getCategory(
     buildAppQueryPayload(bodyParam as Record<string, unknown>, authKey, currency, language),
   )
