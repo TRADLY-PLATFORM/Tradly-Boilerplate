@@ -4,6 +4,7 @@ import { useGetListingsQuery } from "@/state/listing/api";
 import { useGetCartQuery } from "@/state/cart/api";
 import { useAuthSelector } from "@/state/auth/selectors";
 import Layout from "../components/Layout";
+import CategoriesSection from "../components/CategoriesSection";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -183,6 +184,12 @@ export default function HomePage() {
         </div>
         {/* @sky:end */}
       </div>
+
+      {/* @sky:component categories — DO NOT REPLACE with hardcoded data; use CategoriesSection which fetches live from the API */}
+      <div className="mb-10">
+        <CategoriesSection limit={12} />
+      </div>
+      {/* @sky:end */}
 
       {/* States */}
       {isError && (
