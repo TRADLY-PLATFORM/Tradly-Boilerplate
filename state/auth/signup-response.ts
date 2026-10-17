@@ -16,16 +16,17 @@ export const parseSignUpResponse = (response: unknown): ParsedSignUpResponse => 
 	const result = response as {
 		status?: boolean
 		error?: { message?: string }
-		data?: { verify_id?: string }
+		data?: { verify_id?: string | number }
 	}
 
 	if (result.error) {
 		return { error: result.error.message || 'Sign up failed' }
 	}
 
-	if (result.status !== true || typeof result.data?.verify_id !== 'string' || !result.data.verify_id) {
+	const rawVerifyId = result.data?.verify_id
+	if (result.status !== true || rawVerifyId === undefined || rawVerifyId === null || rawVerifyId === '') {
 		return { error: 'Sign up failed. The service returned an invalid response.' }
 	}
 
-	return { verify_id: result.data.verify_id }
+	return { verify_id: String(rawVerifyId) }
 }
