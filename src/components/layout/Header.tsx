@@ -1,10 +1,17 @@
 // Design-only: Sky Builder may regenerate this file per site. All logic comes from `data`.
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ShoppingCart, User, LogOut, ShoppingBag, Menu, X } from 'lucide-react'
+import { ShoppingCart, User, LogOut, ShoppingBag, Menu, X, ChevronDown } from 'lucide-react'
 import { Button } from '@/src/components/ui/button'
 import type { LayoutData } from './useLayoutData'
 
+function categorySlug(cat: { slug?: string; id: string | number; name: string }): string {
+  return cat.slug ?? `${cat.id}-${String(cat.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`
+}
+
 export default function Header({ data }: { data: LayoutData }) {
+  const [catOpen, setCatOpen] = useState(false)
+
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -19,6 +26,27 @@ export default function Header({ data }: { data: LayoutData }) {
               {link.label}
             </Link>
           ))}
+          {data.categories.length > 0 && (
+            <div className="relative" onMouseEnter={() => setCatOpen(true)} onMouseLeave={() => setCatOpen(false)}>
+              <button className="flex items-center gap-1 text-sm text-foreground hover:text-coffee-accent transition-colors">
+                Categories <ChevronDown className={`h-3.5 w-3.5 transition-transform ${catOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {catOpen && (
+                <div className="absolute top-full left-0 mt-1 w-48 rounded-lg bg-background border border-border shadow-lg py-1 z-50">
+                  {data.categories.map(cat => (
+                    <Link
+                      key={cat.id}
+                      to={`/lc/${categorySlug(cat)}`}
+                      className="block px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                      onClick={() => setCatOpen(false)}
+                    >
+                      {cat.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
@@ -71,6 +99,14 @@ export default function Header({ data }: { data: LayoutData }) {
           {data.navLinks.map(link => (
             <Link key={link.to} to={link.to} className="text-sm" onClick={data.closeMobile}>{link.label}</Link>
           ))}
+          {data.categories.length > 0 && (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-1">Categories</p>
+              {data.categories.map(cat => (
+                <Link key={cat.id} to={`/lc/${categorySlug(cat)}`} className="text-sm pl-2" onClick={data.closeMobile}>{cat.name}</Link>
+              ))}
+            </>
+          )}
           {data.showCart && (
             <Link to={data.cartLink} className="text-sm" onClick={data.closeMobile}>Cart ({data.cartCount})</Link>
           )}

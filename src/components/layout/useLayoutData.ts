@@ -6,6 +6,8 @@ import { useDispatch } from 'react-redux'
 import { useAuthSelector } from '@/state/auth/selectors'
 import { useCartItemCount } from '@/state/cart/selectors'
 import { logout as logoutAction } from '@/state/auth/slice'
+import { useGetCategoriesQuery } from '@/state/categories/api'
+import type { Category } from '../../../types/category.types'
 import type { AppDispatch } from '@/state/store'
 import { layoutConfig } from './layout.config'
 
@@ -27,6 +29,8 @@ export interface LayoutData {
   firstName: string
   /** Primary navigation, already filtered for auth state and enabled pages. */
   navLinks: NavLink[]
+  /** Top-level categories for the nav dropdown (empty while loading). */
+  categories: Category[]
   /** True when the cart button should be shown (cart enabled and signed in). */
   showCart: boolean
   cartCount: number
@@ -48,8 +52,11 @@ export function useLayoutData(brandName: string): LayoutData {
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { data: categoriesData } = useGetCategoriesQuery({ page: 1, limit: 12 })
+  const categories = categoriesData?.categories ?? []
 
   const navLinks: NavLink[] = [{ label: 'Home', to: '/' }]
+  if (!isAuthenticated && layoutConfig.signUp) navLinks.push({ label: 'Sell', to: '/sign-up' })
   if (isAuthenticated && layoutConfig.orders) navLinks.push({ label: 'My Orders', to: '/orders' })
 
   const quickLinks: NavLink[] = [{ label: 'Home', to: '/' }]
@@ -70,6 +77,7 @@ export function useLayoutData(brandName: string): LayoutData {
     isAuthenticated,
     firstName: firstName || '',
     navLinks,
+    categories,
     showCart: isAuthenticated && layoutConfig.cart,
     cartCount,
     cartLink: '/cart',
