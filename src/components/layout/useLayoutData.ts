@@ -29,8 +29,8 @@ export interface LayoutData {
   firstName: string
   /** Primary navigation, already filtered for auth state and enabled pages. */
   navLinks: NavLink[]
-  /** Top-level categories for the nav dropdown (empty while loading). */
-  categories: Category[]
+  /** Live top-level categories as /lc/:slug links; empty while loading or when the store has none. */
+  categoryLinks: NavLink[]
   /** True when the cart button should be shown (cart enabled and signed in). */
   showCart: boolean
   cartCount: number
@@ -53,7 +53,10 @@ export function useLayoutData(brandName: string): LayoutData {
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const { data: categoriesData } = useGetCategoriesQuery({ page: 1, limit: 12 })
-  const categories = categoriesData?.categories ?? []
+  const categoryLinks: NavLink[] = (categoriesData?.categories ?? []).map((cat: Category) => ({
+    label: cat.name,
+    to: `/lc/${cat.slug ?? `${cat.id}-${String(cat.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}`,
+  }))
 
   const navLinks: NavLink[] = [{ label: 'Home', to: '/' }]
   if (!isAuthenticated && layoutConfig.signUp) navLinks.push({ label: 'Sell', to: '/sign-up' })
@@ -77,7 +80,7 @@ export function useLayoutData(brandName: string): LayoutData {
     isAuthenticated,
     firstName: firstName || '',
     navLinks,
-    categories,
+    categoryLinks,
     showCart: isAuthenticated && layoutConfig.cart,
     cartCount,
     cartLink: '/cart',
