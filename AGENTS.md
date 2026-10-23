@@ -40,17 +40,15 @@ shipping methods, schedules (bookings), commissions.
 4. **Otherwise call it generically** with `TradlySDK.app.commonFuntion` (sic):
    ```ts
    (TradlySDK as any).app.commonFuntion({
-     path: '/v1/reviews',          // documented path, see prefix rule below
+     path: '/v1/reviews',          // exactly as documented
      Method: 'GET',                // 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
      bodyParam: { page: 1 },       // query string, optional
      data: undefined,              // JSON body for POST/PUT/PATCH
      pkKey: AppConfig.pkKey, authKey, currency, language,
    })
    ```
-   **Path prefix rule:** endpoints under `/v1/listings`, `/v1/cart`, `/v1/orders`, `/v1/home`,
-   `/v1/feeds` and `/v1/variant_types` are served as `/products/v1/...`
-   (e.g. docs `/v1/listings/{id}/schedules_per_day` → `/products/v1/listings/{id}/schedules_per_day`).
-   All other paths are used exactly as documented.
+   Use paths exactly as documented (e.g. `/v1/listings/{id}/schedules_per_day`). The old
+   `/products/v1/...` prefix is deprecated; don't copy it from SDK internals.
 5. **Add it the same way the existing modules are built**: a function in `api/<domain>.ts`, an RTK
    Query endpoint in `state/<domain>/api.ts` (new `createApi` → register it in `state/store.ts`),
    types in `types/`. Pages use the generated hooks only, never the SDK directly.
