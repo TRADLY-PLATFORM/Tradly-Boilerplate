@@ -60,8 +60,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.19(tsx@4.23.14))
       tradly:
-        specifier: ^1.2.14
-        version: 1.2.14
+        specifier: ^1.2.15
+        version: 1.2.15
     devDependencies:
       '@e2e-dev/web':
         specifier: 0.12.0
@@ -997,6 +997,7 @@ packages:
 
   crypto-js@4.2.0:
     resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
+    deprecated: Active development of CryptoJS has been discontinued. This library is no longer maintained.
 
   cssesc@3.0.0:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
@@ -1464,8 +1465,8 @@ packages:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
 
-  tradly@1.2.14:
-    resolution: {integrity: sha512-0o5Wj1TOEBgMostGK+iksvhPfBD2L7QKCraAOgpYRd5post3OkxHKW7OanvEUaq1dwCDSGpgKFbTPuLPDjxgsQ==}
+  tradly@1.2.15:
+    resolution: {integrity: sha512-c0e3Kx6YRWQyQfTCgbIoaa2kIxu4u+dBU6El+VvNjFkTf7jbKZkGm4Lv5fC5ziUhTHypVWyhwThPbLnUYHxRYg==}
 
   ts-interface-checker@0.1.13:
     resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
@@ -2680,7 +2681,7 @@ snapshots:
     dependencies:
       is-number: 7.0.0
 
-  tradly@1.2.14:
+  tradly@1.2.15:
     dependencies:
       '@types/node': 16.18.126
       await-to-js: 3.0.0
