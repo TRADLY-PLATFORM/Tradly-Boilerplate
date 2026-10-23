@@ -142,3 +142,12 @@ the storefront UI. Tell the user that instead of building a page that will get 4
   They read everything from the `data` prop (`LayoutData`). No hooks, state or API calls there.
   Header/footer logic belongs in `src/components/layout/useLayoutData.ts`.
 - Links must point to routes that exist in `src/app/App.tsx`.
+
+## Language and direction
+
+The site's language, text direction and fixed UI words live in `src/components/layout/locale.ts`
+(`locale.language`, `locale.dir`, `locale.labels`). `src/main.tsx` applies `lang` and `dir` to the
+document. When you add or change visible text, write it in that language, and put any new fixed word
+(a button or menu label used in several places) in `locale.labels` instead of hard-coding English.
+When `locale.dir` is `'rtl'`, use logical Tailwind classes (`ms-*`, `me-*`, `ps-*`, `pe-*`,
+`text-start`, `text-end`, `start-*`, `end-*`), not `ml-*`, `mr-*`, `text-left`, `left-*`.

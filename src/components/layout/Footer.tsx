@@ -29,7 +29,7 @@ export default function Footer({ data }: { data: LayoutData }) {
           ))}
         </div>
         <div className="border-t border-coffee-primary-foreground/20 mt-8 pt-6 text-center text-sm opacity-50">
-          <p>&copy; {data.year} {data.brandName}. All rights reserved.</p>
+          <p>&copy; {data.year} {data.brandName}. {data.labels.allRightsReserved}</p>
         </div>
       </div>
     </footer>

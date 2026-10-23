@@ -10,6 +10,7 @@ import { useGetCategoriesQuery } from '@/state/categories/api'
 import type { Category } from '../../../types/category.types'
 import type { AppDispatch } from '@/state/store'
 import { layoutConfig } from './layout.config'
+import { locale, type LocaleLabels } from './locale'
 
 export interface NavLink {
   label: string
@@ -25,6 +26,8 @@ export interface LayoutData {
   brandName: string
   tagline: string
   year: number
+  /** Fixed UI words (Cart, Sign in...) in the site's language. Use these instead of hard-coded text. */
+  labels: LocaleLabels
   isAuthenticated: boolean
   firstName: string
   /** Primary navigation, already filtered for auth state and enabled pages. */
@@ -58,25 +61,26 @@ export function useLayoutData(brandName: string): LayoutData {
     to: `/lc/${cat.slug ?? `${cat.id}-${String(cat.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}`}`,
   }))
 
-  const navLinks: NavLink[] = [{ label: 'Home', to: '/' }]
-  if (!isAuthenticated && layoutConfig.signUp) navLinks.push({ label: 'Sell', to: '/sign-up' })
-  if (isAuthenticated && layoutConfig.orders) navLinks.push({ label: 'My Orders', to: '/orders' })
+  const navLinks: NavLink[] = [{ label: locale.labels.home, to: '/' }]
+  if (!isAuthenticated && layoutConfig.signUp) navLinks.push({ label: locale.labels.sell, to: '/sign-up' })
+  if (isAuthenticated && layoutConfig.orders) navLinks.push({ label: locale.labels.myOrders, to: '/orders' })
 
-  const quickLinks: NavLink[] = [{ label: 'Home', to: '/' }]
-  if (layoutConfig.orders) quickLinks.push({ label: 'My Orders', to: '/orders' })
-  if (layoutConfig.cart) quickLinks.push({ label: 'Cart', to: '/cart' })
+  const quickLinks: NavLink[] = [{ label: locale.labels.home, to: '/' }]
+  if (layoutConfig.orders) quickLinks.push({ label: locale.labels.myOrders, to: '/orders' })
+  if (layoutConfig.cart) quickLinks.push({ label: locale.labels.cart, to: '/cart' })
 
   const accountLinks: NavLink[] = []
-  if (layoutConfig.signIn) accountLinks.push({ label: 'Sign In', to: '/sign-in' })
-  if (layoutConfig.signUp) accountLinks.push({ label: 'Create Account', to: '/sign-up' })
+  if (layoutConfig.signIn) accountLinks.push({ label: locale.labels.signIn, to: '/sign-in' })
+  if (layoutConfig.signUp) accountLinks.push({ label: locale.labels.createAccount, to: '/sign-up' })
 
-  const footerLinkGroups: FooterLinkGroup[] = [{ title: 'Quick Links', links: quickLinks }]
-  if (accountLinks.length > 0) footerLinkGroups.push({ title: 'Account', links: accountLinks })
+  const footerLinkGroups: FooterLinkGroup[] = [{ title: locale.labels.quickLinks, links: quickLinks }]
+  if (accountLinks.length > 0) footerLinkGroups.push({ title: locale.labels.account, links: accountLinks })
 
   return {
     brandName,
     tagline: layoutConfig.tagline,
     year: new Date().getFullYear(),
+    labels: locale.labels,
     isAuthenticated,
     firstName: firstName || '',
     navLinks,
