@@ -331,3 +331,11 @@ Path placeholders appear as `{{id}}` or `:id`. See AGENTS.md for how to call the
 - `POST /v1/inventory/purchase-orders` — Create Purchase Order — /inventory/create-purchase-order
 - `PUT /v1/inventory/purchase-orders/:po_id` — Update Purchase Order — /inventory/update-purchase-order
 - `POST /v1/inventory/purchase-orders/:po_id/receive` — Receive Purchase Order — /inventory/receive-purchase-order
+
+## Not in the public docs (found in the SDK)
+
+- `GET /v1/orders/listings/donations` - Donations received by a listing (SDK getDonationsList)
+- `GET /v1/timeslots` - Time slot templates (SDK getTimeSlots)
+- `POST /v1/cart/coupon` - Apply a coupon (SDK applyCoupon)
+- `DELETE /v1/cart/coupon` - Remove a coupon (SDK removeCoupon)
+- `PUT /v1/listings/{id}/schedules` - Seller sets a listing schedule (SDK createSchedule)

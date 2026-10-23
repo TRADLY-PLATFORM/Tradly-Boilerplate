@@ -53,6 +53,53 @@ shipping methods, schedules (bookings), commissions.
    Query endpoint in `state/<domain>/api.ts` (new `createApi` → register it in `state/store.ts`),
    types in `types/`. Pages use the generated hooks only, never the SDK directly.
 
+## Order types: booking, crowdfunding and the rest are already built in
+
+Every listing has an `order_type`. It decides what the listing page and checkout do. **Booking,
+event tickets and donations are not separate systems: they are listings with a different
+`order_type`, and the detail page + checkout already handle them.** Read `flows/cart-flows.mdc`
+(button per type) and `flows/checkout-flows.mdc` (schedule picker) before changing them.
+
+| Site shape | `order_type` | What the user does | Already in this repo |
+|---|---|---|---|
+| Store / marketplace | `listings`, `digital` | Add to cart, check out | Listing page, cart, checkout |
+| Booking, appointments | `appointments` | Sign in, pick a date + slot, pay | Slot picker in `CheckoutPage` (`state/schedules`), payload `schedule_start_at` / `schedule_end_at` |
+| Events, tickets | `events` | Same as appointments, one event per cart | Same as above |
+| Crowdfunding, donations | `donation` | Enter an amount, optionally give anonymously | Amount field + goal progress bar in `ListingDetailPage` (`listing.goal_price`, `raised_amount`), `custom_price` on add-to-cart |
+| Enquiry-only listings | `information_listing` | Contact the seller, no cart | Branch exists in the flow guide |
+| Reverse marketplace | `requests` | Buyer posts a need (sign-in required) | Branch exists in the flow guide |
+
+Rules that follow from this:
+- **Homepage and category pages must link into the real thing**: a booking site sends visitors to `/lc/:slug` or `/listing/:slug`, a fundraiser's CTA goes to a campaign at `/listing/:slug`. Do not add a made-up booking form or donate button on the homepage.
+- A booking or donation listing only works if the listing itself has the right `order_type` (and schedules, or `goal_price`). Those are created by the seller in the Tradly dashboard, or via `POST /v1/listings`. This storefront has no listing-creation page.
+- Never skip `clearCart` before adding an event, appointment or donation (see the flow guide).
+
+### Endpoints behind these features
+
+Checked against the live API (a protected endpoint answers 401 without a login, an unknown one 404).
+"Docs" means it is in `docs/tradly-api.md`; "SDK only" means it is not in the public docs but the
+SDK calls it.
+
+| Purpose | Endpoint | Source | Wired here |
+|---|---|---|---|
+| Add to cart (incl. `custom_price` for donations) | `POST /v1/cart` | Docs | Yes (`api/cart.ts`) |
+| Check out (incl. `schedule_start_at`, `schedule_end_at`, `anonymous_donation`) | `POST /v1/cart/checkout` | Docs | Yes (`api/checkout.ts`) |
+| Available slots for a listing | `GET /v1/listings/{id}/schedules_per_day?start_at=&days=` | Docs | Yes (`api/schedules.ts`) |
+| Seller sets a listing's schedule | `PUT /v1/listings/{id}/schedules` (SDK `createSchedule`) | SDK only | No |
+| Time slot templates | `GET /v1/timeslots` (SDK `getTimeSlots`) | SDK only | No |
+| Donations received by a listing | `GET /v1/orders/listings/donations?listing_id=` (SDK `getDonationsList`) | SDK only | No |
+| My orders / order detail | `GET /v1/orders`, `GET /v1/orders/{id}` | Docs | Yes |
+| Offer / bid on a listing | `POST /v1/listings/{id}/negotiations` | Docs | No |
+| Reviews | `GET` / `POST /v1/reviews` | Docs | No |
+| Coupons | `POST` / `DELETE /v1/cart/coupon` (SDK `applyCoupon`, `removeCoupon`) | SDK only | No |
+| Subscriptions, memberships | `/v1/subscription_products`, `/v1/subscriptions/...`, Memberships section | Docs | No |
+
+Notes for the endpoints that aren't wired: use `TradlySDK.app.commonFuntion` with the path above
+if the SDK method looks broken. Two known problems in `tradly@1.2.14`: `getTimeSlots` builds a
+bad URL (missing leading slash; fixed in the SDK source, not yet in a published version), and
+`subscribe` issues a `GET` that the live API rejects with 405 (not fixed; use the Subscriptions
+pages in the docs and `commonFuntion`).
+
 ## Who can call what
 
 The storefront runs with the tenant's public `pkKey` plus the signed-in shopper's `authKey`.
