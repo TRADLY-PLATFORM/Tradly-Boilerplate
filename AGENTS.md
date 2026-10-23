@@ -32,7 +32,7 @@ shipping methods, schedules (bookings), commissions.
    https://developer.tradly.app/llms.txt, so check there if nothing fits.
 2. **Read its page**: `https://developer.tradly.app/<page>.md` (the page path is listed next to
    each endpoint) for query params, request body and response shape. Don't guess field names.
-3. **Use an SDK method if one exists.** `TradlySDK.app` wraps ~190 calls beyond the ones used
+3. **Prefer the documented API over the SDK.** The docs index is the source of truth; parts of the SDK are old (for example its feedback calls, `createFeedback` / `getFeedbackCategories` on `/v1/utils/feedback`, are superseded by Forms, below). If the docs have a newer endpoint for the job, use that, even when an SDK method exists for the old one. Otherwise **use an SDK method if one exists.** `TradlySDK.app` wraps ~190 calls beyond the ones used
    here, e.g. `getReviewList` / `addReview`, `applyCoupon` / `removeCoupon`, `getDonationsList`,
    `getSubscriptionList` / `subscribe`, `getCollection`, `getLayer`, `getTimeSlots`,
    `createSchedule`, `getVariants`, `getAccounts` / `followUnfollowAccounts`, `getWalletBalance`.
@@ -99,6 +99,35 @@ if the SDK method looks broken. Two known problems in `tradly@1.2.14`: `getTimeS
 bad URL (missing leading slash; fixed in the SDK source, not yet in a published version), and
 `subscribe` issues a `GET` that the live API rejects with 405 (not fixed; use the Subscriptions
 pages in the docs and `commonFuntion`).
+
+## Forms: contact, enquiry, lead capture, applications, waitlists, surveys, feedback
+
+Tradly has a generic **Forms API**. One mechanism covers contact forms, "request a quote", lead
+capture, seller or partner applications, waitlists, event sign-ups, surveys and customer feedback.
+Use it instead of inventing a backend or posting to a third-party service. **The SDK has no Forms
+calls**, so go through `commonFuntion` (see above) with the documented paths.
+
+How it works:
+1. A form (title, slug, status, and its fields) is created by an admin in the Tradly dashboard
+   (`POST /v1/forms`, admin only). Each field is an **attribute** (`attribute_id`, `required`,
+   `order_by`), so a form's fields and choices come from the Attributes API.
+2. The storefront reads the form: `GET /v1/forms/{id or slug}` returns the fields and choices. Render
+   the inputs from that response, don't hard-code them, so the dashboard stays in control.
+3. The visitor submits: `POST /v1/forms/{form_id}/submissions` with
+   `{ attribute_values: [{ attribute_id, values: [...] }], metadata?: {...} }`.
+4. The owner reads responses in the dashboard (`GET /v1/forms/{form_id}/submissions`,
+   `GET /v1/forms/submissions/{submission_id}`).
+
+Rules:
+- Check `GET /v1/forms` (filter `status=active`) for an existing form before asking the user to
+  create one. If none fits, tell them to create it in the dashboard and which fields to add.
+- Build a reusable `FormPage` / `DynamicForm` component and an RTK Query endpoint in
+  `state/forms/api.ts` (register it in `state/store.ts`). Link to it from the header, footer or
+  homepage only once the route exists in `src/app/App.tsx`.
+- Submitting needs the same `pkKey` + `authKey` context as everything else, so a signed-out visitor
+  may be asked to sign in first. Check the response; if it is 401, show the sign-in route.
+- Full page details: `https://developer.tradly.app/forms/submit-form.md` and its neighbours in the
+  Forms section of `docs/tradly-api.md`.
 
 ## Who can call what
 
