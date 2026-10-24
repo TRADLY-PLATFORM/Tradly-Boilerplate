@@ -9,7 +9,11 @@ export default function Header({ data }: { data: LayoutData }) {
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="container mx-auto px-4 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center space-x-2">
-          <ShoppingBag className="h-7 w-7 text-coffee-accent" />
+          {data.logoUrl ? (
+            <img src={data.logoUrl} alt={data.brandName} className="h-8 w-auto" />
+          ) : (
+            <ShoppingBag className="h-7 w-7 text-coffee-accent" />
+          )}
           <span className="font-display text-xl font-bold text-foreground">{data.brandName}</span>
         </Link>
 

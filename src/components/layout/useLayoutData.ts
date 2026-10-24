@@ -25,6 +25,8 @@ export interface FooterLinkGroup {
 export interface LayoutData {
   brandName: string
   tagline: string
+  /** The customer's logo image URL, or '' when they have none. Show it next to or instead of the brand name. */
+  logoUrl: string
   year: number
   /** Fixed UI words (Cart, Sign in...) in the site's language. Use these instead of hard-coded text. */
   labels: LocaleLabels
@@ -79,6 +81,7 @@ export function useLayoutData(brandName: string): LayoutData {
   return {
     brandName,
     tagline: layoutConfig.tagline,
+    logoUrl: layoutConfig.logoUrl,
     year: new Date().getFullYear(),
     labels: locale.labels,
     isAuthenticated,
