@@ -8,6 +8,7 @@ import type {
   GetCategoryListingsParams,
 } from '@/types/category.types'
 import type { Listing } from '@/types/listing.types'
+import { normalizeTradlyResponse } from '@/state/api-response'
 
 interface LocalState {
   auth: { authKey: string }
@@ -35,12 +36,12 @@ export const categoriesApi = createApi({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await categoriesAPI.getCategories(params, authKey, currency, language)
+          const res = normalizeTradlyResponse(await categoriesAPI.getCategories(params, authKey, currency, language), 'Failed to fetch categories', ['categories'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch categories' } }
           return { data: { categories: res.data!.categories } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: (result, _err, params) =>
@@ -60,21 +61,21 @@ export const categoriesApi = createApi({
       queryFn: async (slug, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await categoriesAPI.getCategoryBySlug(slug, authKey, currency, language)
+          const res = normalizeTradlyResponse(await categoriesAPI.getCategoryBySlug(slug, authKey, currency, language), 'Category not found', ['category'])
           if (!res?.error && res.data?.category) {
             return { data: { category: res.data.category } }
           }
 
           // Fallback: extract numeric ID from slug prefix ("123-name" → 123)
           const idFromSlug = slug.split('-')[0]
-          const fallback = await categoriesAPI.getCategoryById(idFromSlug, authKey, currency, language)
+          const fallback = normalizeTradlyResponse(await categoriesAPI.getCategoryById(idFromSlug, authKey, currency, language), 'Category not found', ['category'])
           if (!fallback?.error && fallback.data?.category) {
             return { data: { category: fallback.data.category } }
           }
 
           return { error: { status: 'CUSTOM_ERROR', error: 'Category not found' } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: (_result, _err, slug) => [{ type: 'Category', id: slug }],
@@ -86,12 +87,12 @@ export const categoriesApi = createApi({
       queryFn: async (id, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await categoriesAPI.getCategoryById(id, authKey, currency, language)
+          const res = normalizeTradlyResponse(await categoriesAPI.getCategoryById(id, authKey, currency, language), 'Category not found', ['category'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Category not found' } }
           return { data: { category: res.data!.category } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: (_result, _err, id) => [{ type: 'Category', id: String(id) }],
@@ -108,7 +109,7 @@ export const categoriesApi = createApi({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await categoriesAPI.getCategoryListings(params, authKey, currency, language)
+          const res = normalizeTradlyResponse(await categoriesAPI.getCategoryListings(params, authKey, currency, language), 'Failed to fetch listings', ['listings', 'page', 'total_records'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch listings' } }
           return {
@@ -119,7 +120,7 @@ export const categoriesApi = createApi({
             },
           }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       // Tag per category so invalidating one category's listings is possible

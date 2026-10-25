@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useSignInMutation } from '@/state/auth/api'
 import { Button } from '@/src/components/ui/button'
 import { Input } from '@/src/components/ui/input'
@@ -8,6 +8,7 @@ import { ShoppingBag } from 'lucide-react'
 
 export default function SignInPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [signIn, { isLoading }] = useSignInMutation()
 
   const [email, setEmail] = useState('')
@@ -22,7 +23,8 @@ export default function SignInPage() {
       setError((result.error as { error: string }).error ?? 'Sign in failed')
       return
     }
-    navigate('/')
+    const next = new URLSearchParams(location.search).get('next')
+    navigate(next?.startsWith('/') && !next.startsWith('//') ? next : '/')
   }
 
   return (
@@ -68,7 +70,7 @@ export default function SignInPage() {
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
-            <Link to="/sign-up" className="text-coffee-accent hover:underline font-medium">Sign up</Link>
+            <Link to={new URLSearchParams(location.search).get('next') ? `/sign-up?next=${encodeURIComponent(new URLSearchParams(location.search).get('next')!)}` : '/sign-up'} className="text-coffee-accent hover:underline font-medium">Sign up</Link>
           </p>
         </div>
       </div>

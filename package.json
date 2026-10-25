@@ -15,7 +15,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "test:e2e": "e2e run"
+    "test:e2e": "e2e run",
+    "test:api": "node --experimental-strip-types --test tests/api-response.test.mjs"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.10",

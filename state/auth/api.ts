@@ -2,6 +2,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import * as authAPI from '@/api/auth'
 import { setCredentials, setVerifyId, updateTokens, logout } from './slice'
 import { parseSignUpResponse } from './signup-response'
+import { normalizeTradlyResponse } from '@/state/api-response'
 import { cartApi } from '@/state/cart/api'
 import { listingApi } from '@/state/listing/api'
 import type {
@@ -50,7 +51,7 @@ export const authApi = createApi({
       queryFn: async (input, { dispatch, getState }) => {
         const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.signIn(input, currency, language)
+          const res = normalizeTradlyResponse(await authAPI.signIn(input, currency, language), 'Sign in failed', ['user'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Sign in failed' } }
           const user = res.data!.user
@@ -60,7 +61,7 @@ export const authApi = createApi({
           dispatch(listingApi.util.invalidateTags(['Listing']))
           return { data: { user } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -94,7 +95,7 @@ export const authApi = createApi({
       queryFn: async (input, { dispatch, getState }) => {
         const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.verifyOtp(input, currency, language)
+          const res = normalizeTradlyResponse(await authAPI.verifyOtp(input, currency, language), 'Verification failed', ['user'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Verification failed' } }
           const user = res.data!.user
@@ -104,7 +105,7 @@ export const authApi = createApi({
           dispatch(listingApi.util.invalidateTags(['Listing']))
           return { data: { user } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -114,12 +115,12 @@ export const authApi = createApi({
       queryFn: async (input, { getState }) => {
         const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.forgotPassword(input, currency, language)
+          const res = normalizeTradlyResponse(await authAPI.forgotPassword(input, currency, language), 'Request failed', ['verify_id'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Request failed' } }
           return { data: { verify_id: res.data!.verify_id } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -129,12 +130,12 @@ export const authApi = createApi({
       queryFn: async (input, { getState }) => {
         const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.setPassword(input, currency, language)
+          const res = normalizeTradlyResponse(await authAPI.setPassword(input, currency, language), 'Password reset failed')
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Password reset failed' } }
           return { data: undefined }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -144,14 +145,14 @@ export const authApi = createApi({
       queryFn: async (input, { dispatch, getState }) => {
         const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.resendOtp(input, currency, language)
+          const res = normalizeTradlyResponse(await authAPI.resendOtp(input, currency, language), 'Resend failed', ['verify_id'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Resend failed' } }
           const { verify_id } = res.data!
           dispatch(setVerifyId(verify_id))
           return { data: { verify_id } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -161,7 +162,7 @@ export const authApi = createApi({
       queryFn: async (input, { dispatch, getState }) => {
         const { currency, language } = getLocale(getState() as LocalState)
         try {
-          const res = await authAPI.socialSignIn(input, currency, language)
+          const res = normalizeTradlyResponse(await authAPI.socialSignIn(input, currency, language), 'Social sign in failed', ['user'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Social sign in failed' } }
           const user = res.data!.user
@@ -171,7 +172,7 @@ export const authApi = createApi({
           dispatch(listingApi.util.invalidateTags(['Listing']))
           return { data: { user } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -193,7 +194,7 @@ export const authApi = createApi({
         }
 
         try {
-          const res = await authAPI.refreshAuth(refreshKey)
+          const res = normalizeTradlyResponse(await authAPI.refreshAuth(refreshKey), 'Token refresh failed', ['auth_key', 'refresh_key'])
           // SDK returns { status: true, data: { auth_key, refresh_key } } on success
           // or { error: { code, message } } / falsy status on failure
           if (!res?.status || res?.error) {
@@ -213,7 +214,7 @@ export const authApi = createApi({
           dispatch(logout())
           dispatch(cartApi.util.resetApiState())
           dispatch(listingApi.util.resetApiState())
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),

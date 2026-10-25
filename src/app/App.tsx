@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useRefreshAuthMutation } from '@/state/auth/api'
 import { useAuthSelector } from '@/state/auth/selectors'
 import SignInPage from '../pages/SignInPage'
@@ -17,6 +17,7 @@ import OrderDetailPage from '../pages/OrderDetailPage'
 import CategoryListingsPage from '../pages/CategoryListingsPage'
 import PaymentPage from '../pages/PaymentPage'
 import PaymentReturnPage from '../pages/PaymentReturnPage'
+import SellPage from '../pages/SellPage'
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -44,8 +45,9 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
   const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
-  if (!isAuthenticated) return <Navigate to="/sign-in" replace />
+  if (!isAuthenticated) return <Navigate to={`/sign-in?next=${encodeURIComponent(location.pathname + location.search)}`} replace />
   return <>{children}</>
 }
 
@@ -67,6 +69,7 @@ export default function App() {
           <Route path="/lc/:slug" element={<CategoryListingsPage />} />
 
           {/* Protected */}
+          <Route path="/sell" element={<ProtectedRoute><SellPage /></ProtectedRoute>} />
           <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
           <Route path="/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />

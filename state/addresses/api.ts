@@ -6,6 +6,7 @@ import type {
 	GetAddressesResponse,
 	GetStorageHubAddressesResponse,
 } from "@/types/checkout.types";
+import { normalizeTradlyResponse } from "@/state/api-response";
 
 interface LocalState {
 	auth: { authKey: string };
@@ -32,11 +33,11 @@ export const addressesApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await addressesAPI.getAddresses(
+					const res = normalizeTradlyResponse(await addressesAPI.getAddresses(
 						authKey,
 						currency,
 						language,
-					);
+					), "Failed to fetch addresses", ["addresses"]);
 					if (res?.error)
 						return {
 							error: {
@@ -56,7 +57,7 @@ export const addressesApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -89,12 +90,15 @@ export const addressesApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res =
+					const res = normalizeTradlyResponse(
 						await addressesAPI.getStorageHubAddresses(
 							authKey,
 							currency,
 							language,
-						);
+						),
+						"Failed to fetch storage hubs",
+						["addresses"],
+					);
 					if (res?.error)
 						return {
 							error: {
@@ -114,7 +118,7 @@ export const addressesApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -130,12 +134,12 @@ export const addressesApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await addressesAPI.addAddress(
+					const res = normalizeTradlyResponse(await addressesAPI.addAddress(
 						input,
 						authKey,
 						currency,
 						language,
-					);
+					), "Failed to add address", ["address"]);
 					if (res?.error)
 						return {
 							error: {
@@ -153,7 +157,7 @@ export const addressesApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -167,12 +171,12 @@ export const addressesApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await addressesAPI.deleteAddress(
+					const res = normalizeTradlyResponse(await addressesAPI.deleteAddress(
 						id,
 						authKey,
 						currency,
 						language,
-					);
+					), "Failed to delete address");
 					if (res?.error)
 						return {
 							error: {
@@ -188,7 +192,7 @@ export const addressesApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -206,4 +210,3 @@ export const {
 	useAddAddressMutation,
 	useDeleteAddressMutation,
 } = addressesApi;
-

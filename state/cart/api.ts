@@ -6,6 +6,7 @@ import type {
 	DeleteCartItemInput,
 	GetCartResponse,
 } from "@/types/cart.types";
+import { normalizeTradlyResponse } from "@/state/api-response";
 
 // Minimal local type — avoids circular dependency with store.ts
 interface LocalState {
@@ -31,11 +32,11 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await cartAPI.getCart(
+					const res = normalizeTradlyResponse(await cartAPI.getCart(
 						authKey,
 						currency,
 						language,
-					);
+					), "Failed to fetch cart", ["cart", "cart_details"]);
 					if (res?.error)
 						return {
 							error: {
@@ -57,7 +58,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -74,12 +75,12 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await cartAPI.addToCart(
+					const res = normalizeTradlyResponse(await cartAPI.addToCart(
 						input,
 						authKey,
 						currency,
 						language,
-					);
+					), "Add to cart failed");
 					if (res?.error) {
 						return {
 							error: {
@@ -106,7 +107,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR" as const,
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -124,12 +125,12 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await cartAPI.deleteCartItem(
+					const res = normalizeTradlyResponse(await cartAPI.deleteCartItem(
 						listing_id,
 						authKey,
 						currency,
 						language,
-					);
+					), "Delete failed");
 					if (res?.error)
 						return {
 							error: {
@@ -151,7 +152,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -166,11 +167,11 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await cartAPI.clearCart(
+					const res = normalizeTradlyResponse(await cartAPI.clearCart(
 						authKey,
 						currency,
 						language,
-					);
+					), "Clear cart failed");
 					if (res?.error)
 						return {
 							error: {
@@ -193,7 +194,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -211,13 +212,13 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res = await cartAPI.applyCouponToCart(
+					const res = normalizeTradlyResponse(await cartAPI.applyCouponToCart(
 						cartId,
 						code,
 						authKey,
 						currency,
 						language,
-					);
+					), "Coupon invalid");
 					if (res?.error)
 						return {
 							error: {
@@ -233,7 +234,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -248,13 +249,15 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res =
+					const res = normalizeTradlyResponse(
 						await cartAPI.removeCouponFromCart(
 							cartId,
 							authKey,
 							currency,
 							language,
-						);
+						),
+						"Remove coupon failed",
+					);
 					if (res?.error)
 						return {
 							error: {
@@ -270,7 +273,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -289,13 +292,16 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res =
+					const res = normalizeTradlyResponse(
 						await cartAPI.getCartWithCommissions(
 							commissions,
 							authKey,
 							currency,
 							language,
-						);
+						),
+						"Failed to fetch cart",
+						["cart", "cart_details"],
+					);
 					if (res?.error)
 						return {
 							error: {
@@ -317,7 +323,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -336,13 +342,16 @@ export const cartApi = createApi({
 					getState() as LocalState,
 				);
 				try {
-					const res =
+					const res = normalizeTradlyResponse(
 						await cartAPI.getCartWithShipping(
 							shippingMethodId,
 							authKey,
 							currency,
 							language,
-						);
+						),
+						"Failed to fetch cart",
+						["cart", "cart_details"],
+					);
 					if (res?.error)
 						return {
 							error: {
@@ -364,7 +373,7 @@ export const cartApi = createApi({
 					return {
 						error: {
 							status: "CUSTOM_ERROR",
-							error: (err as Error).message,
+							error: (err instanceof Error ? err.message : 'Unexpected error'),
 						},
 					};
 				}
@@ -384,4 +393,3 @@ export const {
 	useGetCartWithCommissionsQuery,
 	useGetCartWithShippingQuery,
 } = cartApi;
-

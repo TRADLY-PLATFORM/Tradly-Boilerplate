@@ -63,9 +63,10 @@ This repo uses [TesterArmy e2e](https://github.com/tester-army/e2e). The contrac
 pnpm install
 pnpm exec e2e-web install chromium
 pnpm test:e2e
+pnpm test:api
 ```
 
-Set `APP_URL` to test a running preview or deployed site instead of starting the local Vite server. The suite uses no AI model; it checks browser responses and page navigation directly.
+`pnpm test:api` runs the SDK response and error handling checks without launching a browser. Set `APP_URL` to test a running preview or deployed site instead of starting the local Vite server. The E2E suite uses no AI model; it checks browser responses and page navigation directly.
 
 To probe all 44 SDK routes against a real Tradly workspace, configure `.env` with a dedicated sandbox domain, public key, and `VITE_TRADLY_ENV=sandbox`, then run:
 
@@ -258,6 +259,55 @@ The `flows/` directory contains `.mdc` guides for Cursor and AI-assisted editors
 6. Build your screens using the flow guides in `flows/`
 
 For adding a new API domain (e.g. reviews, accounts), follow the new domain checklist in `flows/project-setup.mdc`.
+
+---
+
+## Getting Up to Date with New Tradly APIs
+
+Your project is a copy of this boilerplate, so it does not update automatically. New Tradly APIs reach you in two ways.
+
+**Check [developer.tradly.app](https://developer.tradly.app) first.** It is always the first place new APIs are announced, before the SDK or this boilerplate are updated.
+
+### 1. New API endpoints: update the SDK
+
+New Tradly endpoints ship as new methods in the [`tradly`](https://www.npmjs.com/package/tradly) SDK. Existing methods are never changed or removed, so upgrading is safe:
+
+```bash
+pnpm up tradly
+```
+
+Then import the new method and use it.
+
+### 2. Boilerplate code (wrappers, state, types): pull from upstream
+
+Platform code and your own code live in separate folders, so merges rarely conflict.
+
+| Platform code (we update it, avoid editing it) | Your code (we never touch it) |
+|---|---|
+| `api/`, `state/`, `types/`, `config/`, `flows/` | `src/pages/`, `src/components/`, `src/index.css`, `tailwind.config.ts` |
+
+Add this repo as a remote once:
+
+```bash
+git remote add upstream https://github.com/TRADLY-PLATFORM/Tradly-Boilerplate.git
+```
+
+Then, whenever you want the latest:
+
+```bash
+git fetch upstream
+git merge upstream/main
+```
+
+On GitHub, if your project is a fork, you can use **Sync fork** instead. If you started from a plain copy with no shared git history, run `git merge upstream/main --allow-unrelated-histories` once, or have your AI agent apply the changes (see below).
+
+Read `CHANGELOG.md` first to see what changed and whether anything needs action. Pin to a tagged release (for example `git merge v1.3.0`) if you do not want to follow `main`.
+
+### 3. Let your AI agent do it
+
+Give your agent this prompt:
+
+> Compare `api/`, `state/`, `types/` and `config/` in my repo with the latest `main` of https://github.com/TRADLY-PLATFORM/Tradly-Boilerplate. Read `CHANGELOG.md` for what changed, apply the differences, keep my local edits, and do not touch `src/pages/` or `src/components/`.
 
 ---
 

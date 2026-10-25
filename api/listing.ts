@@ -83,3 +83,18 @@ export const unlikeListing = (
 			language,
 		),
 	);
+
+// Create a listing for a seller account. Tradly expects the listing payload nested under data.listing.
+export const createListing = (
+	listing: Record<string, unknown>,
+	authKey: string,
+	currency: string,
+	language: string,
+): Promise<TradlyListingSdkResponse<{ listing: Listing }>> =>
+	(TradlySDK as any).app.postListing({
+		pkKey: undefined,
+		authKey,
+		currency,
+		language,
+		data: { listing },
+	});

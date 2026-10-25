@@ -25,11 +25,24 @@ export const getDeviceUUID = (): string => {
     return _memoryUUID
   }
 
-  // Browser: persist across sessions
-  const stored = localStorage.getItem(UUID_STORAGE_KEY)
-  if (stored) return stored
+  // Browser: persist across sessions, but keep the commerce flow working if
+  // storage is disabled or throws (for example, in a restrictive browser).
+  try {
+    const stored = localStorage.getItem(UUID_STORAGE_KEY)
+    if (stored) {
+      _memoryUUID = stored
+      return stored
+    }
+  } catch {
+    if (_memoryUUID) return _memoryUUID
+  }
 
-  const fresh = generateUUID()
-  localStorage.setItem(UUID_STORAGE_KEY, fresh)
+  const fresh = _memoryUUID ?? generateUUID()
+  _memoryUUID = fresh
+  try {
+    localStorage.setItem(UUID_STORAGE_KEY, fresh)
+  } catch {
+    // The in-memory UUID remains valid for this page session.
+  }
   return fresh
 }

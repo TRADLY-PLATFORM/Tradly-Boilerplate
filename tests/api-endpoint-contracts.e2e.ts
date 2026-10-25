@@ -6,6 +6,8 @@ import { expect } from 'e2e'
 import TradlySDK from 'tradly'
 
 import * as addresses from '../api/addresses.ts'
+import * as accounts from '../api/accounts.ts'
+import * as attributes from '../api/attributes.ts'
 import * as auth from '../api/auth.ts'
 import * as cart from '../api/cart.ts'
 import * as categories from '../api/categories.ts'
@@ -17,6 +19,7 @@ import * as paymentMethods from '../api/payment-methods.ts'
 import * as schedules from '../api/schedules.ts'
 import * as shippingMethods from '../api/shipping-methods.ts'
 import { AppConfig } from '../config/app.config.ts'
+import { getTradlyResponseError } from '../state/api-response.ts'
 import { parseSignUpResponse } from '../state/auth/signup-response.ts'
 
 type CapturedRequest = {
@@ -44,6 +47,9 @@ const addressId = 606
 const cartId = 707
 
 const endpoints: EndpointCase[] = [
+  { id: 'accounts.getMyAccounts', method: 'get', path: '/v1/accounts', invoke: () => accounts.getMyAccounts('contract-user', authKey, currency, language) },
+  { id: 'accounts.createAccount', method: 'post', path: '/v1/accounts', invoke: () => accounts.createAccount({ name: 'Contract Shop', type: 'accounts' }, authKey, currency, language) },
+  { id: 'attributes.getAttributes', method: 'get', path: '/v1/attributes', invoke: () => attributes.getAttributes({ type: 'listings', category_id: categoryId }, authKey, currency, language) },
   { id: 'addresses.getAddresses', method: 'get', path: '/v1/addresses', invoke: () => addresses.getAddresses(authKey, currency, language) },
   { id: 'addresses.addAddress', method: 'post', path: '/v1/addresses', invoke: () => addresses.addAddress({ first_name: 'Test', last_name: 'Buyer' } as never, authKey, currency, language) },
   { id: 'addresses.deleteAddress', method: 'delete', path: `/v1/addresses/${addressId}`, invoke: () => addresses.deleteAddress(addressId, authKey, currency, language) },
@@ -59,41 +65,42 @@ const endpoints: EndpointCase[] = [
   { id: 'auth.signOut', method: 'post', path: '/v1/users/logout', invoke: () => auth.signOut(authKey, currency, language) },
   { id: 'auth.refreshAuth', method: 'get', path: '/v1/users/token/refresh', invoke: () => auth.refreshAuth('contract-refresh-key') },
 
-  { id: 'cart.getCart', method: 'get', path: '/products/v1/cart', invoke: () => cart.getCart(authKey, currency, language) },
-  { id: 'cart.addToCart', method: 'post', path: '/products/v1/cart', invoke: () => cart.addToCart({ listing_id: 0, quantity: 0 }, authKey, currency, language) },
-  { id: 'cart.deleteCartItem', method: 'patch', path: '/products/v1/cart', invoke: () => cart.deleteCartItem(listingId, authKey, currency, language) },
-  { id: 'cart.clearCart', method: 'delete', path: '/products/v1/cart', invoke: () => cart.clearCart(authKey, currency, language) },
-  { id: 'cart.applyCouponToCart', method: 'post', path: '/products/v1/cart/coupon', invoke: () => cart.applyCouponToCart(cartId, 'CONTRACT', authKey, currency, language) },
-  { id: 'cart.removeCouponFromCart', method: 'delete', path: '/products/v1/cart/coupon', invoke: () => cart.removeCouponFromCart(cartId, authKey, currency, language) },
-  { id: 'cart.getCartWithCommissions', method: 'get', path: '/products/v1/cart', invoke: () => cart.getCartWithCommissions([{ id: 1, amount: 1 }], authKey, currency, language) },
-  { id: 'cart.getCartWithShipping', method: 'get', path: '/products/v1/cart', invoke: () => cart.getCartWithShipping(shippingMethodId, authKey, currency, language) },
+  { id: 'cart.getCart', method: 'get', path: '/v1/cart', invoke: () => cart.getCart(authKey, currency, language) },
+  { id: 'cart.addToCart', method: 'post', path: '/v1/cart', invoke: () => cart.addToCart({ listing_id: 0, quantity: 0 }, authKey, currency, language) },
+  { id: 'cart.deleteCartItem', method: 'patch', path: '/v1/cart', invoke: () => cart.deleteCartItem(listingId, authKey, currency, language) },
+  { id: 'cart.clearCart', method: 'delete', path: '/v1/cart', invoke: () => cart.clearCart(authKey, currency, language) },
+  { id: 'cart.applyCouponToCart', method: 'post', path: '/v1/cart/coupon', invoke: () => cart.applyCouponToCart(cartId, 'CONTRACT', authKey, currency, language) },
+  { id: 'cart.removeCouponFromCart', method: 'delete', path: '/v1/cart/coupon', invoke: () => cart.removeCouponFromCart(cartId, authKey, currency, language) },
+  { id: 'cart.getCartWithCommissions', method: 'get', path: '/v1/cart', invoke: () => cart.getCartWithCommissions([{ id: 1, amount: 1 }], authKey, currency, language) },
+  { id: 'cart.getCartWithShipping', method: 'get', path: '/v1/cart', invoke: () => cart.getCartWithShipping(shippingMethodId, authKey, currency, language) },
 
   { id: 'categories.getCategories', method: 'get', path: '/v1/categories', invoke: () => categories.getCategories({}, authKey, currency, language) },
   { id: 'categories.getCategoryBySlug', method: 'get', path: '/v1/categories/by_slug/contract-category', invoke: () => categories.getCategoryBySlug('contract-category', authKey, currency, language) },
   { id: 'categories.getCategoryById', method: 'get', path: `/v1/categories/${categoryId}`, invoke: () => categories.getCategoryById(categoryId, authKey, currency, language) },
-  { id: 'categories.getCategoryListings', method: 'get', path: '/products/v1/listings', invoke: () => categories.getCategoryListings({ category_id: categoryId }, authKey, currency, language) },
+  { id: 'categories.getCategoryListings', method: 'get', path: '/v1/listings', invoke: () => categories.getCategoryListings({ category_id: categoryId }, authKey, currency, language) },
 
-  { id: 'checkout.checkout', method: 'post', path: '/products/v1/cart/checkout', invoke: () => checkout.checkout({ order: {} } as never, authKey, currency, language) },
+  { id: 'checkout.checkout', method: 'post', path: '/v1/cart/checkout', invoke: () => checkout.checkout({ order: {} } as never, authKey, currency, language) },
   { id: 'checkout.getPaymentIntent', method: 'post', path: '/v1/payments/stripe/paymentIntent', invoke: () => checkout.getPaymentIntent('contract-order', authKey, currency, language) },
   { id: 'checkout.getEphemeralKey', method: 'post', path: '/v1/payments/stripe/ephemeralKey', invoke: () => checkout.getEphemeralKey(authKey, currency, language) },
-  { id: 'checkout.directCheckout', method: 'post', path: `/products/v1/listings/${listingId}/checkout`, invoke: () => checkout.directCheckout(listingId, {} as never, authKey, currency, language) },
+  { id: 'checkout.directCheckout', method: 'post', path: `/v1/listings/${listingId}/checkout`, invoke: () => checkout.directCheckout(listingId, {} as never, authKey, currency, language) },
 
   { id: 'commissions.getCommissions', method: 'get', path: '/v1/commissions', invoke: () => commissions.getCommissions({ type: 'cart' }, authKey, currency, language) },
 
-  { id: 'listing.getListings', method: 'get', path: '/products/v1/listings', invoke: () => listing.getListings({}, authKey, currency, language) },
-  { id: 'listing.getListingDetail', method: 'get', path: '/products/v1/listings/by_slug/contract-listing', invoke: () => listing.getListingDetail('contract-listing', false, authKey, currency, language) },
-  { id: 'listing.likeListing', method: 'post', path: `/products/v1/listings/${listingId}/likes`, invoke: () => listing.likeListing(listingId, authKey, currency, language) },
-  { id: 'listing.unlikeListing', method: 'delete', path: `/products/v1/listings/${listingId}/unlikes`, invoke: () => listing.unlikeListing(listingId, authKey, currency, language) },
+  { id: 'listing.getListings', method: 'get', path: '/v1/listings', invoke: () => listing.getListings({}, authKey, currency, language) },
+  { id: 'listing.createListing', method: 'post', path: '/v1/listings', invoke: () => listing.createListing({ title: 'Contract listing', account_id: 1, attributes: [{ id: 9, values: ['1'] }] }, authKey, currency, language) },
+  { id: 'listing.getListingDetail', method: 'get', path: '/v1/listings/by_slug/contract-listing', invoke: () => listing.getListingDetail('contract-listing', false, authKey, currency, language) },
+  { id: 'listing.likeListing', method: 'post', path: `/v1/listings/${listingId}/likes`, invoke: () => listing.likeListing(listingId, authKey, currency, language) },
+  { id: 'listing.unlikeListing', method: 'delete', path: `/v1/listings/${listingId}/unlikes`, invoke: () => listing.unlikeListing(listingId, authKey, currency, language) },
 
-  { id: 'orders.getOrders', method: 'get', path: '/products/v1/orders', invoke: () => orders.getOrders({}, authKey, currency, language) },
-  { id: 'orders.getOrderDetail', method: 'get', path: `/products/v1/orders/${orderId}`, invoke: () => orders.getOrderDetail(orderId, authKey, currency, language) },
-  { id: 'orders.updateOrderStatus', method: 'patch', path: `/products/v1/orders/${orderId}/status`, invoke: () => orders.updateOrderStatus({ id: orderId, status: 'pending' } as never, authKey, currency, language) },
-  { id: 'orders.updateShipmentStatus', method: 'patch', path: `/products/v1/orders/${orderId}/shipments/${shipmentId}/status`, invoke: () => orders.updateShipmentStatus({ order_id: orderId, shipment_id: shipmentId, status: 'pending' } as never, authKey, currency, language) },
-  { id: 'orders.verifyOrderDetails', method: 'post', path: '/products/v1/orders/order_detail_item_attributes/validate', invoke: () => orders.verifyOrderDetails({ id: orderId } as never, authKey, currency, language) },
+  { id: 'orders.getOrders', method: 'get', path: '/v1/orders', invoke: () => orders.getOrders({}, authKey, currency, language) },
+  { id: 'orders.getOrderDetail', method: 'get', path: `/v1/orders/${orderId}`, invoke: () => orders.getOrderDetail(orderId, authKey, currency, language) },
+  { id: 'orders.updateOrderStatus', method: 'patch', path: `/v1/orders/${orderId}/status`, invoke: () => orders.updateOrderStatus({ id: orderId, status: 'pending' } as never, authKey, currency, language) },
+  { id: 'orders.updateShipmentStatus', method: 'patch', path: `/v1/orders/${orderId}/shipments/${shipmentId}/status`, invoke: () => orders.updateShipmentStatus({ order_id: orderId, shipment_id: shipmentId, status: 'pending' } as never, authKey, currency, language) },
+  { id: 'orders.verifyOrderDetails', method: 'post', path: '/v1/orders/order_detail_item_attributes/validate', invoke: () => orders.verifyOrderDetails({ id: orderId } as never, authKey, currency, language) },
 
   { id: 'paymentMethods.getPaymentMethods', method: 'get', path: '/v1/tenants/payment_methods', invoke: () => paymentMethods.getPaymentMethods(authKey, currency, language) },
 
-  { id: 'schedules.getSchedules', method: 'get', path: `/products/v1/listings/${listingId}/schedules_per_day`, invoke: () => schedules.getSchedules(listingId, '2026-10-05', 30, authKey, currency, language) },
+  { id: 'schedules.getSchedules', method: 'get', path: `/v1/listings/${listingId}/schedules_per_day`, invoke: () => schedules.getSchedules(listingId, '2026-10-05', 30, authKey, currency, language) },
 
   { id: 'shippingMethods.getShippingMethods', method: 'get', path: '/v1/tenants/shipping_methods', invoke: () => shippingMethods.getShippingMethods({ type: 'tenant' }, authKey, currency, language) },
   { id: 'shippingMethods.getSendCloudShipmentMethods', method: 'get', path: '/v1/shipments/sendcloud/shipping_methods', invoke: () => shippingMethods.getSendCloudShipmentMethods({ shipping_method_id: shippingMethodId, country: 'US' }, authKey, currency, language) },
@@ -110,9 +117,13 @@ const nonEndpointExports = new Set([
   'EXTERNAL_CHECKOUT_TYPES',
   'buildExternalCheckoutUrl',
   'buildWebPaymentUrl',
+  'uploadImages',
 ])
 
 const stateEndpointToApiWrapper: Record<string, string> = {
+  'accounts.getMyAccounts': 'accounts.getMyAccounts',
+  'accounts.createAccount': 'accounts.createAccount',
+  'attributes.getAttributes': 'attributes.getAttributes',
   'addresses.getAddresses': 'addresses.getAddresses',
   'addresses.getStorageHubAddresses': 'addresses.getStorageHubAddresses',
   'addresses.addAddress': 'addresses.addAddress',
@@ -140,6 +151,7 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'commissions.getCartCommissions': 'commissions.getCommissions',
   'commissions.getDemandCommissions': 'commissions.getCommissions',
   'listing.getListings': 'listing.getListings',
+  'listing.createListing': 'listing.createListing',
   'listing.getListingDetail': 'listing.getListingDetail',
   'listing.likeListing': 'listing.likeListing',
   'listing.unlikeListing': 'listing.unlikeListing',
@@ -184,6 +196,35 @@ const discoverStateEndpoints = (): string[] => {
         .flatMap((file) => discoverStateApiFile(`${path}/${file}`, entry))
     }
     return entry.endsWith('.ts') ? discoverStateApiFile(path, entry.replace(/\.ts$/, '')) : []
+  }).filter(name => name !== 'uploads.uploadImages').sort()
+}
+
+const discoverUnguardedStateEndpoints = (): string[] => {
+  const stateDir = fileURLToPath(new URL('../state/', import.meta.url))
+  const apiFiles: string[] = []
+  const collectApiFiles = (directory: string) => {
+    for (const entry of readdirSync(directory)) {
+      const path = `${directory}/${entry}`
+      if (statSync(path).isDirectory()) collectApiFiles(path)
+      else if (entry.endsWith('.ts') && readFileSync(path, 'utf8').includes('builder.')) apiFiles.push(path)
+    }
+  }
+  collectApiFiles(stateDir)
+
+  return apiFiles.flatMap((path) => {
+    const source = readFileSync(path, 'utf8')
+    const endpoints = [...source.matchAll(/^\s*(\w+): builder\.(?:query|mutation)</gm)]
+    return endpoints.flatMap((match, index) => {
+      const start = match.index ?? 0
+      const end = endpoints[index + 1]?.index ?? source.length
+      const body = source.slice(start, end)
+      const hasResponseGuard =
+        body.includes('normalizeTradlyResponse') ||
+        body.includes('parseSignUpResponse') ||
+        body.includes('getTradlyResponseError') ||
+        body.includes('getThrownErrorMessage')
+      return hasResponseGuard ? [] : [`${path.split('/state/')[1]}:${match[1]}`]
+    })
   }).sort()
 }
 
@@ -208,6 +249,7 @@ test('every exported Tradly API wrapper is covered and dispatches its expected S
 
   const discoveredStateEndpoints = discoverStateEndpoints()
   expect(Object.keys(stateEndpointToApiWrapper).sort()).toEqual(discoveredStateEndpoints)
+  expect(discoverUnguardedStateEndpoints()).toEqual([])
   for (const wrapperId of Object.values(stateEndpointToApiWrapper)) {
     expect(discovered.includes(wrapperId)).toBe(true)
   }
@@ -271,11 +313,24 @@ test('signup handles SDK errors and missing response data without crashing', () 
   expect(parseSignUpResponse({ status: true, data: { verify_id: 'verify-123' } }))
     .toEqual({ verify_id: 'verify-123' })
   expect(parseSignUpResponse(new TypeError("Cannot read properties of undefined (reading 'data')")))
-    .toEqual({ error: 'Unable to contact the sign-up service. Check your connection and try again.' })
+    .toEqual({ error: 'Unable to contact the Tradly service. Check your connection and try again.' })
   expect(parseSignUpResponse({ error: { message: 'Email already exists' } }))
     .toEqual({ error: 'Email already exists' })
   expect(parseSignUpResponse(undefined))
-    .toEqual({ error: 'Sign up failed. The service returned an invalid response.' })
+    .toEqual({ error: 'The Tradly service returned an invalid response. Please try again.' })
+})
+
+test('shared API response guard rejects missing, failed, and incomplete SDK envelopes', () => {
+  expect(getTradlyResponseError(new TypeError('network failure'), 'Request failed'))
+    .toBe('Unable to contact the Tradly service. Check your connection and try again.')
+  expect(getTradlyResponseError(undefined, 'Request failed'))
+    .toBe('The Tradly service returned an invalid response. Please try again.')
+  expect(getTradlyResponseError({ status: true, data: {} }, 'Request failed', ['user']))
+    .toBe('The Tradly service returned incomplete data. Please try again.')
+  expect(getTradlyResponseError({ error: { message: 'Invalid credentials' } }, 'Request failed'))
+    .toBe('Invalid credentials')
+  expect(getTradlyResponseError({ status: true, data: {} }, 'Request failed'))
+    .toBe(undefined)
 })
 
 if (process.env.E2E_RUN_LIVE_API_ENDPOINTS === '1') {

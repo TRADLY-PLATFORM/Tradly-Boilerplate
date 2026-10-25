@@ -13,6 +13,7 @@ import type {
 } from '@/types/order.types'
 import type { FullCheckoutPayload } from '@/types/checkout.types'
 import type { PaymentIntentResponse } from '@/api/checkout'
+import { normalizeTradlyResponse } from '@/state/api-response'
 
 interface LocalState {
   auth: { authKey: string }
@@ -40,12 +41,12 @@ export const ordersApi = createApi({
       queryFn: async (input, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await checkoutAPI.checkout(input, authKey, currency, language)
+          const res = normalizeTradlyResponse(await checkoutAPI.checkout(input, authKey, currency, language), 'Checkout failed', ['order_reference'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Checkout failed', data: { code: (res.error as any).code } } as any }
           return { data: res.data! }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       invalidatesTags: ['Order', 'Cart'] as any,
@@ -56,12 +57,12 @@ export const ordersApi = createApi({
       queryFn: async (orderReference, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await checkoutAPI.getPaymentIntent(orderReference, authKey, currency, language)
+          const res = normalizeTradlyResponse(await checkoutAPI.getPaymentIntent(orderReference, authKey, currency, language), 'Payment intent failed', ['client_secret'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Payment intent failed' } }
           return { data: res.data! }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -70,12 +71,12 @@ export const ordersApi = createApi({
       queryFn: async ({ listingId, input }, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await checkoutAPI.directCheckout(listingId, input, authKey, currency, language)
+          const res = normalizeTradlyResponse(await checkoutAPI.directCheckout(listingId, input, authKey, currency, language), 'Checkout failed', ['order_reference'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Checkout failed' } }
           return { data: res.data! }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -86,12 +87,12 @@ export const ordersApi = createApi({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await ordersAPI.getOrders(params, authKey, currency, language)
+          const res = normalizeTradlyResponse(await ordersAPI.getOrders(params, authKey, currency, language), 'Failed to fetch orders', ['orders', 'page', 'total_records'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch orders' } }
           return { data: { orders: res.data!.orders, page: res.data!.page, total_records: res.data!.total_records } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: ['Order'],
@@ -101,12 +102,12 @@ export const ordersApi = createApi({
       queryFn: async (id, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await ordersAPI.getOrderDetail(id, authKey, currency, language)
+          const res = normalizeTradlyResponse(await ordersAPI.getOrderDetail(id, authKey, currency, language), 'Order not found', ['order'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Order not found' } }
           return { data: { order: res.data!.order } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: (_result, _err, id) => [{ type: 'Order', id: String(id) }],
@@ -116,12 +117,12 @@ export const ordersApi = createApi({
       queryFn: async (input, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await ordersAPI.updateOrderStatus(input, authKey, currency, language)
+          const res = normalizeTradlyResponse(await ordersAPI.updateOrderStatus(input, authKey, currency, language), 'Status update failed')
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Status update failed' } }
           return { data: undefined }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       invalidatesTags: (_result, _err, { id }) => ['Order', { type: 'Order', id: String(id) }],
@@ -131,12 +132,12 @@ export const ordersApi = createApi({
       queryFn: async (input, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await ordersAPI.updateShipmentStatus(input, authKey, currency, language)
+          const res = normalizeTradlyResponse(await ordersAPI.updateShipmentStatus(input, authKey, currency, language), 'Shipment update failed')
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Shipment update failed' } }
           return { data: undefined }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       invalidatesTags: (_result, _err, { order_id }) => [{ type: 'Order', id: String(order_id) }],
@@ -146,12 +147,12 @@ export const ordersApi = createApi({
       queryFn: async (input, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await ordersAPI.verifyOrderDetails(input, authKey, currency, language)
+          const res = normalizeTradlyResponse(await ordersAPI.verifyOrderDetails(input, authKey, currency, language), 'Verification failed', ['order'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Verification failed' } }
           return { data: { order: res.data!.order } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),

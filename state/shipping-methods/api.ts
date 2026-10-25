@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import * as shippingAPI from '@/api/shipping-methods'
 import type { GetShippingMethodsResponse } from '@/types/checkout.types'
+import { normalizeTradlyResponse } from '@/state/api-response'
 
 interface LocalState {
   auth: { authKey: string }
@@ -27,12 +28,12 @@ export const shippingMethodsApi = createApi({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = ctx(getState() as LocalState)
         try {
-          const res = await shippingAPI.getShippingMethods(params ?? {}, authKey, currency, language)
+          const res = normalizeTradlyResponse(await shippingAPI.getShippingMethods(params ?? {}, authKey, currency, language), 'Failed to fetch shipping methods', ['shipping_methods'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch shipping methods' } }
           return { data: { shipping_methods: res.data!.shipping_methods } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: ['ShippingMethod'],
@@ -48,12 +49,12 @@ export const shippingMethodsApi = createApi({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = ctx(getState() as LocalState)
         try {
-          const res = await shippingAPI.getSendCloudShipmentMethods(params, authKey, currency, language)
+          const res = normalizeTradlyResponse(await shippingAPI.getSendCloudShipmentMethods(params, authKey, currency, language), 'Failed to fetch shipment methods', ['shipment_methods'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch shipment methods' } }
           return { data: { shipment_methods: res.data!.shipment_methods } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),
@@ -66,12 +67,12 @@ export const shippingMethodsApi = createApi({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = ctx(getState() as LocalState)
         try {
-          const res = await shippingAPI.getExternalShipmentMethods(params, authKey, currency, language)
+          const res = normalizeTradlyResponse(await shippingAPI.getExternalShipmentMethods(params, authKey, currency, language), 'Failed to fetch shipment methods', ['shipment_methods'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch shipment methods' } }
           return { data: { shipment_methods: res.data!.shipment_methods } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
     }),

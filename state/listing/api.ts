@@ -6,6 +6,7 @@ import type {
   GetListingDetailInput,
   LikeListingInput,
 } from '@/types/listing.types'
+import { normalizeTradlyResponse } from '@/state/api-response'
 // LikeListingInput = { id: number } — used for both like and unlike mutations
 
 // Minimal local type — avoids circular dependency with store.ts
@@ -84,7 +85,7 @@ export const listingApi = createApi({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await listingAPI.getListings(params, authKey, currency, language)
+          const res = normalizeTradlyResponse(await listingAPI.getListings(params, authKey, currency, language), 'Failed to fetch listings', ['listings', 'page', 'total_records'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch listings' } }
           return {
@@ -95,7 +96,7 @@ export const listingApi = createApi({
             },
           }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: ['Listing'],
@@ -107,12 +108,12 @@ export const listingApi = createApi({
         const { authKey, currency, language } = getContext(getState() as LocalState)
         const useId = id === true || id === 'true'
         try {
-          const res = await listingAPI.getListingDetail(slug, useId, authKey, currency, language)
+          const res = normalizeTradlyResponse(await listingAPI.getListingDetail(slug, useId, authKey, currency, language), 'Listing not found', ['listing'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Listing not found' } }
           return { data: { listing: res.data!.listing } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: (_result, _err, { slug }) => [{ type: 'Listing', id: slug }],
@@ -124,12 +125,12 @@ export const listingApi = createApi({
       queryFn: async ({ id }, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await listingAPI.likeListing(id, authKey, currency, language)
+          const res = normalizeTradlyResponse(await listingAPI.likeListing(id, authKey, currency, language), 'Like failed')
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Like failed' } }
           return { data: undefined }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       onQueryStarted: async ({ id }, { dispatch, queryFulfilled, getState }) => {
@@ -143,18 +144,32 @@ export const listingApi = createApi({
       queryFn: async ({ id }, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
         try {
-          const res = await listingAPI.unlikeListing(id, authKey, currency, language)
+          const res = normalizeTradlyResponse(await listingAPI.unlikeListing(id, authKey, currency, language), 'Unlike failed')
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Unlike failed' } }
           return { data: undefined }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       onQueryStarted: async ({ id }, { dispatch, queryFulfilled, getState }) => {
         const patches = patchLikeInCache(dispatch, getState, id, false)
         try { await queryFulfilled } catch { patches.forEach(p => p.undo()) }
       },
+    }),
+
+    createListing: builder.mutation<{ listing: import('@/types/listing.types').Listing }, Record<string, unknown>>({
+      queryFn: async (listing, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await listingAPI.createListing(listing, authKey, currency, language), 'Could not publish listing', ['listing'])
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not publish listing' } }
+          return { data: { listing: res.data!.listing } }
+        } catch (err) {
+          return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } }
+        }
+      },
+      invalidatesTags: ['Listing'],
     }),
 
   }),
@@ -165,4 +180,5 @@ export const {
   useGetListingDetailQuery,
   useLikeListingMutation,
   useUnlikeListingMutation,
+  useCreateListingMutation,
 } = listingApi

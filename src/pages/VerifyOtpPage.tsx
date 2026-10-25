@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useVerifyOtpMutation, useResendOtpMutation } from '@/state/auth/api'
 import { useAuthSelector } from '@/state/auth/selectors'
 import { Button } from '@/src/components/ui/button'
@@ -11,6 +11,7 @@ import type { ResendOtpInput } from '@/types/auth.types'
 
 export default function VerifyOtpPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const verifyId = useAuthSelector(s => s.verifyId)
   const [verifyOtp, { isLoading: isVerifying }] = useVerifyOtpMutation()
   const [resendOtp, { isLoading: isResending }] = useResendOtpMutation()
@@ -35,16 +36,40 @@ export default function VerifyOtpPage() {
     }
 
     sessionStorage.removeItem('signup_input')
-    navigate('/')
+    const next = new URLSearchParams(location.search).get('next')
+    navigate(next?.startsWith('/') && !next.startsWith('//') ? next : '/')
   }
 
   const handleResend = async () => {
     setError('')
     setSuccessMsg('')
-    const raw = sessionStorage.getItem('signup_input')
+    let raw: string | null
+    try {
+      raw = sessionStorage.getItem('signup_input')
+    } catch {
+      navigate('/sign-up', { replace: true })
+      return
+    }
     if (!raw) { navigate('/sign-up', { replace: true }); return }
 
-    const input = JSON.parse(raw) as ResendOtpInput
+    let input: ResendOtpInput
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      if (!parsed || typeof parsed !== 'object') throw new Error('Invalid signup details')
+      const candidate = parsed as Partial<ResendOtpInput>
+      const hasContact =
+        ('email' in candidate && Boolean(candidate.email)) ||
+        ('mobile' in candidate && Boolean(candidate.mobile))
+      if (!candidate.first_name || !candidate.last_name || !candidate.password || !candidate.type || !hasContact) {
+        throw new Error('Incomplete signup details')
+      }
+      input = candidate as ResendOtpInput
+    } catch {
+      try { sessionStorage.removeItem('signup_input') } catch { /* storage may be unavailable */ }
+      navigate('/sign-up', { replace: true })
+      return
+    }
+
     const result = await resendOtp(input)
     if ('error' in result) {
       setError((result.error as { error: string }).error ?? 'Resend failed')

@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import * as commissionsAPI from '@/api/commissions'
 import type { GetCommissionsResponse } from '@/types/checkout.types'
+import { normalizeTradlyResponse } from '@/state/api-response'
 
 interface LocalState {
   auth: { authKey: string }
@@ -26,12 +27,12 @@ export const commissionsApi = createApi({
       queryFn: async (_arg, { getState }) => {
         const { authKey, currency, language } = ctx(getState() as LocalState)
         try {
-          const res = await commissionsAPI.getCommissions({ type: 'cart' }, authKey, currency, language)
+          const res = normalizeTradlyResponse(await commissionsAPI.getCommissions({ type: 'cart' }, authKey, currency, language), 'Failed to fetch commissions', ['commissions'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch commissions' } }
           return { data: { commissions: res.data!.commissions } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: ['Commission'],
@@ -43,12 +44,12 @@ export const commissionsApi = createApi({
       queryFn: async (_arg, { getState }) => {
         const { authKey, currency, language } = ctx(getState() as LocalState)
         try {
-          const res = await commissionsAPI.getCommissions({ type: 'demand', optional: true }, authKey, currency, language)
+          const res = normalizeTradlyResponse(await commissionsAPI.getCommissions({ type: 'demand', optional: true }, authKey, currency, language), 'Failed to fetch demand commissions', ['commissions'])
           if (res?.error)
             return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Failed to fetch demand commissions' } }
           return { data: { commissions: res.data!.commissions } }
         } catch (err) {
-          return { error: { status: 'CUSTOM_ERROR', error: (err as Error).message } }
+          return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
       providesTags: ['Commission'],

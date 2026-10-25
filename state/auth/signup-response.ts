@@ -1,13 +1,12 @@
+import { getTradlyResponseError } from '../api-response.ts'
+
 export type ParsedSignUpResponse =
 	| { verify_id: string }
 	| { error: string }
 
 export const parseSignUpResponse = (response: unknown): ParsedSignUpResponse => {
-	if (response instanceof Error) {
-		return {
-			error: 'Unable to contact the sign-up service. Check your connection and try again.',
-		}
-	}
+	const error = getTradlyResponseError(response, 'Sign up failed', ['verify_id'])
+	if (error) return { error }
 
 	if (!response || typeof response !== 'object') {
 		return { error: 'Sign up failed. The service returned an invalid response.' }

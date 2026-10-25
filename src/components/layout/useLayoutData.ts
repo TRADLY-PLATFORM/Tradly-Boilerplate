@@ -64,7 +64,10 @@ export function useLayoutData(brandName: string): LayoutData {
   }))
 
   const navLinks: NavLink[] = [{ label: locale.labels.home, to: '/' }]
-  if (!isAuthenticated && layoutConfig.signUp) navLinks.push({ label: locale.labels.sell, to: '/sign-up' })
+  navLinks.push({
+    label: locale.labels.sell,
+    to: isAuthenticated ? '/sell' : '/sign-in?next=%2Fsell',
+  })
   if (isAuthenticated && layoutConfig.orders) navLinks.push({ label: locale.labels.myOrders, to: '/orders' })
 
   const quickLinks: NavLink[] = [{ label: locale.labels.home, to: '/' }]

@@ -2,25 +2,22 @@ import { test } from '@e2e-dev/web'
 import { expect } from 'e2e'
 
 test('home page loads listings from the configured Tradly workspace', async ({ app, browser }) => {
-  const listingResponse = browser.waitForResponse('**/products/v1/listings**')
-
   await app.open('/')
+  const listingResponse = browser.waitForResponse('**/v1/listings**')
+  await browser.reload()
 
   const response = await listingResponse
   expect(response.status).toBe(200)
 })
 
-test('home page loads the guest cart from the configured Tradly workspace', async ({ app, browser }) => {
-  const cartResponse = browser.waitForResponse('**/products/v1/cart**')
-
+test('Sell navigation sends signed-out sellers to sign in and preserves the destination', async ({ app, browser }) => {
   await app.open('/')
-
-  const response = await cartResponse
-  expect(response.status).toBe(200)
+  await browser.goto('/sell')
+  await expect(browser).toHaveURL('/sign-in?next=%2Fsell')
 })
 
 test('protected order pages send unauthenticated visitors to sign in', async ({ app, browser }) => {
   await app.open('/orders')
 
-  await expect(browser).toHaveURL('/sign-in')
+  await expect(browser).toHaveURL('/sign-in?next=%2Forders')
 })
