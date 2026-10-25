@@ -63,15 +63,17 @@ event tickets and donations are not separate systems: they are listings with a d
 | Site shape | `order_type` | What the user does | Already in this repo |
 |---|---|---|---|
 | Store / marketplace | `listings`, `digital` | Add to cart, check out | Listing page, cart, checkout |
-| Booking, appointments | `appointments` | Sign in, pick a date + slot, pay | Slot picker in `CheckoutPage` (`state/schedules`), payload `schedule_start_at` / `schedule_end_at` |
-| Events, tickets | `events` | Same as appointments, one event per cart | Same as above |
+| Booking, appointments | `appointments` | Sign in, pick a date + slot, pay | Booking page `/booking/:slug` (`BookingListingPage`), slot picker + payload `schedule_start_at` / `schedule_end_at` carried into `CheckoutPage` (`state/schedules`) |
+| Events, tickets | `events` | Same as appointments, one event per cart | Same as above; the booked date shows on `/booking/orders/:id` (`BookingOrderPage`) |
 | Crowdfunding, donations | `donation` | Enter an amount, optionally give anonymously | Amount field + goal progress bar in `ListingDetailPage` (`listing.goal_price`, `raised_amount`), `custom_price` on add-to-cart |
 | Enquiry-only listings | `information_listing` | Contact the seller, no cart | Branch exists in the flow guide |
 | Reverse marketplace | `requests` | Buyer posts a need (sign-in required) | Branch exists in the flow guide |
 
 Rules that follow from this:
+- **Link to a listing only as `/listing/:slug`.** One site can sell products, appointments and events side by side, so never pick the route from the site type. The listing page sends `appointments` and `events` on to `/booking/:slug` through its "Book now" button, and everything else (donations included) stays on `/listing/:slug`. Do not hard-code `/booking/...` links on the homepage or in cards.
+- **Orders:** a standard order opens at `/orders/:id`; an order for an appointment or event links on to `/booking/orders/:id` (calendar view). Keep both routes.
 - **Homepage and category pages must link into the real thing**: a booking site sends visitors to `/lc/:slug` or `/listing/:slug`, a fundraiser's CTA goes to a campaign at `/listing/:slug`. Do not add a made-up booking form or donate button on the homepage.
-- A booking or donation listing only works if the listing itself has the right `order_type` (and schedules, or `goal_price`). Those are created by the seller in the Tradly dashboard, or via `POST /v1/listings`. This storefront has no listing-creation page.
+- A booking or donation listing only works if the listing itself has the right `order_type` (and schedules, or `goal_price`). Sellers create them on `/sell` (`SellPage`): the form takes the `order_type`, and for `appointments` and `events` it also takes dates, hours and slot capacity, saved through `createSchedule` (`api/schedules.ts`). Point any "Sell", "List your service" or "Host an event" link at `/sell`. Do not build a second listing form.
 - Never skip `clearCart` before adding an event, appointment or donation (see the flow guide).
 
 ### Endpoints behind these features
