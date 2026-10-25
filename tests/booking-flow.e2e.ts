@@ -35,6 +35,20 @@ test('buyer chooses an appointment time on the separate booking route and carrie
   await expect(browser).toHaveURL('/checkout?booking_schedule_id=8001&booking_day=2026-10-26')
 })
 
+test('scheduled listing URLs route by order type, with a standard-detail override', async ({ app, browser, screen }) => {
+  await browser.route('**/v1/listings/by_slug/e2e-appointment**', route => route.fulfill({ json: { status: true, data: { listing: {
+    id: 501, slug: 'e2e-appointment', title: 'E2E Appointment', description: 'A test booking slot', images: [], order_type: 'appointments',
+    offer_price: { formatted: '$25.00' }, list_price: { formatted: '$25.00' }, account: { name: 'Test Seller' },
+    rating_data: { rating_count: 0, rating_average: 0 }, stock: 5, goal_price: { amount: 0 }, likes: 0,
+  } } } }))
+
+  await app.open('/listing/e2e-appointment')
+  await expect(browser).toHaveURL('/booking/e2e-appointment')
+  await app.open('/listing/e2e-appointment?view=standard')
+  await expect(screen.getByRole('heading', 'E2E Appointment')).toBeVisible()
+  await expect(screen.getByRole('button', 'Book appointment')).toBeVisible()
+})
+
 test('buyer can open a separate booking order page with the booked date highlighted on its calendar', async ({ app, browser, screen }) => {
   await signIn(browser)
   await browser.route('**/v1/users/token/refresh**', route => route.fulfill({ json: { status: true, data: { auth_key: 'booking-auth', refresh_key: 'booking-refresh' } } }))

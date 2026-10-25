@@ -55,10 +55,10 @@ export default function BookingListingPage() {
 
   if (isLoading) return <Layout><div className="grid gap-8 md:grid-cols-2"><Skeleton className="aspect-square rounded-2xl" /><Skeleton className="h-96 rounded-2xl" /></div></Layout>
   if (isError || !listing) return <Layout><div className="py-20 text-center text-destructive">Listing not found.</div></Layout>
-  if (!['events', 'appointments'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">This listing does not use booking availability. <Link className="text-coffee-accent underline" to={`/listing/${slug}`}>Open the regular listing page</Link>.</div></Layout>
+  if (!['events', 'appointments'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">This listing does not use booking availability. <Link className="text-coffee-accent underline" to={`/listing/${slug}?view=standard`}>Open the regular listing page</Link>.</div></Layout>
 
   return <Layout>
-    <div className="mb-5 flex items-center gap-2 text-sm"><Link to={`/listing/${slug}`} className="text-coffee-accent hover:underline">Regular listing page</Link><span className="text-muted-foreground">/</span><span>Book</span></div>
+    <div className="mb-5 flex items-center gap-2 text-sm"><Link to={`/listing/${slug}?view=standard`} className="text-coffee-accent hover:underline">Regular listing page</Link><span className="text-muted-foreground">/</span><span>Book</span></div>
     <div className="grid items-start gap-8 lg:grid-cols-2">
       <div>
         <div className="aspect-square overflow-hidden rounded-2xl bg-muted">{listing.images?.[0] ? <img src={listing.images[0]} alt={listing.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-sm text-muted-foreground">No image</div>}</div>

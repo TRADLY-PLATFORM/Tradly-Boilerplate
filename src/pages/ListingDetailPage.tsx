@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
 	useGetListingDetailQuery,
 	useLikeListingMutation,
@@ -29,9 +29,17 @@ function Toast({ msg }: { msg: string }) {
 export default function ListingDetailPage() {
 	const { slug = "" } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 	const isAuthenticated = useAuthSelector((s) => s.isAuthenticated);
 
 	const { data, isLoading, isError } = useGetListingDetailQuery({ slug });
+	const resolvedOrderType = data?.listing.order_type;
+	const shouldRedirectToBooking =
+		(resolvedOrderType === "events" || resolvedOrderType === "appointments") &&
+		searchParams.get("view") !== "standard";
+	useEffect(() => {
+		if (shouldRedirectToBooking) navigate(`/booking/${slug}`, { replace: true });
+	}, [navigate, shouldRedirectToBooking, slug]);
 	const [likeListing, { isLoading: isLiking }] = useLikeListingMutation();
 	const [unlikeListing, { isLoading: isUnliking }] =
 		useUnlikeListingMutation();
@@ -75,6 +83,8 @@ export default function ListingDetailPage() {
 				</div>
 			</Layout>
 		);
+	if (shouldRedirectToBooking)
+		return <Layout><div className="py-20 text-center text-sm text-muted-foreground">Opening booking…</div></Layout>;
 
 	const { listing } = data;
 	const orderType = listing.order_type;
