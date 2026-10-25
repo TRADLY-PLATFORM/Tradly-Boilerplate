@@ -1,5 +1,5 @@
-import React from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import React, { useEffect } from "react";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useGetOrderDetailQuery } from "@/state/orders/api";
 import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
@@ -39,14 +39,23 @@ function StatusBadge({ status }: { status: number }) {
 export default function OrderDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const { data, isLoading, isError } = useGetOrderDetailQuery(id, { skip: !id });
+  const order = data?.order as any;
+  const orderItems: any[] = order?.order_details ?? [];
+  const orderType: string = order?.type ?? "";
+  const hasBooking = orderType === "events" || orderType === "appointments" || orderItems.some((item: any) => item.schedule_start_at);
+  const shouldRedirectToBooking = hasBooking && searchParams.get("view") !== "standard";
+  useEffect(() => {
+    if (shouldRedirectToBooking) navigate(`/booking/orders/${id}`, { replace: true });
+  }, [id, navigate, shouldRedirectToBooking]);
 
   if (isLoading) return <Layout><div className="text-center py-20 text-muted-foreground text-sm">Loading order…</div></Layout>;
   if (isError || !data) return <Layout><div className="text-center py-20 text-destructive text-sm">Order not found.</div></Layout>;
+  if (shouldRedirectToBooking) return <Layout><div className="py-20 text-center text-sm text-muted-foreground">Opening booking calendar…</div></Layout>;
 
-  const { order } = data;
-  const items: any[] = (order as any).order_details ?? [];
+  const items: any[] = orderItems;
   const shipments: any[] = (order as any).shipments ?? [];
   const shippingAddress = (order as any).shipping_address;
   const grandTotal = (order as any).customer_pricing?.grand_total;
@@ -55,8 +64,7 @@ export default function OrderDetailPage() {
   const taxTotal = (order as any).tax_total;
   const paymentMethod = (order as any).payment_method;
   const customerPricing: any[] = (order as any).customer_pricing?.items ?? [];
-  const orderType: string = (order as any).type ?? "";
-  const isScheduled = orderType === "events" || orderType === "appointments" || items.some((item: any) => item.schedule_start_at);
+  const isScheduled = hasBooking;
 
   return (
     <Layout>

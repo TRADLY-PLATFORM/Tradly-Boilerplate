@@ -22,7 +22,7 @@ Booking screens are separate routes, so generated storefronts can choose the boo
 
 - `/listing/:slug` — standard listing details; event and appointment actions open the booking flow.
 - `/booking/:slug` — booking details with available dates and time slots before checkout.
-- `/orders/:id` — standard order details, with a link to the booking calendar for scheduled orders.
+- `/orders/:id` — standard order route; scheduled orders open the booking calendar based on their order type. Add `?view=standard` to force standard details.
 - `/booking/orders/:id` — order details with the booked date highlighted on a calendar.
 
 Change the route elements in `src/app/App.tsx` or point generated links at the route that matches the storefront design. The standard listing and order pages remain available.

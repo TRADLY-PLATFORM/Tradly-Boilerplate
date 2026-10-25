@@ -30,7 +30,7 @@ export default function BookingOrderPage() {
   return <Layout>
     <div className="mb-7 flex items-center justify-between gap-3">
       <Button variant="ghost" size="sm" onClick={() => navigate('/orders')} className="gap-1.5 pl-0 text-coffee-accent hover:bg-transparent"><ArrowLeft className="h-4 w-4" /> My orders</Button>
-      <Link to={`/orders/${id}`} className="text-sm text-coffee-accent underline">Standard order view</Link>
+      <Link to={`/orders/${id}?view=standard`} className="text-sm text-coffee-accent underline">Standard order view</Link>
     </div>
     <div className="mb-6"><p className="text-xs uppercase tracking-wider text-muted-foreground">Booking #{order.order_reference}</p><h1 className="mt-1 font-display text-2xl font-bold">Your booking</h1><p className="mt-1 text-sm text-muted-foreground">{STATUS[order.order_status] ?? `Status ${order.order_status}`}</p></div>
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">

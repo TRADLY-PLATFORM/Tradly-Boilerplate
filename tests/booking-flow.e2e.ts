@@ -49,7 +49,7 @@ test('scheduled listing URLs route by order type, with a standard-detail overrid
   await expect(screen.getByRole('button', 'Book appointment')).toBeVisible()
 })
 
-test('buyer can open a separate booking order page with the booked date highlighted on its calendar', async ({ app, browser, screen }) => {
+test('booking orders open the calendar by order type, with regular order details available as an override', async ({ app, browser, screen }) => {
   await signIn(browser)
   await browser.route('**/v1/users/token/refresh**', route => route.fulfill({ json: { status: true, data: { auth_key: 'booking-auth', refresh_key: 'booking-refresh' } } }))
   await browser.route('**/v1/orders/303**', route => route.fulfill({ json: { status: true, data: { order: {
@@ -57,9 +57,14 @@ test('buyer can open a separate booking order page with the booked date highligh
     order_details: [{ id: 7, listing_id: 501, schedule_start_at: '2026-11-12 10:00:00', schedule_end_at: '2026-11-12 10:30:00', listing: { slug: 'e2e-appointment', title: 'E2E Appointment', images: [] } }],
   } } } }))
 
-  await app.open('/booking/orders/303')
+  await app.open('/orders/303')
+  await expect(browser).toHaveURL('/booking/orders/303')
   await expect(screen.getByRole('heading', 'Your booking')).toBeVisible()
   await expect(screen.getByText('November 2026')).toBeVisible()
   await expect(screen.getByRole('link', 'Standard order view')).toBeVisible()
   await expect(screen.getByText('Thursday, November 12, 2026')).toBeVisible()
+
+  await app.open('/orders/303?view=standard')
+  await expect(screen.getByRole('heading', 'Items')).toBeVisible()
+  await expect(screen.getByRole('link', 'View booking calendar')).toBeVisible()
 })
