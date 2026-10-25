@@ -156,31 +156,6 @@ export default function ListingDetailPage() {
 		});
 	};
 
-	const handleBookNow = async () => {
-		if (!isAuthenticated) {
-			navigate("/sign-in");
-			return;
-		}
-		const clearResult = await clearCart();
-		// 471 = cart already empty — still proceed
-		if (
-			"error" in clearResult &&
-			(clearResult.error as any)?.code !== 471
-		) {
-			showToast("Failed to prepare booking");
-			return;
-		}
-		const result = await addToCart({
-			listing_id: listing.id,
-			quantity: 1,
-		});
-		if ("error" in result) {
-			showToast((result.error as { error: string }).error);
-			return;
-		}
-		navigate("/cart");
-	};
-
 	const handleFundNow = async () => {
 		if (!isAuthenticated) {
 			navigate("/sign-in");
@@ -562,7 +537,7 @@ export default function ListingDetailPage() {
 								"appointments") && (
 							<Button
 								className="btn-hero flex-1"
-								onClick={handleBookNow}
+								onClick={() => navigate(`/booking/${slug}`)}
 							>
 								{orderType === "events"
 									? "Book now"

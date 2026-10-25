@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useGetOrderDetailQuery } from "@/state/orders/api";
 import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
@@ -56,7 +56,7 @@ export default function OrderDetailPage() {
   const paymentMethod = (order as any).payment_method;
   const customerPricing: any[] = (order as any).customer_pricing?.items ?? [];
   const orderType: string = (order as any).type ?? "";
-  const isScheduled = orderType === "events" || orderType === "appointments";
+  const isScheduled = orderType === "events" || orderType === "appointments" || items.some((item: any) => item.schedule_start_at);
 
   return (
     <Layout>
@@ -71,6 +71,7 @@ export default function OrderDetailPage() {
           <StatusBadge status={(order as any).order_status} />
         </div>
       </div>
+      {isScheduled && <div className="mb-5 flex justify-end"><Link to={`/booking/orders/${id}`} className="text-sm font-medium text-coffee-accent underline">View booking calendar</Link></div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
         {/* Main column */}

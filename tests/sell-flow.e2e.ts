@@ -108,3 +108,48 @@ test('seller can publish a free listing with category attributes, stock and ship
     attributes: [{ id: 9, values: ['1'] }, { id: 10, values: ['2'] }],
   })
 })
+
+test('seller can publish an appointment with date range, daily hours and slot capacity', async ({ app, browser, screen }) => {
+  await browser.addInitScript((cookiePrefix: string) => {
+    localStorage.setItem(`${cookiePrefix}_user_profile`, JSON.stringify({ id: 'e2e-seller', first_name: 'E2E', last_name: 'Seller', email: 'seller@example.test' }))
+    document.cookie = `${cookiePrefix}_login=true; path=/`
+    document.cookie = `${cookiePrefix}_logged_in_user_id=e2e-seller; path=/`
+    document.cookie = `${cookiePrefix}_auth_key=e2e-auth-key; path=/`
+    document.cookie = `${cookiePrefix}_refresh_key=e2e-refresh-key; path=/`
+  }, AppConfig.domain)
+  await browser.route('**/v1/users/token/refresh**', route => route.fulfill({ json: { status: true, data: { auth_key: 'e2e-auth-key', refresh_key: 'e2e-refresh-key' } } }))
+  await browser.route('**/v1/accounts**', route => route.fulfill({ json: { status: true, data: { accounts: [{ id: 77, name: 'E2E Shop' }] } } }))
+  await browser.route('**/v1/categories**', async route => {
+    const type = new URL(route.request.url).searchParams.get('type')
+    await route.fulfill({ json: { status: true, data: { categories: type === 'account' ? [] : [{ id: 4, name: 'Services' }] } } })
+  })
+  await browser.route('**/v1/attributes**', route => route.fulfill({ json: { status: true, data: { attributes: [] } } }))
+  await browser.route('**/v1/listings**', route => route.fulfill({ json: { status: true, data: { listing: { id: 9002, slug: 'e2e-appointment' } } } }))
+  let availability: any
+  await browser.route('**/v1/listings/9002/schedules**', async route => {
+    availability = JSON.parse(route.request.postData ?? '{}')
+    await route.fulfill({ json: { status: true, data: {} } })
+  })
+  await browser.route('**/v1/utils/S3signedUploadURL**', route => route.fulfill({ json: { status: true, data: { result: [{ signedUrl: 'https://upload.example.test/appointment', fileUri: 'https://media.example.test/appointment.jpg' }] } } }))
+  await browser.route('https://upload.example.test/**', route => route.fulfill({ status: 200, body: '' }))
+
+  await app.open('/sell')
+  await screen.getByLabel('Title').fill('E2E Appointment')
+  await screen.getByLabel('Description').fill('Book a test service')
+  await screen.getByLabel('Listing type').selectOption({ value: 'appointments' })
+  await screen.getByLabel('Category').selectOption({ value: '4' })
+  await screen.getByLabel('Price').fill('25')
+  await screen.getByLabel('First date').fill('2026-11-01')
+  await screen.getByLabel('Last date').fill('2026-11-30')
+  await screen.getByLabel('Start time').fill('10:00')
+  await screen.getByLabel('End time').fill('17:00')
+  await screen.getByLabel('Capacity per slot').fill('3')
+  await screen.getByLabel('Photos').setInputFiles(fileURLToPath(new URL('./fixtures/listing-photo.svg', import.meta.url)))
+  await screen.getByRole('button', 'Publish listing').tap()
+
+  await expect(browser).toHaveURL('/booking/e2e-appointment')
+  expect(availability).toMatchObject({ schedules: [{
+    start_date: '2026-11-01', end_date: '2026-11-30', start_time: '10:00', end_time: '17:00',
+    schedule_type: 1, active: true, total_stocks: 3,
+  }] })
+})

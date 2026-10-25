@@ -9,6 +9,8 @@ import ForgotPasswordPage from '../pages/ForgotPasswordPage'
 import ResetPasswordPage from '../pages/ResetPasswordPage'
 import HomePage from '../pages/HomePage'
 import ListingDetailPage from '../pages/ListingDetailPage'
+import BookingListingPage from '../pages/BookingListingPage'
+import BookingOrderPage from '../pages/BookingOrderPage'
 import CartPage from '../pages/CartPage'
 import CheckoutPage from '../pages/CheckoutPage'
 import ThankYouPage from '../pages/ThankYouPage'
@@ -66,6 +68,7 @@ export default function App() {
           {/* Public */}
           <Route path="/" element={<HomePage />} />
           <Route path="/listing/:slug" element={<ListingDetailPage />} />
+          <Route path="/booking/:slug" element={<BookingListingPage />} />
           <Route path="/lc/:slug" element={<CategoryListingsPage />} />
 
           {/* Protected */}
@@ -77,6 +80,7 @@ export default function App() {
           <Route path="/checkouts/:reference/thank-you" element={<ProtectedRoute><ThankYouPage /></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
           <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
+          <Route path="/booking/orders/:id" element={<ProtectedRoute><BookingOrderPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

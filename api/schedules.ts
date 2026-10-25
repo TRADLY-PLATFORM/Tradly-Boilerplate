@@ -21,6 +21,33 @@ export interface SchedulesPerDay {
 // API returns a flat array of SchedulesPerDay directly (not wrapped in an object)
 export type GetSchedulesResponse = SchedulesPerDay[]
 
+export interface CreateScheduleInput {
+  start_date: string
+  end_date?: string
+  start_time: string
+  end_time: string
+  schedule_type: 1 | 2
+  repeat_days?: number[]
+  active: boolean
+  total_stocks?: number
+}
+
+export const createSchedule = (
+  listingId: number | string,
+  schedules: CreateScheduleInput[],
+  authKey: string,
+  currency: string,
+  language: string,
+): Promise<any> =>
+  (TradlySDK as any).app.createSchedule({
+    id: String(listingId),
+    data: { schedules },
+    pkKey: AppConfig.pkKey,
+    authKey,
+    currency,
+    language,
+  })
+
 // Fetch available schedule slots for a listing
 // id: listing ID, start_at: "YYYY-MM-DD", days: how many days ahead to fetch
 export const getSchedules = (

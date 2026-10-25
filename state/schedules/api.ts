@@ -1,7 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import * as schedulesAPI from '@/api/schedules'
-import type { SchedulesPerDay } from '@/api/schedules'
-import { getTradlyResponseError } from '@/state/api-response'
+import type { CreateScheduleInput, SchedulesPerDay } from '@/api/schedules'
+import { getTradlyResponseError, normalizeTradlyResponse } from '@/state/api-response'
 
 interface LocalState {
   auth: { authKey: string }
@@ -17,6 +17,7 @@ const ctx = (state: LocalState) => ({
 export const schedulesApi = createApi({
   reducerPath: 'schedulesApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/' }),
+  tagTypes: ['Schedule'],
   keepUnusedDataFor: 60,
   endpoints: (builder) => ({
 
@@ -49,9 +50,26 @@ export const schedulesApi = createApi({
           return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
         }
       },
+      providesTags: (_result, _error, { listingId }) => [{ type: 'Schedule', id: String(listingId) }],
+    }),
+
+    createSchedule: builder.mutation<void, { listingId: number | string; schedules: CreateScheduleInput[] }>({
+      queryFn: async ({ listingId, schedules }, { getState }) => {
+        const { authKey, currency, language } = ctx(getState() as LocalState)
+        try {
+          const response = await schedulesAPI.createSchedule(listingId, schedules, authKey, currency, language)
+          const normalized = normalizeTradlyResponse(response, 'Failed to save booking availability')
+          if (normalized.error)
+            return { error: { status: 'CUSTOM_ERROR', error: normalized.error.message ?? 'Failed to save booking availability' } }
+          return { data: undefined }
+        } catch (err) {
+          return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } }
+        }
+      },
+      invalidatesTags: (_result, _error, { listingId }) => [{ type: 'Schedule', id: String(listingId) }],
     }),
 
   }),
 })
 
-export const { useGetSchedulesQuery } = schedulesApi
+export const { useGetSchedulesQuery, useCreateScheduleMutation } = schedulesApi

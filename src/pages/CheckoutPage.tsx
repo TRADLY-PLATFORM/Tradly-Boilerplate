@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import dayjs from "dayjs";
 import {
@@ -347,6 +347,7 @@ function ScheduleSelector({
 
 export default function CheckoutPage() {
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
 	const dispatch = useDispatch();
 	const isAuthenticated = useAuthSelector((st) => st.isAuthenticated);
 	const authKey = useAuthSelector((st) => st.authKey ?? "");
@@ -437,7 +438,17 @@ export default function CheckoutPage() {
 	);
 	const dates = schedulesPerDay.map((s) => s.day);
 
-	useEffect(() => { setSelectedSlotIdx(null); }, [selectedDateIdx]);
+	useEffect(() => {
+		const scheduleId = Number(searchParams.get("booking_schedule_id"));
+		const day = searchParams.get("booking_day");
+		if (!scheduleId || !day || !schedulesPerDay.length) return;
+		const dayIndex = schedulesPerDay.findIndex(entry => entry.day === day);
+		if (dayIndex < 0) return;
+		const slotIndex = schedulesPerDay[dayIndex].schedules.findIndex(slot => Number(slot.id) === scheduleId);
+		if (slotIndex < 0) return;
+		setSelectedDateIdx(dayIndex);
+		setSelectedSlotIdx(slotIndex);
+	}, [searchParams, scheduleData]);
 
 	// ── Guest ──
 	const [guestEmail, setGuestEmail] = useState("");
@@ -736,7 +747,7 @@ export default function CheckoutPage() {
 								dates={dates}
 								schedulesPerDay={schedulesPerDay}
 								selectedDateIdx={selectedDateIdx}
-								onSelectDate={(i) => setSelectedDateIdx(i)}
+								onSelectDate={(i) => { setSelectedDateIdx(i); setSelectedSlotIdx(null); }}
 								selectedSlotIdx={selectedSlotIdx}
 								onSelectSlot={(i) => setSelectedSlotIdx(i)}
 							/>

@@ -16,6 +16,7 @@ Each entry says which folders changed and whether you need to act:
 - `src/components/Layout.tsx` is now a thin shell. Header and footer logic (auth, cart count, nav links, sign-out, mobile menu) moved to `src/components/layout/useLayoutData.ts`; `layout/Header.tsx` and `layout/Footer.tsx` are design-only and read everything from a `data: LayoutData` prop. Which links appear is set in `layout/layout.config.ts`. Action: none for new projects. If you edited `Layout.tsx`, move your markup into `layout/Header.tsx` / `layout/Footer.tsx`.
 
 ### Added
+- Platform code: `api/schedules.ts` and `state/schedules/` now include `createSchedule` for seller event/appointment availability. Site code adds `/booking/:slug` for buyer slot selection and `/booking/orders/:id` for the booked-date calendar; standard listing and order routes remain available. No SDK update is needed because `tradly@1.2.15` already exposes `createSchedule`.
 - `HomePage.tsx`: helper components `CategoryCard`, `TrustBadge`, `SectionHeader`, `StatCard` (site code, optional).
 - `index.css`: utilities `.bg-surface`, `.section-accent`, `.scroll-row`, `.badge-category` (site code, optional).
 - Exhaustive endpoint contract tests (`pnpm test:e2e`, `pnpm test:api`).

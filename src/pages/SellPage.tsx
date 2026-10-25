@@ -10,6 +10,7 @@ import { useGetCategoriesQuery } from '@/state/categories/api'
 import { useGetAttributesQuery } from '@/state/attributes/api'
 import { useGetMyAccountsQuery, useCreateAccountMutation } from '@/state/accounts/api'
 import { useCreateListingMutation } from '@/state/listing/api'
+import { useCreateScheduleMutation } from '@/state/schedules/api'
 import { useUploadImagesMutation } from '@/state/uploads/api'
 import type { Category } from '@/types/category.types'
 import type { SellerAccount } from '@/api/accounts'
@@ -79,6 +80,7 @@ export default function SellPage() {
   const [createAccount, accountState] = useCreateAccountMutation()
   const [createListing, listingState] = useCreateListingMutation()
   const [uploadImages, uploadState] = useUploadImagesMutation()
+  const [createSchedule, scheduleState] = useCreateScheduleMutation()
 
   const accounts = accountsData?.accounts ?? []
   const listingCategories = useMemo(() => flattenCategories(listingCategoriesData?.categories ?? []), [listingCategoriesData])
@@ -112,6 +114,13 @@ export default function SellPage() {
   const [imageUrls, setImageUrls] = useState<string[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [scheduleStartDate, setScheduleStartDate] = useState('')
+  const [scheduleEndDate, setScheduleEndDate] = useState('')
+  const [scheduleStartTime, setScheduleStartTime] = useState('09:00')
+  const [scheduleEndTime, setScheduleEndTime] = useState('17:00')
+  const [scheduleCapacity, setScheduleCapacity] = useState('1')
+  const [scheduleRepeat, setScheduleRepeat] = useState(false)
+  const [publishedListing, setPublishedListing] = useState<{ slug: string; id: number } | null>(null)
 
   useEffect(() => {
     if (!accountId && accounts.length) setAccountId(String(accounts[0].id))
@@ -181,6 +190,10 @@ export default function SellPage() {
       setError('Add at least one photo to publish your listing.')
       return
     }
+    if (needsSchedule && (!scheduleStartDate || !scheduleEndDate || scheduleEndDate < scheduleStartDate || scheduleEndTime <= scheduleStartTime)) {
+      setError('Enter a valid availability date range and end time after the start time.')
+      return
+    }
     const owner = selectedAccount ?? accountState.data!.account
     const payload: Record<string, unknown> = {
       title: title.trim(),
@@ -225,6 +238,28 @@ export default function SellPage() {
     }
     setSuccess('Your listing is live.')
     const listing = result.data.listing
+    if (needsSchedule && listing?.id) {
+      setPublishedListing({ id: listing.id, slug: listing.slug ?? String(listing.id) })
+      const scheduleResult = await createSchedule({
+        listingId: listing.id,
+        schedules: [{
+          start_date: scheduleStartDate,
+          end_date: scheduleEndDate,
+          start_time: scheduleStartTime,
+          end_time: scheduleEndTime,
+          schedule_type: scheduleRepeat ? 2 : 1,
+          ...(scheduleRepeat ? { repeat_days: [1, 2, 3, 4, 5, 6, 7] } : {}),
+          active: true,
+          total_stocks: Math.max(1, Number(scheduleCapacity) || 1),
+        }],
+      })
+      if ('error' in scheduleResult) {
+        setError(`Your listing was created, but its booking availability could not be saved: ${errorMessage(scheduleResult.error, 'Please try again later.')}`)
+        return
+      }
+      navigate(`/booking/${listing.slug ?? listing.id}`)
+      return
+    }
     if (listing?.slug) navigate(`/listing/${listing.slug}`)
   }
 
@@ -270,6 +305,17 @@ export default function SellPage() {
             <div className="space-y-1.5"><Label htmlFor="listing-description">Description</Label><textarea id="listing-description" value={description} onChange={event => setDescription(event.target.value)} required rows={5} maxLength={5000} placeholder="Add details that help people understand your listing." className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5"><Label htmlFor="listing-type">Listing type</Label><select id="listing-type" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={orderType} onChange={event => setOrderType(event.target.value)}>{ORDER_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+            {needsSchedule && <section className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
+              <div><h3 className="font-semibold">Booking availability</h3><p className="text-xs text-muted-foreground">Set the date range, daily time window, and number of bookings available per slot.</p></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5"><Label htmlFor="schedule-start-date">First date</Label><Input id="schedule-start-date" type="date" value={scheduleStartDate} onChange={event => setScheduleStartDate(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="schedule-end-date">Last date</Label><Input id="schedule-end-date" type="date" min={scheduleStartDate || undefined} value={scheduleEndDate} onChange={event => setScheduleEndDate(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="schedule-start-time">Start time</Label><Input id="schedule-start-time" type="time" value={scheduleStartTime} onChange={event => setScheduleStartTime(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="schedule-end-time">End time</Label><Input id="schedule-end-time" type="time" value={scheduleEndTime} onChange={event => setScheduleEndTime(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="schedule-capacity">Capacity per slot</Label><Input id="schedule-capacity" type="number" min="1" step="1" value={scheduleCapacity} onChange={event => setScheduleCapacity(event.target.value)} required /></div>
+              </div>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={scheduleRepeat} onChange={event => setScheduleRepeat(event.target.checked)} /> Repeat every day in this date range</label>
+            </section>}
               <div className="space-y-1.5"><Label htmlFor="listing-category">Category</Label><select id="listing-category" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryId} onChange={event => setCategoryId(event.target.value)} required><option value="">Choose a category</option>{listingCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
               <div className="space-y-1.5"><Label htmlFor="listing-price">{orderType === 'donation' ? 'Suggested amount' : 'Price'}</Label><Input id="listing-price" type="number" min="0" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0.00" required /></div>
               <div className="space-y-1.5"><Label htmlFor="listing-stock">Available quantity</Label><Input id="listing-stock" type="number" min="1" step="1" value={stock} onChange={event => setStock(event.target.value)} required /></div>
@@ -309,7 +355,8 @@ export default function SellPage() {
               <p className="text-xs text-muted-foreground">Add at least one photo, up to 8. Photos upload securely as you select them.</p>
               {uploadState.isLoading && <p className="text-xs text-muted-foreground">Uploading photos…</p>}
             </div>
-            <Button type="submit" disabled={listingState.isLoading || uploadState.isLoading || files.length > 0} className="btn-hero w-full sm:w-auto">{listingState.isLoading ? 'Publishing…' : 'Publish listing'}</Button>
+            <Button type="submit" disabled={listingState.isLoading || scheduleState.isLoading || !!publishedListing || uploadState.isLoading || files.length > 0} className="btn-hero w-full sm:w-auto">{listingState.isLoading ? 'Publishing…' : scheduleState.isLoading ? 'Saving availability…' : 'Publish listing'}</Button>
+            {publishedListing && <p className="text-sm text-muted-foreground">Listing created. <Link className="text-coffee-accent underline" to={`/listing/${publishedListing.slug}`}>View listing</Link> or <Link className="text-coffee-accent underline" to={`/booking/${publishedListing.slug}`}>open booking page</Link>.</p>}
           </form>
         )}
       </div>

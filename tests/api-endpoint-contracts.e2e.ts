@@ -101,6 +101,7 @@ const endpoints: EndpointCase[] = [
   { id: 'paymentMethods.getPaymentMethods', method: 'get', path: '/v1/tenants/payment_methods', invoke: () => paymentMethods.getPaymentMethods(authKey, currency, language) },
 
   { id: 'schedules.getSchedules', method: 'get', path: `/v1/listings/${listingId}/schedules_per_day`, invoke: () => schedules.getSchedules(listingId, '2026-10-05', 30, authKey, currency, language) },
+  { id: 'schedules.createSchedule', method: 'put', path: `/v1/listings/${listingId}/schedules`, invoke: () => schedules.createSchedule(listingId, [{ start_date: '2026-11-01', end_date: '2026-11-30', start_time: '09:00', end_time: '17:00', schedule_type: 1, active: true, total_stocks: 4 }], authKey, currency, language) },
 
   { id: 'shippingMethods.getShippingMethods', method: 'get', path: '/v1/tenants/shipping_methods', invoke: () => shippingMethods.getShippingMethods({ type: 'tenant' }, authKey, currency, language) },
   { id: 'shippingMethods.getSendCloudShipmentMethods', method: 'get', path: '/v1/shipments/sendcloud/shipping_methods', invoke: () => shippingMethods.getSendCloudShipmentMethods({ shipping_method_id: shippingMethodId, country: 'US' }, authKey, currency, language) },
@@ -165,6 +166,7 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'orders.verifyOrder': 'orders.verifyOrderDetails',
   'payment-methods.getPaymentMethods': 'paymentMethods.getPaymentMethods',
   'schedules.getSchedules': 'schedules.getSchedules',
+  'schedules.createSchedule': 'schedules.createSchedule',
   'shipping-methods.getShippingMethods': 'shippingMethods.getShippingMethods',
   'shipping-methods.getSendCloudShipmentMethods': 'shippingMethods.getSendCloudShipmentMethods',
   'shipping-methods.getExternalShipmentMethods': 'shippingMethods.getExternalShipmentMethods',

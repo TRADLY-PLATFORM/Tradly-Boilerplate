@@ -14,6 +14,18 @@ A production-ready foundation for building marketplace apps powered by the [Trad
 | **Listings** | List with filters/pagination, listing detail, like/unlike (optimistic), `in_cart` sync |
 | **Cart** | Get cart, add to cart, delete item, clear cart, guest cart (UUID), multi-seller conflict (error 480/489) |
 | **Order types** | `listings`, `events`, `appointments`, `donation`, `digital`, `information_listing`, `video_listing`, `requests` — each with the correct cart flow |
+| **Booking** | Seller schedule creation, buyer date/time selection, checkout schedule selection, and a booking calendar in the order view |
+
+### Booking page routes
+
+Booking screens are separate routes, so generated storefronts can choose the booking-specific pages while keeping the standard pages available:
+
+- `/listing/:slug` — standard listing details; event and appointment actions open the booking flow.
+- `/booking/:slug` — booking details with available dates and time slots before checkout.
+- `/orders/:id` — standard order details, with a link to the booking calendar for scheduled orders.
+- `/booking/orders/:id` — order details with the booked date highlighted on a calendar.
+
+Change the route elements in `src/app/App.tsx` or point generated links at the route that matches the storefront design. The standard listing and order pages remain available.
 
 ---
 
@@ -57,7 +69,7 @@ Get your domain and public key from the [Tradly Dashboard](https://tradly.app/da
 
 ## End-to-end checks
 
-This repo uses [TesterArmy e2e](https://github.com/tester-army/e2e). The contract suite covers every exported API wrapper (44 today), both payment URL routes, and every RTK Query endpoint (43 today), checking the SDK HTTP method and path each operation dispatches. It also scans the source for newly added wrappers or RTK endpoints, so the coverage check fails if one is added without a test mapping. The browser suite checks live listings and guest cart requests, plus the unauthenticated orders redirect.
+This repo uses [TesterArmy e2e](https://github.com/tester-army/e2e). The contract suite covers every exported API wrapper, both payment URL routes, and every RTK Query endpoint, checking the SDK HTTP method and path each operation dispatches. It also scans the source for newly added wrappers or RTK endpoints, so the coverage check fails if one is added without a test mapping. Browser flows cover listing publishing, booking slot selection and checkout handoff, the booking calendar order view, storefront requests, and protected order redirects.
 
 ```bash
 pnpm install
@@ -68,7 +80,7 @@ pnpm test:api
 
 `pnpm test:api` runs the SDK response and error handling checks without launching a browser. Set `APP_URL` to test a running preview or deployed site instead of starting the local Vite server. The E2E suite uses no AI model; it checks browser responses and page navigation directly.
 
-To probe all 44 SDK routes against a real Tradly workspace, configure `.env` with a dedicated sandbox domain, public key, and `VITE_TRADLY_ENV=sandbox`, then run:
+To probe every SDK route against a real Tradly workspace, configure `.env` with a dedicated sandbox domain, public key, and `VITE_TRADLY_ENV=sandbox`, then run:
 
 ```bash
 E2E_RUN_LIVE_API_ENDPOINTS=1 pnpm test:e2e
