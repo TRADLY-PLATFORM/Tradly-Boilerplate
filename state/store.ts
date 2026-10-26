@@ -13,6 +13,9 @@ import { schedulesApi } from './schedules/api'
 import { accountsApi } from './accounts/api'
 import { uploadsApi } from './uploads/api'
 import { attributesApi } from './attributes/api'
+import { variantsApi } from './variants/api'
+import { bundlesApi } from './bundles/api'
+import { membershipsApi } from './memberships/api'
 import { authSlice } from './auth/slice'
 import { appSlice } from './app/slice'
 
@@ -50,6 +53,9 @@ const rootReducer = combineReducers({
   [accountsApi.reducerPath]: accountsApi.reducer,
   [uploadsApi.reducerPath]: uploadsApi.reducer,
   [attributesApi.reducerPath]: attributesApi.reducer,
+  [variantsApi.reducerPath]: variantsApi.reducer,
+  [bundlesApi.reducerPath]: bundlesApi.reducer,
+  [membershipsApi.reducerPath]: membershipsApi.reducer,
 })
 
 export type RootState = ReturnType<typeof rootReducer>
@@ -72,7 +78,10 @@ export const store = configureStore({
       .concat(schedulesApi.middleware)
       .concat(accountsApi.middleware)
       .concat(uploadsApi.middleware)
-      .concat(attributesApi.middleware),
+      .concat(attributesApi.middleware)
+      .concat(variantsApi.middleware)
+      .concat(bundlesApi.middleware)
+      .concat(membershipsApi.middleware),
 })
 
 export const persistor = persistStore(store)

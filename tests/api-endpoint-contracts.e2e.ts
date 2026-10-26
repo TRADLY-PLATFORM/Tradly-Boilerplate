@@ -8,16 +8,19 @@ import TradlySDK from 'tradly'
 import * as addresses from '../api/addresses.ts'
 import * as accounts from '../api/accounts.ts'
 import * as attributes from '../api/attributes.ts'
+import * as bundles from '../api/bundles.ts'
 import * as auth from '../api/auth.ts'
 import * as cart from '../api/cart.ts'
 import * as categories from '../api/categories.ts'
 import * as checkout from '../api/checkout.ts'
 import * as commissions from '../api/commissions.ts'
 import * as listing from '../api/listing.ts'
+import * as memberships from '../api/memberships.ts'
 import * as orders from '../api/orders.ts'
 import * as paymentMethods from '../api/payment-methods.ts'
 import * as schedules from '../api/schedules.ts'
 import * as shippingMethods from '../api/shipping-methods.ts'
+import * as variants from '../api/variants.ts'
 import { AppConfig } from '../config/app.config.ts'
 import { getTradlyResponseError } from '../state/api-response.ts'
 import { parseSignUpResponse } from '../state/auth/signup-response.ts'
@@ -33,6 +36,8 @@ type EndpointCase = {
   method: string
   path: string
   invoke: () => Promise<unknown>
+  expectedBody?: unknown
+  expectedQuery?: Record<string, string>
 }
 
 const authKey = 'contract-auth-key'
@@ -50,6 +55,14 @@ const endpoints: EndpointCase[] = [
   { id: 'accounts.getMyAccounts', method: 'get', path: '/v1/accounts', invoke: () => accounts.getMyAccounts('contract-user', authKey, currency, language) },
   { id: 'accounts.createAccount', method: 'post', path: '/v1/accounts', invoke: () => accounts.createAccount({ name: 'Contract Shop', type: 'accounts' }, authKey, currency, language) },
   { id: 'attributes.getAttributes', method: 'get', path: '/v1/attributes', invoke: () => attributes.getAttributes({ type: 'listings', category_id: categoryId }, authKey, currency, language) },
+
+  { id: 'bundles.getBundleItems', method: 'get', path: `/v1/bundles/${listingId}/items`, invoke: () => bundles.getBundleItems(listingId, authKey, currency, language) },
+  { id: 'bundles.addBundleItem', method: 'post', path: `/v1/bundles/${listingId}/items`, invoke: () => bundles.addBundleItem(listingId, { component_listing_id: 202, quantity: 1 }, authKey, currency, language), expectedBody: { component_listing_id: 202, quantity: 1 } },
+  { id: 'bundles.getBundleStock', method: 'get', path: `/v1/bundles/${listingId}/stock`, invoke: () => bundles.getBundleStock(listingId, 2, authKey, currency, language), expectedQuery: { quantity: '2' } },
+  { id: 'bundles.getBundlePool', method: 'get', path: `/v1/bundles/${listingId}/pool`, invoke: () => bundles.getBundlePool(listingId, authKey, currency, language) },
+  { id: 'bundles.addBundlePoolItem', method: 'post', path: `/v1/bundles/${listingId}/pool`, invoke: () => bundles.addBundlePoolItem(listingId, { component_listing_id: 202 }, authKey, currency, language), expectedBody: { component_listing_id: 202 } },
+  { id: 'bundles.submitBundleSelection', method: 'post', path: `/v1/bundles/${listingId}/select`, invoke: () => bundles.submitBundleSelection(listingId, { selected_listing_ids: [202], quantity: 1 }, authKey, currency, language), expectedBody: { selected_listing_ids: [202], quantity: 1 } },
+  { id: 'bundles.getBundleSelection', method: 'get', path: `/v1/bundles/${listingId}/selections/1`, invoke: () => bundles.getBundleSelection(listingId, 1, authKey, currency, language) },
   { id: 'addresses.getAddresses', method: 'get', path: '/v1/addresses', invoke: () => addresses.getAddresses(authKey, currency, language) },
   { id: 'addresses.addAddress', method: 'post', path: '/v1/addresses', invoke: () => addresses.addAddress({ first_name: 'Test', last_name: 'Buyer' } as never, authKey, currency, language) },
   { id: 'addresses.deleteAddress', method: 'delete', path: `/v1/addresses/${addressId}`, invoke: () => addresses.deleteAddress(addressId, authKey, currency, language) },
@@ -92,6 +105,15 @@ const endpoints: EndpointCase[] = [
   { id: 'listing.likeListing', method: 'post', path: `/v1/listings/${listingId}/likes`, invoke: () => listing.likeListing(listingId, authKey, currency, language) },
   { id: 'listing.unlikeListing', method: 'delete', path: `/v1/listings/${listingId}/unlikes`, invoke: () => listing.unlikeListing(listingId, authKey, currency, language) },
 
+  { id: 'memberships.createMembership', method: 'post', path: '/v1/memberships', invoke: () => memberships.createMembership({ listing_id: listingId, membership_id: 'contract-member' }, authKey, currency, language), expectedBody: { membership: { listing_id: listingId, membership_id: 'contract-member' } } },
+  { id: 'memberships.getMemberships', method: 'get', path: '/v1/memberships', invoke: () => memberships.getMemberships({ listing_id: listingId }, authKey, currency, language), expectedQuery: { listing_id: String(listingId) } },
+
+  { id: 'variants.getVariantTypes', method: 'get', path: '/v1/variant_types', invoke: () => variants.getVariantTypes(authKey, currency, language) },
+  { id: 'variants.getVariantTypeValues', method: 'get', path: '/v1/variant_types/2/values', invoke: () => variants.getVariantTypeValues(2, authKey, currency, language) },
+  { id: 'variants.getListingVariants', method: 'get', path: `/v1/listings/${listingId}/variants`, invoke: () => variants.getListingVariants(listingId, authKey, currency, language) },
+  { id: 'variants.createListingVariant', method: 'post', path: `/v1/listings/${listingId}/variants`, invoke: () => variants.createListingVariant(listingId, { title: 'Small', list_price: 10, stock: 5, active: true, variant_values: [{ variant_type_id: 2, variant_type_value_id: 3 }] }, authKey, currency, language), expectedBody: { variant: { title: 'Small', list_price: 10, stock: 5, active: true, variant_values: [{ variant_type_id: 2, variant_type_value_id: 3 }] } } },
+  { id: 'variants.deleteListingVariant', method: 'delete', path: `/v1/listings/${listingId}/variants/3`, invoke: () => variants.deleteListingVariant(listingId, 3, authKey, currency, language) },
+
   { id: 'orders.getOrders', method: 'get', path: '/v1/orders', invoke: () => orders.getOrders({}, authKey, currency, language) },
   { id: 'orders.getOrderDetail', method: 'get', path: `/v1/orders/${orderId}`, invoke: () => orders.getOrderDetail(orderId, authKey, currency, language) },
   { id: 'orders.updateOrderStatus', method: 'patch', path: `/v1/orders/${orderId}/status`, invoke: () => orders.updateOrderStatus({ id: orderId, status: 'pending' } as never, authKey, currency, language) },
@@ -125,6 +147,13 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'accounts.getMyAccounts': 'accounts.getMyAccounts',
   'accounts.createAccount': 'accounts.createAccount',
   'attributes.getAttributes': 'attributes.getAttributes',
+  'bundles.getBundleItems': 'bundles.getBundleItems',
+  'bundles.addBundleItem': 'bundles.addBundleItem',
+  'bundles.getBundleStock': 'bundles.getBundleStock',
+  'bundles.getBundlePool': 'bundles.getBundlePool',
+  'bundles.addBundlePoolItem': 'bundles.addBundlePoolItem',
+  'bundles.submitBundleSelection': 'bundles.submitBundleSelection',
+  'bundles.getBundleSelection': 'bundles.getBundleSelection',
   'addresses.getAddresses': 'addresses.getAddresses',
   'addresses.getStorageHubAddresses': 'addresses.getStorageHubAddresses',
   'addresses.addAddress': 'addresses.addAddress',
@@ -156,6 +185,8 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'listing.getListingDetail': 'listing.getListingDetail',
   'listing.likeListing': 'listing.likeListing',
   'listing.unlikeListing': 'listing.unlikeListing',
+  'memberships.createMembership': 'memberships.createMembership',
+  'memberships.getMemberships': 'memberships.getMemberships',
   'orders.checkout': 'checkout.checkout',
   'orders.paymentIntent': 'checkout.getPaymentIntent',
   'orders.directCheckout': 'checkout.directCheckout',
@@ -170,6 +201,11 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'shipping-methods.getShippingMethods': 'shippingMethods.getShippingMethods',
   'shipping-methods.getSendCloudShipmentMethods': 'shippingMethods.getSendCloudShipmentMethods',
   'shipping-methods.getExternalShipmentMethods': 'shippingMethods.getExternalShipmentMethods',
+  'variants.getVariantTypes': 'variants.getVariantTypes',
+  'variants.getVariantTypeValues': 'variants.getVariantTypeValues',
+  'variants.getListingVariants': 'variants.getListingVariants',
+  'variants.createListingVariant': 'variants.createListingVariant',
+  'variants.deleteListingVariant': 'variants.deleteListingVariant',
 }
 
 const discoverEndpointExports = (): string[] => {
@@ -287,6 +323,15 @@ test('every exported Tradly API wrapper is covered and dispatches its expected S
       const actualUrl = new URL(request.url)
       expect(request.method).toBe(endpoint.method)
       expect(actualUrl.pathname).toBe(endpoint.path)
+      if (endpoint.expectedQuery) {
+        for (const [key, value] of Object.entries(endpoint.expectedQuery)) {
+          expect(actualUrl.searchParams.get(key)).toBe(value)
+        }
+      }
+      if (endpoint.expectedBody !== undefined) {
+        const body = typeof request.data === 'string' ? JSON.parse(request.data) : request.data
+        expect(body).toEqual(endpoint.expectedBody)
+      }
     }
   } finally {
     axios.defaults.adapter = originalAdapter

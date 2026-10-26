@@ -12,6 +12,13 @@ export default defineConfig(({ mode }) => ({
 			clientPort: 443,
 			protocol: "wss",
 		},
+		proxy: {
+			"/tradly-analytics": {
+				target: "https://analytics.tradly.dev",
+				changeOrigin: true,
+				rewrite: (path) => path.replace(/^\/tradly-analytics/, ""),
+			},
+		},
 	},
 	preview: {
 		host: "0.0.0.0",

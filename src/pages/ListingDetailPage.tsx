@@ -6,6 +6,9 @@ import {
 	useUnlikeListingMutation,
 } from "@/state/listing/api";
 import { useAddToCartMutation, useClearCartMutation } from "@/state/cart/api";
+import { useGetListingVariantsQuery } from "@/state/variants/api";
+import { useGetBundleItemsQuery, useGetBundlePoolQuery, useLazyGetBundleStockQuery, useSubmitBundleSelectionMutation } from "@/state/bundles/api";
+import { useCreateMembershipMutation } from "@/state/memberships/api";
 import { useAuthSelector } from "@/state/auth/selectors";
 import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
@@ -26,6 +29,17 @@ function Toast({ msg }: { msg: string }) {
 	);
 }
 
+function formatVariantPrice(value: number | { amount: number; formatted?: string } | undefined, currency: string) {
+	if (value == null) return undefined;
+	if (typeof value === "object" && value.formatted) return value.formatted;
+	const amount = typeof value === "number" ? value : value.amount;
+	try {
+		return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
+	} catch {
+		return `${currency} ${amount}`;
+	}
+}
+
 export default function ListingDetailPage() {
 	const { slug = "" } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
@@ -33,6 +47,13 @@ export default function ListingDetailPage() {
 	const isAuthenticated = useAuthSelector((s) => s.isAuthenticated);
 
 	const { data, isLoading, isError } = useGetListingDetailQuery({ slug });
+	const listingId = data?.listing.id;
+	const isBundle = data?.listing.type === "bundle";
+	const isMembership = data?.listing.type === "membership" || data?.listing.order_type === "membership";
+	const { data: variants = [], isLoading: variantsLoading } = useGetListingVariantsQuery(listingId!, { skip: !listingId || !data || data.listing.order_type !== "listings" || isBundle || isMembership });
+	const { data: bundleItems, isLoading: bundleItemsLoading, isError: bundleItemsError } = useGetBundleItemsQuery(listingId!, { skip: !listingId || !isBundle || data?.listing.metadata?.bundle_mode === "mix_match" });
+	const { data: bundlePool, isLoading: bundlePoolLoading, isError: bundlePoolError } = useGetBundlePoolQuery(listingId!, { skip: !listingId || !isBundle || data?.listing.metadata?.bundle_mode !== "mix_match" });
+	const [checkBundleStock] = useLazyGetBundleStockQuery();
 	const resolvedOrderType = data?.listing.order_type;
 	const shouldRedirectToBooking =
 		(resolvedOrderType === "events" || resolvedOrderType === "appointments") &&
@@ -45,9 +66,12 @@ export default function ListingDetailPage() {
 		useUnlikeListingMutation();
 	const [addToCart, { isLoading: isAdding }] = useAddToCartMutation();
 	const [clearCart] = useClearCartMutation();
+	const [createMembership, { isLoading: isJoining }] = useCreateMembershipMutation();
+	const [submitBundleSelection, { isLoading: isSelectingBundle }] = useSubmitBundleSelectionMutation();
 
 	const [selectedQty, setSelectedQty] = useState(1);
-	const [selectedVariantId] = useState<number | null>(null);
+	const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+	const [selectedBundleIds, setSelectedBundleIds] = useState<number[]>([]);
 	const [donationAmount, setDonationAmount] = useState(0);
 	const [toast, setToast] = useState("");
 	const [clearModal, setClearModal] = useState(false);
@@ -59,6 +83,11 @@ export default function ListingDetailPage() {
 		setToast(msg);
 		setTimeout(() => setToast(""), 3000);
 	};
+	useEffect(() => {
+		setSelectedVariantId(null);
+		setSelectedBundleIds([]);
+		setSelectedQty(1);
+	}, [listingId]);
 
 	if (isLoading) {
 		return (
@@ -87,7 +116,10 @@ export default function ListingDetailPage() {
 		return <Layout><div className="py-20 text-center text-sm text-muted-foreground">Opening booking…</div></Layout>;
 
 	const { listing } = data;
-	const orderType = listing.order_type;
+	const orderType = listing.type === "membership" ? "membership" : listing.order_type;
+	const selectedVariant = variants.find((variant) => variant.id === selectedVariantId);
+	const selectedVariantOffer = selectedVariant?.offer_price ?? selectedVariant?.list_price;
+	const selectedVariantList = selectedVariant?.list_price;
 
 	const handleLikeToggle = async () => {
 		if (!isAuthenticated) {
@@ -153,9 +185,60 @@ export default function ListingDetailPage() {
 			navigate("/sign-in");
 			return false;
 		}
+		if (variantsLoading) {
+			showToast("Product options are still loading");
+			return false;
+		}
+		if (isBundle && listing.metadata?.bundle_mode === "mix_match" && (!bundlePool || bundlePoolLoading || bundlePoolError)) {
+			showToast(bundlePoolError ? "Could not load bundle choices" : "Bundle choices are still loading");
+			return false;
+		}
+		if (isBundle && listing.metadata?.bundle_mode !== "mix_match" && (!bundleItems || bundleItemsLoading || bundleItemsError)) {
+			showToast(bundleItemsError ? "Could not load bundle contents" : "Bundle contents are still loading");
+			return false;
+		}
 		if (listing.stock === 0 || listing.sold) {
 			showToast("Item not available");
 			return false;
+		}
+		if (selectedVariant && selectedQty > selectedVariant.stock) {
+			showToast(`Only ${selectedVariant.stock} of this option are available`);
+			return false;
+		}
+		if (variants.length > 0 && !selectedVariantId) {
+			showToast("Choose an option first");
+			return false;
+		}
+		if (isBundle) {
+			const mode = listing.metadata?.bundle_mode;
+			if (mode === "mix_match") {
+				const min = Number(listing.metadata?.min_quantity) || bundlePool?.min_quantity || 1;
+				const max = Number(listing.metadata?.max_quantity) || bundlePool?.max_quantity || undefined;
+				if (selectedBundleIds.length < min) {
+					showToast(`Choose at least ${min} bundle items`);
+					return false;
+				}
+				if (max && selectedBundleIds.length > max) {
+					showToast(`Choose no more than ${max} bundle items`);
+					return false;
+				}
+				const selection = await submitBundleSelection({ listingId: listing.id, selectedListingIds: selectedBundleIds, quantity: selectedQty });
+				if ("error" in selection) {
+					showToast("Could not save your bundle choices");
+					return false;
+				}
+			} else {
+				try {
+					const stockCheck = await checkBundleStock({ listingId: listing.id, quantity: selectedQty }).unwrap();
+					if (stockCheck?.ok === false) {
+						showToast("Some bundle items are out of stock");
+						return false;
+					}
+				} catch {
+					showToast("Could not check bundle stock");
+					return false;
+				}
+			}
 		}
 		return doAddToCart({
 			listing_id: listing.id,
@@ -164,6 +247,24 @@ export default function ListingDetailPage() {
 				? { variant_id: selectedVariantId }
 				: {}),
 		});
+	};
+
+	const handleJoinMembership = async () => {
+		if (!isAuthenticated) { navigate(`/sign-in?next=${encodeURIComponent(`/listing/${slug}`)}`); return; }
+		const cleared = await clearCart();
+		if ("error" in cleared && (cleared.error as any)?.code !== 471) {
+			showToast("Could not prepare membership checkout"); return;
+		}
+		const added = await addToCart({ listing_id: listing.id, quantity: 1 });
+		if ("error" in added) { showToast((added.error as any)?.error ?? "Could not add membership"); return; }
+		const duration = Number(listing.metadata?.membership_duration_months) || undefined;
+		const membershipId = globalThis.crypto?.randomUUID?.() ?? `member-${listing.id}-${Date.now()}`;
+		const joined = await createMembership({ listing_id: listing.id, membership_id: membershipId, ...(duration ? { duration_months: duration } : {}) });
+		if ("error" in joined) {
+			await clearCart();
+			showToast((joined.error as any)?.error ?? "Could not start membership"); return;
+		}
+		navigate("/checkout");
 	};
 
 	const handleFundNow = async () => {
@@ -340,29 +441,16 @@ export default function ListingDetailPage() {
 					].includes(orderType) && (
 						<div className="flex items-center gap-3">
 							<span className="font-display text-2xl font-bold text-coffee-accent">
-								{
-									listing
-										.offer_price
-										.formatted
-								}
+								{selectedVariant ? formatVariantPrice(selectedVariantOffer, listing.offer_price.currency) : listing.offer_price.formatted}
 							</span>
-							{listing.offer_percent > 0 && (
+							{selectedVariant ? Number(typeof selectedVariantList === "object" ? selectedVariantList.amount : selectedVariantList) > Number(typeof selectedVariantOffer === "object" ? selectedVariantOffer.amount : selectedVariantOffer) : listing.offer_percent > 0 ? (
 								<>
 									<span className="text-muted-foreground text-base line-through">
-										{
-											listing
-												.list_price
-												.formatted
-										}
+										{selectedVariant ? formatVariantPrice(selectedVariantList, listing.list_price.currency) : listing.list_price.formatted}
 									</span>
-									<Badge className="bg-destructive text-destructive-foreground text-xs">
-										{
-											listing.offer_percent
-										}
-										% off
-									</Badge>
+									{!selectedVariant && <Badge className="bg-destructive text-destructive-foreground text-xs">{listing.offer_percent}% off</Badge>}
 								</>
-							)}
+							) : null}
 						</div>
 					)}
 
@@ -401,6 +489,47 @@ export default function ListingDetailPage() {
 						)}
 
 					<Separator />
+
+					{variantsLoading && <p className="text-sm text-muted-foreground">Loading options…</p>}
+					{variants.length > 0 && (
+						<section aria-label="Product options" className="space-y-2">
+							<p className="text-sm font-medium">Choose an option</p>
+							<div className="flex flex-wrap gap-2">
+								{variants.map((variant) => {
+									const price = formatVariantPrice(variant.offer_price ?? variant.list_price, listing.offer_price.currency);
+									return <button key={variant.id} type="button" onClick={() => setSelectedVariantId(variant.id)} className={`rounded-lg border px-3 py-2 text-sm ${selectedVariantId === variant.id ? "border-coffee-accent bg-coffee-secondary/20" : "border-border"}`}>
+										{variant.title}{price != null ? ` · ${price}` : ""} · {variant.stock} left
+									</button>;
+								})}
+							</div>
+						</section>
+					)}
+
+					{isBundle && listing.metadata?.bundle_mode === "mix_match" && bundlePool && (
+						<section className="space-y-2">
+							<p className="text-sm font-medium">Choose bundle items (minimum {Number(listing.metadata?.min_quantity) || bundlePool.min_quantity})</p>
+							<div className="space-y-2">
+								{bundlePool.pool.map((entry: any) => {
+									const component = entry.listing ?? entry.component_listing ?? entry;
+									const id = Number(entry.component_listing_id ?? component.id);
+									if (!id) return null;
+									const max = Number(listing.metadata?.max_quantity) || bundlePool.max_quantity || undefined;
+									return <label key={id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selectedBundleIds.includes(id)} disabled={Boolean(max && selectedBundleIds.length >= max && !selectedBundleIds.includes(id))} onChange={(event) => setSelectedBundleIds((current) => event.target.checked ? [...current, id] : current.filter((value) => value !== id))} />{component.title ?? `Item ${id}`}</label>;
+								})}
+							</div>
+						</section>
+					)}
+
+					{isBundle && listing.metadata?.bundle_mode !== "mix_match" && bundleItems && (
+						<section className="space-y-1">
+							<p className="text-sm font-medium">Included in this bundle</p>
+							{bundleItems.items.map((entry: any, index) => {
+								const component = entry.listing ?? entry.component_listing ?? entry;
+								return <p key={entry.id ?? index} className="text-sm text-muted-foreground">{component.title ?? `Item ${entry.component_listing_id ?? ""}`} × {entry.quantity ?? 1}</p>;
+							})}
+							{bundleItems.saving > 0 && <p className="text-sm text-green-700">Save {bundleItems.saving} with this bundle</p>}
+						</section>
+					)}
 
 					{/* Qty selector */}
 					{["listings", "digital"].includes(
@@ -441,7 +570,8 @@ export default function ListingDetailPage() {
 												(
 													q,
 												) =>
-													Math.min(
+														Math.min(
+														selectedVariantId ? (variants.find((variant) => variant.id === selectedVariantId)?.stock ?? listing.stock) : listing.stock,
 														listing.max_quantity ||
 															listing.stock,
 														q +
@@ -492,12 +622,19 @@ export default function ListingDetailPage() {
 
 					{/* CTAs */}
 					<div className="flex gap-3 flex-wrap">
+						{orderType === "membership" && (
+							<Button className="btn-hero flex-1" disabled={isAdding || isJoining} onClick={handleJoinMembership}>
+								{isJoining || isAdding ? "Joining…" : "Join now"}
+							</Button>
+						)}
 						{orderType === "listings" && (
 							<>
 								<Button
 									className="btn-hero flex-1"
 									disabled={
-										isAdding ||
+									isAdding ||
+									isSelectingBundle ||
+									variantsLoading ||
 										listing.stock ===
 											0
 									}
@@ -506,7 +643,7 @@ export default function ListingDetailPage() {
 									}
 								>
 									<ShoppingCart className="h-4 w-4 mr-1.5" />
-									{listing.in_cart
+									{isSelectingBundle ? "Saving choices…" : listing.in_cart
 										? "Add more"
 										: "Add to cart"}
 								</Button>

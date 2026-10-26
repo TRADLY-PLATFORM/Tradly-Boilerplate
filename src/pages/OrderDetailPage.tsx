@@ -98,6 +98,7 @@ export default function OrderDetailPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-foreground mb-1">{item.listing?.title ?? `Item #${item.listing_id}`}</p>
+                    {item.variant?.name && <p className="text-xs text-muted-foreground mb-1">Option: {item.variant.name}</p>}
                     <p className="text-xs text-muted-foreground">
                       {item.offer_price?.formatted ?? item.list_price?.formatted} × {item.quantity}
                     </p>

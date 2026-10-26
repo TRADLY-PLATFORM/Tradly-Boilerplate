@@ -13,7 +13,9 @@ A production-ready foundation for building marketplace apps powered by the [Trad
 | **Auth** | Sign in (email + phone), sign up, OTP verify, resend OTP, forgot password, set password, social sign-in (Google/Facebook/Apple), token refresh, logout |
 | **Listings** | List with filters/pagination, listing detail, like/unlike (optimistic), `in_cart` sync |
 | **Cart** | Get cart, add to cart, delete item, clear cart, guest cart (UUID), multi-seller conflict (error 480/489) |
-| **Order types** | `listings`, `events`, `appointments`, `donation`, `digital`, `information_listing`, `video_listing`, `requests` — each with the correct cart flow |
+| **Order types** | `listings`, `events`, `appointments`, `donation`, `digital`, `membership`, `information_listing`, `video_listing`, `requests` — each with the matching buyer flow |
+| **Variants and bundles** | Product options carry their own price and stock; fixed and mix-and-match bundles use Tradly component, selection and stock endpoints |
+| **Membership programs** | Sellers can publish a `membership` listing; buyers join and continue through payment checkout. Recurring billing must be configured separately in Tradly. |
 | **Booking** | Seller schedule creation, buyer date/time selection, checkout schedule selection, and a booking calendar in the order view |
 
 ### Booking page routes
@@ -69,7 +71,7 @@ Get your domain and public key from the [Tradly Dashboard](https://tradly.app/da
 
 ## End-to-end checks
 
-This repo uses [TesterArmy e2e](https://github.com/tester-army/e2e). The contract suite covers every exported API wrapper, both payment URL routes, and every RTK Query endpoint, checking the SDK HTTP method and path each operation dispatches. It also scans the source for newly added wrappers or RTK endpoints, so the coverage check fails if one is added without a test mapping. Browser flows cover listing publishing, booking slot selection and checkout handoff, the booking calendar order view, storefront requests, and protected order redirects.
+This repo uses [TesterArmy e2e](https://github.com/tester-army/e2e). The contract suite covers every exported API wrapper, both payment URL routes, and every RTK Query endpoint, checking the SDK HTTP method and path each operation dispatches. It also scans the source for newly added wrappers or RTK endpoints, so the coverage check fails if one is added without a test mapping. Browser flows cover listing publishing, membership creation and checkout, bundle composition and stock guards, product variants, booking and checkout, the booking calendar order view, storefront requests, and protected order redirects.
 
 ```bash
 pnpm install
@@ -228,6 +230,7 @@ Every listing has an `order_type` field that determines the CTA and cart flow:
 | `events` | Book Now | Yes | Clear cart first |
 | `appointments` | Book Appointment | Yes | Clear cart first |
 | `donation` | Fund Now | No | Clear cart first + `custom_price` |
+| `membership` | Join Now | Yes | Creates a Tradly membership record, then shipping-free checkout |
 | `information_listing` | Contact / Enquire | No | No cart |
 | `video_listing` | Watch / Subscribe | No | No cart |
 | `requests` | Submit Request | Yes | No cart — reverse marketplace |

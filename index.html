@@ -4,6 +4,57 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tradly App</title>
+    <script>
+      (function (window, document) {
+        var retried = false;
+        var status;
+
+        function setStatus(value) {
+          window.__tradlyAnalyticsLoaderState = value;
+          if (status) status.textContent = 'Analytics: ' + value;
+        }
+
+        function addLocalStatus() {
+          if (window.location.hostname !== 'localhost') return;
+          status = document.createElement('div');
+          status.style.cssText = 'position:fixed;right:12px;bottom:12px;z-index:2147483647;padding:6px 10px;border-radius:4px;background:#111;color:#fff;font:12px system-ui,sans-serif';
+          status.textContent = 'Analytics: loading';
+          document.addEventListener('DOMContentLoaded', function () {
+            document.body.appendChild(status);
+          });
+        }
+
+        function loadTracker(cacheBust) {
+          var script = document.createElement('script');
+          var analyticsBase = window.location.hostname === 'localhost'
+            ? window.location.origin + '/tradly-analytics'
+            : 'https://analytics.tradly.dev';
+          script.async = true;
+          script.src = analyticsBase + '/tracker.js' + (cacheBust ? '?v=' + Date.now() : '');
+          script.dataset.server = analyticsBase;
+          script.dataset.project = 'tradly-boilerplate-local';
+          script.onload = function () {
+            setStatus(window.ta ? 'ready' : 'loaded_without_api');
+            if (!window.ta && !retried) {
+              retried = true;
+              loadTracker(true);
+            }
+          };
+          script.onerror = function () {
+            setStatus('failed');
+            if (!retried) {
+              retried = true;
+              loadTracker(true);
+            }
+          };
+          document.head.appendChild(script);
+        }
+
+        addLocalStatus();
+        setStatus('loading');
+        loadTracker(false);
+      })(window, document);
+    </script>
   </head>
   <body>
     <div id="root"></div>

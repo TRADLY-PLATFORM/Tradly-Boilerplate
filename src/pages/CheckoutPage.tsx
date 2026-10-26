@@ -55,7 +55,7 @@ import type { SchedulesPerDay, ScheduleSlot } from "@/api/schedules";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SPECIAL_TYPES = ["events", "appointments", "donation"];
+const SPECIAL_TYPES = ["events", "appointments", "donation", "membership"];
 const SCHEDULE_TYPES = ["events", "appointments"];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -367,7 +367,10 @@ export default function CheckoutPage() {
 	const items = activeCartData?.cart_details ?? [];
 	const summary = activeCartData?.cart ?? null;
 
-	const checkoutType = (items[0] as any)?.listing?.order_type ?? "listings";
+	const firstListing = (items[0] as any)?.listing;
+	const checkoutType = firstListing?.type === "membership"
+		? "membership"
+		: firstListing?.order_type ?? "listings";
 	const isSpecialType = SPECIAL_TYPES.includes(checkoutType);
 	const isScheduleType = SCHEDULE_TYPES.includes(checkoutType);
 	const isDonation = checkoutType === "donation";
@@ -379,12 +382,12 @@ export default function CheckoutPage() {
 	const { data: tenantShipping, isLoading: tenantShippingLoading } =
 		useGetShippingMethodsQuery(
 			{ type: "tenant" },
-			{ skip: !needsShipping || useAccountShipping },
+			{ skip: cartLoading || !items.length || !needsShipping || useAccountShipping },
 		);
 	const { data: accountShipping, isLoading: accountShippingLoading } =
 		useGetShippingMethodsQuery(
 			{ type: "account", account_id: sellerAccountId },
-			{ skip: !needsShipping || !useAccountShipping || !sellerAccountId },
+			{ skip: cartLoading || !items.length || !needsShipping || !useAccountShipping || !sellerAccountId },
 		);
 	const shippingData = useAccountShipping ? accountShipping : tenantShipping;
 	const shippingMethods = shippingData?.shipping_methods?.filter((m: any) => m.active) ?? [];

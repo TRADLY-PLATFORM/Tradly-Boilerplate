@@ -43,6 +43,7 @@ Always read `listing.order_type` to decide which action handler to call.
 | `events` | Book Now | **Yes** | **Yes** | No | One event per cart, clear before add |
 | `appointments` | Book Appointment | **Yes** | **Yes** | No | Same as events |
 | `donation` | Fund Now | No | **Yes** | **Yes** | Requires `custom_price` from user input |
+| `membership` | Join Now | **Yes** | **Yes** | No | Create the Tradly membership record, then shipping-free checkout; recurring billing is configured separately |
 | `information_listing` | Contact / Enquire | No | — | — | No cart — lead/enquiry only |
 | `video_listing` | Watch / Subscribe | No | — | — | No cart — content access only |
 | `requests` | Submit Request | **Yes** | — | — | Reverse marketplace — buyer posts a need |
@@ -52,10 +53,14 @@ Always read `listing.order_type` to decide which action handler to call.
 const orderType = listing.order_type  // "listings" | "events" | "appointments" | "donation" | ...
 
 // Helper — determines if this listing type uses cart at all
-const usesCart = ['listings', 'digital', 'events', 'appointments', 'donation'].includes(orderType)
+const usesCart = ['listings', 'digital', 'events', 'appointments', 'donation', 'membership'].includes(orderType)
 
 // Helper — requires auth before any action
-const requiresAuth = ['events', 'appointments', 'requests'].includes(orderType)
+const requiresAuth = ['events', 'appointments', 'requests', 'membership'].includes(orderType)
+
+// A bundle is a `type: 'bundle'` listing with `order_type: 'listings'`.
+// Select from the mix-and-match pool with `/v1/bundles/{id}/select`; check fixed bundle stock
+// with `/stock`. For variants, require a selected option and send its `variant_id`.
 ```
 
 ---

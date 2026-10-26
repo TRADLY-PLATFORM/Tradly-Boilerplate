@@ -205,6 +205,7 @@ export interface Listing {
 	listing_taxes: unknown[];
 	my_review: unknown | null;
 	location: Record<string, unknown>; // {} when no location set
+	metadata?: Record<string, unknown>;
 }
 
 // ─── Input types ──────────────────────────────────────────────────────────────

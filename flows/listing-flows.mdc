@@ -38,12 +38,19 @@ Component
 |---|---|---|---|
 | `listings` | Physical product | Add to Cart + Buy Now | Standard — multi-item ok |
 | `digital` | Downloadable file / software | Buy Now | Standard — no shipping display |
+| `membership` | Paid membership / program listing | Join Now | Auth required + create membership record before shipping-free checkout; does not set up recurring billing |
 | `events` | Time-based event / ticket | Book Now | Auth required + clear cart first |
 | `appointments` | Bookable time slot | Book Appointment | Auth required + clear cart first |
 | `donation` | Fundraising / charity | Fund Now | Clear cart first + custom_price |
 | `information_listing` | Lead gen / enquiry only | Contact / Enquire | No cart |
 | `video_listing` | Video content access | Watch / Subscribe | No cart |
 | `requests` | Reverse marketplace (buyer posts need) | Submit Request | No cart — different flow entirely |
+
+For a bundle, the listing uses `type: 'bundle'` and `order_type: 'listings'`. Read its
+`metadata.bundle_mode`: fixed bundles show `/v1/bundles/{id}/items`; mix-and-match bundles let the
+buyer select from `/pool` and submit with `/select`. Check `/stock` before adding a fixed bundle to
+the cart. Product variants are loaded through `useGetListingVariantsQuery`; require a selected
+variant and include its `variant_id` in `addToCart`.
 
 ---
 
@@ -95,9 +102,9 @@ interface ListingAccount {
 interface Listing {
   id: number; slug: string; title: string
   description: string      // may contain HTML
-  order_type: string       // "listings" | "events" | "appointments" | "donation" |
+  order_type: string       // "listings" | "events" | "appointments" | "donation" | "membership" |
                            // "digital" | "information_listing" | "video_listing" | "requests"
-  type: string             // same value as order_type — use order_type for branching
+  type: string             // usually matches order_type; bundles use type "bundle" + order_type "listings"
 
   // Pricing
   list_price: Money        // ← "list_price" not "price" — show as strikethrough
@@ -287,8 +294,8 @@ listing.rating_data.rating_count_data // { rating_1..5 } for breakdown bar
 // Attributes — show only visible ones
 const visibleAttrs = listing.attributes.filter(a => a.visible)
 
-// Variants — show selector when length > 0
-listing.variants.length > 0  // → render variant picker
+// Load product options from the variants API (listing.variants may not be populated)
+useGetListingVariantsQuery(listing.id)
 ```
 
 ---
@@ -305,7 +312,12 @@ function ListingDetailCTA({ listing }: { listing: Listing }) {
 
   // Physical & digital — standard cart flow
   if (order_type === 'listings' || order_type === 'digital') {
+    // For type === 'bundle', also load components/pool and validate stock/selection.
     return <ProductCTA listing={listing} />
+  }
+
+  if (order_type === 'membership') {
+    return <MembershipCTA listing={listing} />
   }
 
   // Events & appointments — auth + clear cart + book

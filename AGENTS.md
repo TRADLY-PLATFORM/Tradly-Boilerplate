@@ -23,7 +23,8 @@ Toolkit Query. Routes live in `src/app/App.tsx`.
 | Flow guides | `flows/*.mdc` | How auth, cart, category, checkout and listing flows work. Read the matching one before changing a flow. |
 
 Already wired: auth, listing, categories, cart, checkout, orders, addresses, payment methods,
-shipping methods, schedules (bookings), commissions.
+shipping methods, schedules (bookings), commissions, membership listings, bundles and product
+variants.
 
 ## Adding a feature that needs a new Tradly endpoint
 
@@ -63,6 +64,9 @@ event tickets and donations are not separate systems: they are listings with a d
 | Site shape | `order_type` | What the user does | Already in this repo |
 |---|---|---|---|
 | Store / marketplace | `listings`, `digital` | Add to cart, check out | Listing page, cart, checkout |
+| Product with variants | `listings` + Tradly variants | Choose an option, then add the selected variant to cart | Seller variant creation, buyer selection and variant stock/price |
+| Membership program | `membership` | Join, then pay through checkout | Membership record and shipping-free checkout; this is not automatic recurring billing |
+| Fixed or mix-and-match bundle | `listings` + listing `type: bundle` | Inspect bundle contents or choose from its pool, then add to cart | Seller composition, buyer selection and bundle stock check |
 | Booking, appointments | `appointments` | Sign in, pick a date + slot, pay | Booking page `/booking/:slug` (`BookingListingPage`), slot picker + payload `schedule_start_at` / `schedule_end_at` carried into `CheckoutPage` (`state/schedules`) |
 | Events, tickets | `events` | Same as appointments, one event per cart | Same as above; the booked date shows on `/booking/orders/:id` (`BookingOrderPage`) |
 | Crowdfunding, donations | `donation` | Enter an amount, optionally give anonymously | Amount field + goal progress bar in `ListingDetailPage` (`listing.goal_price`, `raised_amount`), `custom_price` on add-to-cart |
@@ -85,6 +89,9 @@ SDK calls it.
 | Purpose | Endpoint | Source | Wired here |
 |---|---|---|---|
 | Add to cart (incl. `custom_price` for donations) | `POST /v1/cart` | Docs | Yes (`api/cart.ts`) |
+| Listing variants | `/v1/variant_types`, `/v1/listings/{id}/variants` | Docs | Yes (`api/variants.ts`, `state/variants/`) |
+| Fixed and mix-and-match bundle components, choices and stock | `/v1/bundles/{id}/items`, `/pool`, `/stock`, `/select`, `/selections/{id}` | Docs | Yes (`api/bundles.ts`, `state/bundles/`) |
+| Membership list and creation | `GET` / `POST /v1/memberships` | Docs | Yes (`api/memberships.ts`, `state/memberships/`) |
 | Check out (incl. `schedule_start_at`, `schedule_end_at`, `anonymous_donation`) | `POST /v1/cart/checkout` | Docs | Yes (`api/checkout.ts`) |
 | Available slots for a listing | `GET /v1/listings/{id}/schedules_per_day?start_at=&days=` | Docs | Yes (`api/schedules.ts`) |
 | Seller sets a listing's schedule | `PUT /v1/listings/{id}/schedules` (SDK `createSchedule`) | SDK only | No |

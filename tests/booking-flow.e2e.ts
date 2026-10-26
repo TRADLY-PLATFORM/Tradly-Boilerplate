@@ -12,7 +12,7 @@ const signIn = async (browser: any) => {
   }, AppConfig.domain)
 }
 
-test('buyer chooses an appointment time on the separate booking route and carries it into checkout', async ({ app, browser, screen }) => {
+test('buyer sends the selected appointment start and end times in the checkout order', async ({ app, browser, screen }) => {
   await signIn(browser)
   await browser.route('**/v1/users/token/refresh**', route => route.fulfill({ json: { status: true, data: { auth_key: 'booking-auth', refresh_key: 'booking-refresh' } } }))
   await browser.route('**/v1/listings/by_slug/e2e-appointment**', route => route.fulfill({ json: { status: true, data: { listing: {
@@ -27,12 +27,26 @@ test('buyer chooses an appointment time on the separate booking route and carrie
     if (route.request.method.toUpperCase() === 'POST') return route.fulfill({ json: { status: true, data: { cart: { id: 77 }, cart_details: [] } } })
     return route.fulfill({ json: { status: true, data: { cart: { id: 77 }, cart_details: [{ id: 4, listing: { id: 501, order_type: 'appointments' }, quantity: 1 }] } } })
   })
+  await browser.route('**/v1/tenants/payment_methods**', route => route.fulfill({ json: { status: true, data: { payment_methods: [{ id: 9952, name: 'Test COD', type: 'cod', channel: 'cod', active: true }] } } }))
+  await browser.route('**/v1/commissions**', route => route.fulfill({ json: { status: true, data: { commissions: [] } } }))
+  let checkoutBody: any
+  await browser.route('**/v1/cart/checkout**', async route => {
+    checkoutBody = JSON.parse(route.request.postData ?? '{}')
+    await route.fulfill({ json: { status: true, data: { order_reference: 'BOOKING-E2E-1' } } })
+  })
 
   await app.open('/booking/e2e-appointment')
   await expect(screen.getByRole('heading', 'E2E Appointment')).toBeVisible()
   await screen.getByRole('button', '10:00 – 10:30 2 left').tap()
   await screen.getByRole('button', 'Continue to checkout').tap()
   await expect(browser).toHaveURL('/checkout?booking_schedule_id=8001&booking_day=2026-10-26')
+  await screen.getByRole('button', 'Place order').tap()
+  expect(checkoutBody.order).toMatchObject({
+    schedule_id: 8001,
+    schedule_start_at: '2026-10-26 10:00:00',
+    schedule_end_at: '2026-10-26 10:30:00',
+  })
+  expect(checkoutBody.order.payment_method_id).toBe(9952)
 })
 
 test('scheduled listing URLs route by order type, with a standard-detail override', async ({ app, browser, screen }) => {

@@ -11,6 +11,9 @@ import { useGetAttributesQuery } from '@/state/attributes/api'
 import { useGetMyAccountsQuery, useCreateAccountMutation } from '@/state/accounts/api'
 import { useCreateListingMutation } from '@/state/listing/api'
 import { useCreateScheduleMutation } from '@/state/schedules/api'
+import { useAddBundleItemMutation, useAddBundlePoolItemMutation } from '@/state/bundles/api'
+import { useCreateListingVariantMutation, useGetVariantTypeValuesQuery, useGetVariantTypesQuery } from '@/state/variants/api'
+import { useGetListingsQuery } from '@/state/listing/api'
 import { useUploadImagesMutation } from '@/state/uploads/api'
 import type { Category } from '@/types/category.types'
 import type { SellerAccount } from '@/api/accounts'
@@ -24,6 +27,8 @@ const ORDER_TYPES = [
   { value: 'information_listing', label: 'Information listing' },
   { value: 'video_listing', label: 'Video listing' },
   { value: 'requests', label: 'Request' },
+  { value: 'membership', label: 'Membership program' },
+  { value: 'bundle', label: 'Bundle of products' },
 ]
 
 function flattenCategories(categories: Category[]): Category[] {
@@ -81,6 +86,9 @@ export default function SellPage() {
   const [createListing, listingState] = useCreateListingMutation()
   const [uploadImages, uploadState] = useUploadImagesMutation()
   const [createSchedule, scheduleState] = useCreateScheduleMutation()
+  const [addBundleItem, bundleItemState] = useAddBundleItemMutation()
+  const [addBundlePoolItem, bundlePoolState] = useAddBundlePoolItemMutation()
+  const [createListingVariant, variantState] = useCreateListingVariantMutation()
 
   const accounts = accountsData?.accounts ?? []
   const listingCategories = useMemo(() => flattenCategories(listingCategoriesData?.categories ?? []), [listingCategoriesData])
@@ -121,12 +129,26 @@ export default function SellPage() {
   const [scheduleCapacity, setScheduleCapacity] = useState('1')
   const [scheduleRepeat, setScheduleRepeat] = useState(false)
   const [publishedListing, setPublishedListing] = useState<{ slug: string; id: number } | null>(null)
+  const [membershipDuration, setMembershipDuration] = useState('')
+  const [bundleMode, setBundleMode] = useState<'fixed' | 'mix_match'>('fixed')
+  const [bundleComponentIds, setBundleComponentIds] = useState<string[]>([])
+  const [bundleComponentQuantities, setBundleComponentQuantities] = useState<Record<string, string>>({})
+  const [bundleMinQuantity, setBundleMinQuantity] = useState('1')
+  const [bundleMaxQuantity, setBundleMaxQuantity] = useState('')
+  const [variantTypeId, setVariantTypeId] = useState('')
+  const [variantValueIds, setVariantValueIds] = useState<string[]>([])
+  const [variantPrices, setVariantPrices] = useState<Record<string, string>>({})
+  const [variantStocks, setVariantStocks] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!accountId && accounts.length) setAccountId(String(accounts[0].id))
   }, [accountId, accounts])
 
   const selectedAccount = accounts.find(account => String(account.id) === accountId)
+  const { data: variantsTypes = [], isLoading: variantTypesLoading } = useGetVariantTypesQuery(undefined, { skip: orderType !== 'listings' })
+  const { data: variantValues = [], isLoading: variantValuesLoading } = useGetVariantTypeValuesQuery(variantTypeId, { skip: !variantTypeId })
+  const { data: sellerListingsData, isLoading: sellerListingsLoading } = useGetListingsQuery({ page: 1, limit: 100, account_id: Number(accountId) }, { skip: orderType !== 'bundle' || !accountId })
+  const sellerListings = (sellerListingsData?.listings ?? []).filter(listing => String(listing.id) !== publishedListing?.id.toString() && listing.type !== 'bundle')
   const attributes = (attributesData?.attributes ?? []).filter(attribute => attribute.active !== false && !attribute.private && attribute.field_type !== 6)
   const showShopSetup = !accountsLoading && accounts.length === 0 && !accountState.data?.account
   const needsSchedule = orderType === 'events' || orderType === 'appointments'
@@ -190,6 +212,22 @@ export default function SellPage() {
       setError('Add at least one photo to publish your listing.')
       return
     }
+    if (orderType === 'bundle' && !bundleComponentIds.length) {
+      setError('Add at least one of your listings to this bundle.')
+      return
+    }
+    if (orderType === 'bundle' && bundleMode === 'mix_match') {
+      const minimumChoices = Math.max(1, Number(bundleMinQuantity) || 1)
+      const maximumChoices = bundleMaxQuantity.trim() ? Number(bundleMaxQuantity) : bundleComponentIds.length
+      if (minimumChoices > bundleComponentIds.length || maximumChoices < minimumChoices) {
+        setError('Bundle choice limits must be valid and fit the selected pool.')
+        return
+      }
+    }
+    if (orderType === 'listings' && variantTypeId && !variantValueIds.length) {
+      setError('Choose at least one option value for your variants.')
+      return
+    }
     if (needsSchedule && (!scheduleStartDate || !scheduleEndDate || scheduleEndDate < scheduleStartDate || scheduleEndTime <= scheduleStartTime)) {
       setError('Enter a valid availability date range and end time after the start time.')
       return
@@ -198,8 +236,8 @@ export default function SellPage() {
     const payload: Record<string, unknown> = {
       title: title.trim(),
       description: description.trim(),
-      type: orderType,
-      order_type: orderType,
+      type: orderType === 'bundle' ? 'bundle' : orderType,
+      order_type: orderType === 'bundle' ? 'listings' : orderType,
       account_id: Number(owner.id),
       category_id: [Number(categoryId)],
       images: imageUrls,
@@ -231,6 +269,15 @@ export default function SellPage() {
     })
     if (selectedAttributes.length) payload.attributes = selectedAttributes
     if (orderType === 'donation') payload.goal_price = Number(goalPrice) || 0
+    if (orderType === 'membership' && membershipDuration) {
+      payload.metadata = { membership_duration_months: Number(membershipDuration) }
+    }
+    if (orderType === 'bundle') {
+      payload.metadata = {
+        bundle_mode: bundleMode,
+        ...(bundleMode === 'mix_match' ? { min_quantity: Math.max(1, Number(bundleMinQuantity) || 1), max_quantity: bundleMaxQuantity.trim() ? Number(bundleMaxQuantity) : bundleComponentIds.length } : {}),
+      }
+    }
     const result = await createListing(payload)
     if ('error' in result) {
       setError(errorMessage(result.error, 'Could not publish listing.'))
@@ -238,6 +285,45 @@ export default function SellPage() {
     }
     setSuccess('Your listing is live.')
     const listing = result.data.listing
+    if (listing?.id && orderType === 'bundle') {
+      setPublishedListing({ id: listing.id, slug: listing.slug ?? String(listing.id) })
+      for (const [index, componentId] of bundleComponentIds.entries()) {
+        const input = { listingId: listing.id, componentListingId: Number(componentId), orderBy: index }
+        const bundleResult = bundleMode === 'mix_match'
+          ? await addBundlePoolItem(input)
+          : await addBundleItem({ ...input, quantity: Math.max(1, Number(bundleComponentQuantities[componentId]) || 1) })
+        if ('error' in bundleResult) {
+          setError(`The bundle listing was created, but a component could not be saved: ${errorMessage(bundleResult.error, 'Please try again in the listing editor.')}`)
+          return
+        }
+      }
+      navigate(`/listing/${listing.slug ?? listing.id}`)
+      return
+    }
+    if (listing?.id && orderType === 'listings' && variantTypeId && variantValueIds.length) {
+      setPublishedListing({ id: listing.id, slug: listing.slug ?? String(listing.id) })
+      for (const valueId of variantValueIds) {
+        const value = variantValues.find(item => String(item.id) === valueId)
+        const variantResult = await createListingVariant({
+          listingId: listing.id,
+          variant: {
+            title: `${title.trim()}${value?.name ? ` – ${value.name}` : ''}`,
+            description: description.trim(),
+            list_price: Number(variantPrices[valueId] || price) || 0,
+            offer_percent: Number(offerPercent) || 0,
+            stock: Math.max(0, Number(variantStocks[valueId] ?? stock) || 0),
+            active: true,
+            variant_values: [{ variant_type_id: Number(variantTypeId), variant_type_value_id: Number(valueId) }],
+          },
+        })
+        if ('error' in variantResult) {
+          setError(`The listing was created, but a variant could not be saved: ${errorMessage(variantResult.error, 'Please try again in the listing editor.')}`)
+          return
+        }
+      }
+      navigate(`/listing/${listing.slug ?? listing.id}`)
+      return
+    }
     if (needsSchedule && listing?.id) {
       setPublishedListing({ id: listing.id, slug: listing.slug ?? String(listing.id) })
       const scheduleResult = await createSchedule({
@@ -305,6 +391,7 @@ export default function SellPage() {
             <div className="space-y-1.5"><Label htmlFor="listing-description">Description</Label><textarea id="listing-description" value={description} onChange={event => setDescription(event.target.value)} required rows={5} maxLength={5000} placeholder="Add details that help people understand your listing." className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" /></div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5"><Label htmlFor="listing-type">Listing type</Label><select id="listing-type" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={orderType} onChange={event => setOrderType(event.target.value)}>{ORDER_TYPES.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
+              {orderType === 'membership' && <div className="space-y-1.5"><Label htmlFor="membership-duration">Membership duration</Label><select id="membership-duration" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={membershipDuration} onChange={event => setMembershipDuration(event.target.value)}><option value="">No fixed end date</option><option value="1">1 month</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option></select><p className="text-xs text-muted-foreground">Buyers join this program from its listing page. Duration is stored with the listing and membership record.</p></div>}
             {needsSchedule && <section className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
               <div><h3 className="font-semibold">Booking availability</h3><p className="text-xs text-muted-foreground">Set the date range, daily time window, and number of bookings available per slot.</p></div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -321,6 +408,21 @@ export default function SellPage() {
               <div className="space-y-1.5"><Label htmlFor="listing-stock">Available quantity</Label><Input id="listing-stock" type="number" min="1" step="1" value={stock} onChange={event => setStock(event.target.value)} required /></div>
               {orderType === 'donation' && <div className="space-y-1.5"><Label htmlFor="goal-price">Fundraising goal</Label><Input id="goal-price" type="number" min="0" step="0.01" value={goalPrice} onChange={event => setGoalPrice(event.target.value)} placeholder="Optional" /></div>}
             </div>
+            {orderType === 'bundle' && <section className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
+              <div><h3 className="font-semibold">Bundle contents</h3><p className="text-xs text-muted-foreground">Choose existing listings from this seller account. Tradly checks component stock when buyers purchase the bundle.</p></div>
+              <div className="space-y-2">{sellerListingsLoading ? <p className="text-sm text-muted-foreground">Loading your listings…</p> : sellerListings.length === 0 ? <p className="text-sm text-muted-foreground">Create a regular product listing first to use it in a bundle.</p> : sellerListings.map(component => <div key={component.id} className="flex items-center gap-2 rounded-lg border border-border bg-background p-3 text-sm"><input aria-label={`Include ${component.title}`} type="checkbox" checked={bundleComponentIds.includes(String(component.id))} onChange={event => setBundleComponentIds(current => event.target.checked ? [...current, String(component.id)] : current.filter(id => id !== String(component.id)))} /><span className="flex-1">{component.title}</span><span className="text-xs text-muted-foreground">{component.offer_price?.formatted}</span>{bundleMode === 'fixed' && bundleComponentIds.includes(String(component.id)) && <Input aria-label={`${component.title} quantity in bundle`} className="w-20" type="number" min="1" value={bundleComponentQuantities[String(component.id)] ?? '1'} onChange={event => setBundleComponentQuantities(current => ({ ...current, [String(component.id)]: event.target.value }))} />}</div>)}</div>
+              <label className="flex items-center gap-2 text-sm"><input type="radio" name="bundle-mode" checked={bundleMode === 'fixed'} onChange={() => setBundleMode('fixed')} /> Fixed bundle: buyer gets every selected item</label>
+              <label className="flex items-center gap-2 text-sm"><input type="radio" name="bundle-mode" checked={bundleMode === 'mix_match'} onChange={() => setBundleMode('mix_match')} /> Mix and match: buyer selects from the chosen pool</label>
+              {bundleMode === 'mix_match' && <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label htmlFor="bundle-min">Minimum choices</Label><Input id="bundle-min" type="number" min="1" value={bundleMinQuantity} onChange={event => setBundleMinQuantity(event.target.value)} /></div><div className="space-y-1.5"><Label htmlFor="bundle-max">Maximum choices</Label><Input id="bundle-max" type="number" min={bundleMinQuantity} value={bundleMaxQuantity} onChange={event => setBundleMaxQuantity(event.target.value)} placeholder={String(bundleComponentIds.length || 'Pool size')} /></div></div>}
+            </section>}
+            {orderType === 'listings' && <section className="space-y-4 rounded-xl border border-border p-4">
+              <div><h3 className="font-semibold">Product variants (optional)</h3><p className="text-xs text-muted-foreground">Use variant types and values already configured for this Tradly workspace.</p></div>
+              {variantTypesLoading ? <p className="text-sm text-muted-foreground">Loading variant types…</p> : <div className="space-y-1.5"><Label htmlFor="variant-type">Variant type</Label><select id="variant-type" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={variantTypeId} onChange={event => { setVariantTypeId(event.target.value); setVariantValueIds([]) }}><option value="">No variants</option>{variantsTypes.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}</select></div>}
+              {variantTypeId && (variantValuesLoading ? <p className="text-sm text-muted-foreground">Loading variant choices…</p> : <div className="space-y-3">{variantValues.length === 0 ? <p className="text-sm text-muted-foreground">No values exist for this variant type. Add its values in Tradly Dashboard first.</p> : variantValues.map(value => {
+                const selected = variantValueIds.includes(String(value.id))
+                return <div key={value.id} className="grid items-center gap-2 sm:grid-cols-[1fr_1fr_1fr]"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected} onChange={event => setVariantValueIds(current => event.target.checked ? [...current, String(value.id)] : current.filter(id => id !== String(value.id)))} />{value.name}</label>{selected && <><Input aria-label={`${value.name} price`} type="number" min="0" step="0.01" value={variantPrices[String(value.id)] ?? price} onChange={event => setVariantPrices(current => ({ ...current, [String(value.id)]: event.target.value }))} /><Input aria-label={`${value.name} stock`} type="number" min="0" step="1" value={variantStocks[String(value.id)] ?? stock} onChange={event => setVariantStocks(current => ({ ...current, [String(value.id)]: event.target.value }))} /></>}</div>
+              })}</div>)}
+            </section>}
             {needsSchedule && <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">After publishing, add available dates and time slots for this listing in the Tradly Dashboard.</p>}
             <section className="space-y-4 rounded-xl border border-border p-4 sm:p-5">
               <div><h3 className="font-medium">Listing attributes</h3><p className="mt-1 text-xs text-muted-foreground">These fields come from your Tradly category setup.</p></div>
@@ -355,7 +457,7 @@ export default function SellPage() {
               <p className="text-xs text-muted-foreground">Add at least one photo, up to 8. Photos upload securely as you select them.</p>
               {uploadState.isLoading && <p className="text-xs text-muted-foreground">Uploading photos…</p>}
             </div>
-            <Button type="submit" disabled={listingState.isLoading || scheduleState.isLoading || !!publishedListing || uploadState.isLoading || files.length > 0} className="btn-hero w-full sm:w-auto">{listingState.isLoading ? 'Publishing…' : scheduleState.isLoading ? 'Saving availability…' : 'Publish listing'}</Button>
+            <Button type="submit" disabled={listingState.isLoading || scheduleState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading || !!publishedListing || uploadState.isLoading || files.length > 0} className="btn-hero w-full sm:w-auto">{listingState.isLoading ? 'Publishing…' : scheduleState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading ? 'Saving listing options…' : 'Publish listing'}</Button>
             {publishedListing && <p className="text-sm text-muted-foreground">Listing created. <Link className="text-coffee-accent underline" to={`/listing/${publishedListing.slug}`}>View listing</Link> or <Link className="text-coffee-accent underline" to={`/booking/${publishedListing.slug}`}>open booking page</Link>.</p>}
           </form>
         )}
