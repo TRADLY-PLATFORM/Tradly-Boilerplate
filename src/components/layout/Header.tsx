@@ -56,14 +56,30 @@ export default function Header({ data }: { data: LayoutData }) {
             </Link>
           )}
           {data.isAuthenticated ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                <User className="h-3.5 w-3.5 inline mr-1" />
-                {data.firstName || data.labels.account}
-              </span>
-              <Button variant="ghost" size="sm" onClick={data.logout} className="text-muted-foreground hover:text-destructive gap-1.5">
-                <LogOut className="h-4 w-4" />
-              </Button>
+            <div className="relative">
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-foreground hover:bg-muted [&::-webkit-details-marker]:hidden">
+                  {data.profilePic ? (
+                    <img src={data.profilePic} alt="" className="h-7 w-7 rounded-full object-cover" />
+                  ) : (
+                    <User className="h-4 w-4 text-coffee-accent" />
+                  )}
+                  <span>{data.firstName || data.labels.account}</span>
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                </summary>
+                <div className="absolute right-0 top-full z-50 mt-2 min-w-48 rounded-xl border border-border bg-background p-1.5 shadow-lg">
+                  {data.accountMenuLinks.map(link => (
+                    <Link key={link.to} to={link.to} className="block rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted">
+                      {link.label}
+                    </Link>
+                  ))}
+                  <div className="my-1 border-t border-border" />
+                  <button type="button" onClick={data.logout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-destructive hover:bg-muted">
+                    <LogOut className="h-4 w-4" />
+                    {data.labels.signOut}
+                  </button>
+                </div>
+              </details>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -103,7 +119,13 @@ export default function Header({ data }: { data: LayoutData }) {
             <Link to={data.cartLink} className="text-sm" onClick={data.closeMobile}>{data.labels.cart} ({data.cartCount})</Link>
           )}
           {data.isAuthenticated ? (
-            <button onClick={data.logout} className="text-sm text-left text-destructive">{data.labels.signOut}</button>
+            <>
+              <p className="mt-2 border-t border-border pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{data.labels.profile}</p>
+              {data.accountMenuLinks.filter(link => !data.navLinks.some(navLink => navLink.to === link.to)).map(link => (
+                <Link key={link.to} to={link.to} className="text-sm" onClick={data.closeMobile}>{link.label}</Link>
+              ))}
+              <button onClick={data.logout} className="text-sm text-left text-destructive">{data.labels.signOut}</button>
+            </>
           ) : (
             <>
               {data.signInLink && <Link to={data.signInLink} className="text-sm" onClick={data.closeMobile}>{data.labels.signIn}</Link>}

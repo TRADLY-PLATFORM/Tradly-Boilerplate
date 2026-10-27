@@ -32,6 +32,8 @@ export interface LayoutData {
   labels: LocaleLabels
   isAuthenticated: boolean
   firstName: string
+  profilePic: string
+  accountMenuLinks: NavLink[]
   /** Primary navigation, already filtered for auth state and enabled pages. */
   navLinks: NavLink[]
   /** Live top-level categories as /lc/:slug links; empty while loading or when the store has none. */
@@ -53,6 +55,7 @@ export interface LayoutData {
 export function useLayoutData(brandName: string): LayoutData {
   const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
   const firstName = useAuthSelector(s => s.firstName)
+  const profilePic = useAuthSelector(s => s.profilePic)
   const cartCount = useCartItemCount()
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
@@ -69,6 +72,14 @@ export function useLayoutData(brandName: string): LayoutData {
     to: isAuthenticated ? '/sell' : '/sign-in?next=%2Fsell',
   })
   if (isAuthenticated && layoutConfig.orders) navLinks.push({ label: locale.labels.myOrders, to: '/orders' })
+
+  const accountMenuLinks: NavLink[] = isAuthenticated
+    ? [
+        { label: locale.labels.myAccount, to: '/account' },
+        { label: locale.labels.sell, to: '/sell' },
+        ...(layoutConfig.orders ? [{ label: locale.labels.myOrders, to: '/orders' }] : []),
+      ]
+    : []
 
   const quickLinks: NavLink[] = [{ label: locale.labels.home, to: '/' }]
   if (layoutConfig.orders) quickLinks.push({ label: locale.labels.myOrders, to: '/orders' })
@@ -89,6 +100,8 @@ export function useLayoutData(brandName: string): LayoutData {
     labels: locale.labels,
     isAuthenticated,
     firstName: firstName || '',
+    profilePic: profilePic || '',
+    accountMenuLinks,
     navLinks,
     categoryLinks,
     showCart: isAuthenticated && layoutConfig.cart,

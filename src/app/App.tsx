@@ -20,6 +20,7 @@ import CategoryListingsPage from '../pages/CategoryListingsPage'
 import PaymentPage from '../pages/PaymentPage'
 import PaymentReturnPage from '../pages/PaymentReturnPage'
 import SellPage from '../pages/SellPage'
+import AccountPage from '../pages/AccountPage'
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -73,6 +74,7 @@ export default function App() {
 
           {/* Protected */}
           <Route path="/sell" element={<ProtectedRoute><SellPage /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
           <Route path="/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
