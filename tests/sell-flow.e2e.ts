@@ -22,7 +22,7 @@ test('seller can publish a free listing with category attributes, stock and ship
   }))
   await browser.route('**/v1/categories**', async route => {
     const type = new URL(route.request.url).searchParams.get('type')
-    const categories = type === 'account' ? [{ id: 2, name: 'Seller' }] : [{ id: 4, name: 'Home goods' }]
+    const categories = type === 'accounts' ? [{ id: 2, name: 'Seller' }] : [{ id: 4, name: 'Home goods' }]
     await route.fulfill({ json: { status: true, data: { categories } } })
   })
   await browser.route('**/v1/attributes**', async route => route.fulfill({
@@ -121,7 +121,7 @@ test('seller can publish an appointment with date range, daily hours and slot ca
   await browser.route('**/v1/accounts**', route => route.fulfill({ json: { status: true, data: { accounts: [{ id: 77, name: 'E2E Shop' }] } } }))
   await browser.route('**/v1/categories**', async route => {
     const type = new URL(route.request.url).searchParams.get('type')
-    await route.fulfill({ json: { status: true, data: { categories: type === 'account' ? [] : [{ id: 4, name: 'Services' }] } } })
+    await route.fulfill({ json: { status: true, data: { categories: type === 'accounts' ? [] : [{ id: 4, name: 'Services' }] } } })
   })
   await browser.route('**/v1/attributes**', route => route.fulfill({ json: { status: true, data: { attributes: [] } } }))
   await browser.route('**/v1/listings**', route => route.fulfill({ json: { status: true, data: { listing: { id: 9002, slug: 'e2e-appointment' } } } }))

@@ -15,7 +15,7 @@ export interface Category {
   parent_id?: string | number | null
   sub_category?: Category[]
   hierarchy?: CategoryHierarchy[]
-  type?: 'listing' | 'account'
+  type?: 'listings' | 'accounts'
   [key: string]: unknown
 }
 
@@ -23,7 +23,7 @@ export interface Category {
 
 export interface GetCategoriesParams {
   page?: number
-  type?: 'listing' | 'account'
+  type?: 'listings' | 'accounts'
   [key: string]: unknown
 }
 

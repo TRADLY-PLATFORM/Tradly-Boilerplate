@@ -75,8 +75,8 @@ export default function SellPage() {
   const navigate = useNavigate()
   const userId = useAuthSelector(state => state.userId)
   const { data: accountsData, isLoading: accountsLoading, error: accountsError } = useGetMyAccountsQuery(userId, { skip: !userId })
-  const { data: listingCategoriesData, isLoading: listingCategoriesLoading } = useGetCategoriesQuery({ type: 'listing' })
-  const { data: accountCategoriesData, isLoading: accountCategoriesLoading } = useGetCategoriesQuery({ type: 'account' })
+  const { data: listingCategoriesData, isLoading: listingCategoriesLoading } = useGetCategoriesQuery({ type: 'listings' })
+  const { data: accountCategoriesData, isLoading: accountCategoriesLoading } = useGetCategoriesQuery({ type: 'accounts' })
   const [categoryId, setCategoryId] = useState('')
   const { data: attributesData, isLoading: attributesLoading, error: attributesError } = useGetAttributesQuery(
     { type: 'listings', ...(categoryId ? { category_id: Number(categoryId) } : {}) },
@@ -156,11 +156,7 @@ export default function SellPage() {
   const handleCreateShop = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
-    if (!shopCategoryId) {
-      setError('Choose a seller category to create your shop.')
-      return
-    }
-    const result = await createAccount({ name: shopName.trim(), type: 'accounts', category_id: [Number(shopCategoryId)] })
+    const result = await createAccount({ name: shopName.trim(), type: 'accounts', ...(shopCategoryId ? { category_id: [Number(shopCategoryId)] } : {}) })
     if ('error' in result) {
       setError(errorMessage(result.error, 'Could not create seller account.'))
       return
@@ -199,10 +195,6 @@ export default function SellPage() {
       setError('Create or choose a seller account before publishing.')
       return
     }
-    if (!categoryId) {
-      setError('Choose a listing category.')
-      return
-    }
     const missingRequired = attributes.find(attribute => attribute.optional === false && selectedAttributeValues(attribute, attributeValues[String(attribute.id)]).length === 0)
     if (missingRequired) {
       setError(`Enter ${missingRequired.name}.`)
@@ -239,7 +231,7 @@ export default function SellPage() {
       type: orderType === 'bundle' ? 'bundle' : orderType,
       order_type: orderType === 'bundle' ? 'listings' : orderType,
       account_id: Number(owner.id),
-      category_id: [Number(categoryId)],
+      ...(categoryId ? { category_id: [Number(categoryId)] } : {}),
       images: imageUrls,
       stock: Math.max(1, Number(stock) || 1),
       list_price: Number(price) || 0,
@@ -373,8 +365,8 @@ export default function SellPage() {
             <p className="mb-5 mt-1 text-sm text-muted-foreground">Your items will appear under this account.</p>
             <form onSubmit={handleCreateShop} className="space-y-4">
               <div className="space-y-1.5"><Label htmlFor="shop-name">Seller or shop name</Label><Input id="shop-name" value={shopName} onChange={event => setShopName(event.target.value)} required maxLength={100} placeholder="e.g. Jane’s Finds" /></div>
-              <div className="space-y-1.5"><Label htmlFor="shop-category">Seller category</Label><select id="shop-category" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={shopCategoryId} onChange={event => setShopCategoryId(event.target.value)} required disabled={accountCategoriesLoading}><option value="">Choose a category</option>{accountCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select>{!accountCategoriesLoading && !accountCategories.length && <p className="text-xs text-destructive">No seller categories are configured. Add account categories in Tradly Dashboard to continue.</p>}</div>
-              <Button type="submit" disabled={accountState.isLoading || !accountCategories.length} className="btn-hero">{accountState.isLoading ? 'Creating seller account…' : 'Create seller account'}</Button>
+              <div className="space-y-1.5"><Label htmlFor="shop-category">Seller category</Label><select id="shop-category" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={shopCategoryId} onChange={event => setShopCategoryId(event.target.value)} disabled={accountCategoriesLoading}><option value="">No category</option>{accountCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
+              <Button type="submit" disabled={accountState.isLoading} className="btn-hero">{accountState.isLoading ? 'Creating seller account…' : 'Create seller account'}</Button>
             </form>
           </section>
         ) : accounts.length > 1 ? (
@@ -403,7 +395,7 @@ export default function SellPage() {
               </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={scheduleRepeat} onChange={event => setScheduleRepeat(event.target.checked)} /> Repeat every day in this date range</label>
             </section>}
-              <div className="space-y-1.5"><Label htmlFor="listing-category">Category</Label><select id="listing-category" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryId} onChange={event => setCategoryId(event.target.value)} required><option value="">Choose a category</option>{listingCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
+              <div className="space-y-1.5"><Label htmlFor="listing-category">Category</Label><select id="listing-category" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryId} onChange={event => setCategoryId(event.target.value)}><option value="">No category</option>{listingCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
               <div className="space-y-1.5"><Label htmlFor="listing-price">{orderType === 'donation' ? 'Suggested amount' : 'Price'}</Label><Input id="listing-price" type="number" min="0" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0.00" required /></div>
               <div className="space-y-1.5"><Label htmlFor="listing-stock">Available quantity</Label><Input id="listing-stock" type="number" min="1" step="1" value={stock} onChange={event => setStock(event.target.value)} required /></div>
               {orderType === 'donation' && <div className="space-y-1.5"><Label htmlFor="goal-price">Fundraising goal</Label><Input id="goal-price" type="number" min="0" step="0.01" value={goalPrice} onChange={event => setGoalPrice(event.target.value)} placeholder="Optional" /></div>}

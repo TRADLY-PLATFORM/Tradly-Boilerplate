@@ -160,3 +160,10 @@ document. When you add or change visible text, write it in that language, and pu
 (a button or menu label used in several places) in `locale.labels` instead of hard-coding English.
 When `locale.dir` is `'rtl'`, use logical Tailwind classes (`ms-*`, `me-*`, `ps-*`, `pe-*`,
 `text-start`, `text-end`, `start-*`, `end-*`), not `ml-*`, `mr-*`, `text-left`, `left-*`.
+
+## Categories
+
+Ask the API for categories with its own type names: `type: 'listings'` or `type: 'accounts'`. The singular
+`'listing'` and `'account'` return an empty list. A category is optional when creating a seller account
+or a listing, and a new tenant may have no account categories, so never block a form on one. Send
+`category_id` only when the user picked one.

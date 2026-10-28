@@ -31,7 +31,7 @@ export const categoriesApi = createApi({
     // ── Category list ─────────────────────────────────────────────────────────
 
     // result.data → { categories: Category[] }
-    // Pass type: 'listing' (default) or 'account' to get different category sets
+    // Pass type: 'listings' (default) or 'accounts' (the API's own names; 'listing'/'account' return nothing) to get different category sets
     getCategories: builder.query<GetCategoriesResponse, GetCategoriesParams>({
       queryFn: async (params, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)

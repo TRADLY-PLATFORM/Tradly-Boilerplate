@@ -49,12 +49,12 @@ interface Category {
   parent_id?: string | number | null
   sub_category?: Category[]       // nested children — may be empty []
   hierarchy?: CategoryHierarchy[] // ancestors from root to current — for breadcrumbs
-  type?: 'listing' | 'account'
+  type?: 'listings' | 'accounts'
 }
 
 interface GetCategoriesParams {
   page?: number
-  type?: 'listing' | 'account'  // omit for listing categories (default)
+  type?: 'listings' | 'accounts'  // omit for listing categories (default); singular names return nothing
 }
 
 interface GetCategoryListingsParams {
