@@ -152,6 +152,32 @@ the storefront UI. Tell the user that instead of building a page that will get 4
   Header/footer logic belongs in `src/components/layout/useLayoutData.ts`.
 - Links must point to routes that exist in `src/app/App.tsx`.
 
+## Keeping features safe from homepage regeneration
+
+Sky Builder rewrites `src/pages/HomePage.tsx`, `src/index.css`, `src/components/layout/Header.tsx`,
+`Footer.tsx`, `locale.ts` (non-English sites) and `src/brand.ts` for every new site, and may redo them
+from a prompt later. Nothing else is rewritten at signup, so a feature must never depend on those files.
+
+- **Where feature code goes.** Layers are in "Where the Tradly code lives". Put a feature's hooks and
+  components in `src/features/<feature>/` and its route in `src/pages/<Feature>Page.tsx`. Split a page by
+  listing type (for example `src/features/sell/`) instead of growing one file.
+- **HomePage only composes.** It reads listings and categories and links out. It must not import from
+  `src/features/`, call a feature's API or need new props. Keep its default export.
+- **Reach the UI through `useLayoutData`.** Give a new page a `navLinks`, `accountMenuLinks` or
+  `footerLinkGroups` entry there, and gate it with a flag in `layout.config.ts` (for example
+  `features.rental`) so sites without it show no dead link. The regenerated header and footer render
+  those lists, so they never need to know about a feature.
+- **Contracts the generator relies on.** `LayoutData` may gain fields; never rename or remove one. New
+  words go in `locale.labels`, never hard-coded English (new labels are translated automatically). Keep
+  the routes `/listing/:slug`, `/sell` and `/account`, and send other listing types from
+  `/listing/:slug` to their own route (`/booking/:slug` today, `/rental/:slug` for rentals).
+- **Style with theme tokens.** Use the Tailwind theme classes and CSS variables from `index.css`, never
+  fixed colors or fonts, so a restyle carries over to feature pages.
+- **Tenant data may be missing.** A new tenant can have no categories, currency or rental settings.
+  Show an empty state, never block a form on it, and read the currency from the tenant.
+- **Mock tests with the API's real values.** Mocks keyed on invented values hide bugs: the
+  `'account'` / `'accounts'` bug passed the e2e mocks.
+
 ## Language and direction
 
 The site's language, text direction and fixed UI words live in `src/components/layout/locale.ts`
