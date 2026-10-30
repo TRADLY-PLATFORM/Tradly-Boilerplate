@@ -9,6 +9,9 @@ import { useAuthSelector } from '@/state/auth/selectors'
 import Layout from '../components/Layout'
 import { Button } from '@/src/components/ui/button'
 import { Skeleton } from '@/src/components/ui/skeleton'
+import ListingHero from '@/src/components/listing/ListingHero'
+import type { ListingHeroData } from '@/src/components/listing/listingHero.types'
+import { locale } from '@/src/components/layout/locale'
 
 export default function BookingListingPage() {
   const { slug = '' } = useParams<{ slug: string }>()
@@ -57,28 +60,34 @@ export default function BookingListingPage() {
   if (isError || !listing) return <Layout><div className="py-20 text-center text-destructive">Listing not found.</div></Layout>
   if (!['events', 'appointments'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">This listing does not use booking availability. <Link className="text-coffee-accent underline" to={`/listing/${slug}?view=standard`}>Open the regular listing page</Link>.</div></Layout>
 
+  const heroData: ListingHeroData = {
+    title: listing.title,
+    sellerName: listing.account?.name ?? locale.labels.unknownSeller,
+    images: listing.images ?? [],
+    rating: listing.rating_data?.rating_count > 0 ? { average: listing.rating_data.rating_average, count: listing.rating_data.rating_count } : null,
+    priceLabel: listing.offer_price?.formatted ?? listing.list_price?.formatted ?? null,
+    comparePriceLabel: null,
+    discountLabel: null,
+    stockNote: null,
+    donation: null,
+    descriptionHtml: listing.description ?? '',
+    labels: { noImage: locale.labels.noImage, reviews: locale.labels.reviews, aboutThisListing: locale.labels.aboutThisListing },
+  }
+
   return <Layout>
     <div className="mb-5 flex items-center gap-2 text-sm"><Link to={`/listing/${slug}?view=standard`} className="text-coffee-accent hover:underline">Regular listing page</Link><span className="text-muted-foreground">/</span><span>Book</span></div>
-    <div className="grid items-start gap-8 lg:grid-cols-2">
-      <div>
-        <div className="aspect-square overflow-hidden rounded-2xl bg-muted">{listing.images?.[0] ? <img src={listing.images[0]} alt={listing.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-sm text-muted-foreground">No image</div>}</div>
-        {listing.images?.length > 1 && <div className="mt-3 flex gap-2">{listing.images.slice(1, 5).map((image, index) => <img key={image + index} src={image} alt="" className="h-16 w-16 rounded-lg object-cover" />)}</div>}
-      </div>
-      <div className="space-y-5">
-        <div><p className="text-xs text-muted-foreground">{listing.account?.name ?? 'Seller'}</p><h1 className="mt-1 font-display text-3xl font-bold">{listing.title}</h1><p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">{listing.description}</p></div>
-        <p className="font-display text-2xl font-bold text-coffee-accent">{listing.offer_price?.formatted ?? listing.list_price?.formatted}</p>
-        <section className="rounded-2xl border border-border bg-card p-5">
-          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold"><CalendarDays className="h-5 w-5 text-coffee-accent" /> Choose a date</h2>
-          {schedulesLoading ? <p className="text-sm text-muted-foreground">Loading available dates…</p> : schedulesError ? <p role="alert" className="text-sm text-destructive">Could not load booking availability. Refresh to try again.</p> : dates.length === 0 ? <p className="text-sm text-muted-foreground">There are no available dates in the next 30 days.</p> : <>
-            <div className="flex gap-2 overflow-x-auto pb-2">{dates.map(item => <button key={item.day} type="button" onClick={() => { setSelectedDate(item.day); setSelectedSlot(null) }} className={`min-w-20 rounded-xl border px-3 py-2 text-center ${activeDate === item.day ? 'border-coffee-accent bg-coffee-secondary/30' : 'border-border'}`}><span className="block text-[11px] text-muted-foreground">{dayjs(item.day).format('ddd')}</span><span className="font-semibold">{dayjs(item.day).format('MMM D')}</span></button>)}</div>
-            <h3 className="mb-2 mt-4 flex items-center gap-2 text-sm font-semibold"><Clock3 className="h-4 w-4" /> Available times</h3>
-            {slots.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{slots.map((slot, index) => <button key={`${slot.id}-${slot.start_time}`} type="button" aria-pressed={selectedSlot === index} onClick={() => setSelectedSlot(index)} className={`rounded-lg border px-3 py-2 text-sm ${selectedSlot === index ? 'border-coffee-accent bg-coffee-secondary/30 font-semibold' : 'border-border hover:border-coffee-accent'}`}>{slot.start_time} – {slot.end_time}{slot.stocks_left !== undefined && <span className="mt-1 block text-[10px] text-muted-foreground">{slot.stocks_left} left</span>}</button>)}</div> : <p className="text-sm text-muted-foreground">No times are available on this date.</p>}
-          </>}
-        </section>
-        {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-        <Button onClick={continueToCheckout} disabled={!dates.length || selectedSlot === null || adding} className="btn-hero w-full">{adding ? 'Preparing booking…' : 'Continue to checkout'}</Button>
-        <p className="text-xs text-muted-foreground">Your selected time will be confirmed during checkout.</p>
-      </div>
-    </div>
+    <ListingHero data={heroData}>
+          <section className="rounded-2xl border border-border bg-card p-5">
+            <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold"><CalendarDays className="h-5 w-5 text-coffee-accent" /> Choose a date</h2>
+            {schedulesLoading ? <p className="text-sm text-muted-foreground">Loading available dates…</p> : schedulesError ? <p role="alert" className="text-sm text-destructive">Could not load booking availability. Refresh to try again.</p> : dates.length === 0 ? <p className="text-sm text-muted-foreground">There are no available dates in the next 30 days.</p> : <>
+              <div className="flex gap-2 overflow-x-auto pb-2">{dates.map(item => <button key={item.day} type="button" onClick={() => { setSelectedDate(item.day); setSelectedSlot(null) }} className={`min-w-20 rounded-xl border px-3 py-2 text-center ${activeDate === item.day ? 'border-coffee-accent bg-coffee-secondary/30' : 'border-border'}`}><span className="block text-[11px] text-muted-foreground">{dayjs(item.day).format('ddd')}</span><span className="font-semibold">{dayjs(item.day).format('MMM D')}</span></button>)}</div>
+              <h3 className="mb-2 mt-4 flex items-center gap-2 text-sm font-semibold"><Clock3 className="h-4 w-4" /> Available times</h3>
+              {slots.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{slots.map((slot, index) => <button key={`${slot.id}-${slot.start_time}`} type="button" aria-pressed={selectedSlot === index} onClick={() => setSelectedSlot(index)} className={`rounded-lg border px-3 py-2 text-sm ${selectedSlot === index ? 'border-coffee-accent bg-coffee-secondary/30 font-semibold' : 'border-border hover:border-coffee-accent'}`}>{slot.start_time} – {slot.end_time}{slot.stocks_left !== undefined && <span className="mt-1 block text-[10px] text-muted-foreground">{slot.stocks_left} left</span>}</button>)}</div> : <p className="text-sm text-muted-foreground">No times are available on this date.</p>}
+            </>}
+          </section>
+          {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+          <Button onClick={continueToCheckout} disabled={!dates.length || selectedSlot === null || adding} className="btn-hero w-full">{adding ? 'Preparing booking…' : 'Continue to checkout'}</Button>
+          <p className="text-xs text-muted-foreground">Your selected time will be confirmed during checkout.</p>
+    </ListingHero>
   </Layout>
 }
