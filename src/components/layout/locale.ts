@@ -24,6 +24,14 @@ export const locale = {
     createAccount: 'Create Account',
     menu: 'Menu',
     allRightsReserved: 'All rights reserved.',
+    noImage: 'No image',
+    reviews: 'reviews',
+    aboutThisListing: 'About this listing',
+    unknownSeller: 'Unknown seller',
+    off: 'off',
+    outOfStock: 'Out of stock',
+    onlyLeft: 'Only {count} left',
+    goal: 'Goal',
   },
 }
 

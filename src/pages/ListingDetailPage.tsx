@@ -13,10 +13,12 @@ import ListingSocialPanel from "@/src/features/listing-social/ListingSocialPanel
 import { useAuthSelector } from "@/state/auth/selectors";
 import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
-import { Badge } from "@/src/components/ui/badge";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Separator } from "@/src/components/ui/separator";
-import { Heart, ShoppingCart, Minus, Plus, Star } from "lucide-react";
+import ListingHero from "@/src/components/listing/ListingHero";
+import type { ListingHeroData } from "@/src/components/listing/listingHero.types";
+import { locale } from "@/src/components/layout/locale";
+import { Heart, ShoppingCart, Minus, Plus } from "lucide-react";
 import type { AddToCartInput } from "@/types/cart.types";
 
 // @sky:token-only — this page is data/logic-bound (branches on orderType, listing.*, handlers).
@@ -325,6 +327,45 @@ export default function ListingDetailPage() {
 				)
 			: 0;
 
+	const showPrice = !["information_listing", "video_listing", "requests"].includes(orderType);
+	const offerAmount = (value: unknown) => Number(typeof value === "object" && value ? (value as { amount: number }).amount : value);
+	const onSale = selectedVariant
+		? offerAmount(selectedVariantList) > offerAmount(selectedVariantOffer)
+		: listing.offer_percent > 0;
+	const heroData: ListingHeroData = {
+		title: listing.title,
+		sellerName: listing.account?.name ?? locale.labels.unknownSeller,
+		images: listing.images,
+		rating:
+			listing.rating_data.rating_count > 0
+				? { average: listing.rating_data.rating_average, count: listing.rating_data.rating_count }
+				: null,
+		priceLabel: showPrice
+			? selectedVariant
+				? (formatVariantPrice(selectedVariantOffer, listing.offer_price.currency) ?? null)
+				: listing.offer_price.formatted
+			: null,
+		comparePriceLabel:
+			showPrice && onSale
+				? selectedVariant
+					? (formatVariantPrice(selectedVariantList, listing.list_price.currency) ?? null)
+					: listing.list_price.formatted
+				: null,
+		discountLabel: showPrice && !selectedVariant && listing.offer_percent > 0 ? `${listing.offer_percent}% ${locale.labels.off}` : null,
+		stockNote:
+			listing.stock === 0
+				? { tone: "out", text: locale.labels.outOfStock }
+				: listing.stock <= 5
+					? { tone: "low", text: locale.labels.onlyLeft.replace("{count}", String(listing.stock)) }
+					: null,
+		donation:
+			orderType === "donation" && listing.goal_price.amount > 0
+				? { percent: raisedPercent, goalLabel: `${locale.labels.goal}: ${listing.goal_price.formatted}` }
+				: null,
+		descriptionHtml: listing.description ?? "",
+		labels: { noImage: locale.labels.noImage, reviews: locale.labels.reviews, aboutThisListing: locale.labels.aboutThisListing },
+	};
+
 	return (
 		<Layout>
 			{toast && <Toast msg={toast} />}
@@ -363,135 +404,8 @@ export default function ListingDetailPage() {
 				</div>
 			)}
 
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-				{/* Images */}
-				<div>
-					<div className="aspect-square overflow-hidden rounded-2xl bg-coffee-secondary/20 mb-3">
-						{mainImage ? (
-							<img
-								src={mainImage}
-								alt={listing.title}
-								className="w-full h-full object-cover"
-							/>
-						) : (
-							<div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-								No image
-							</div>
-						)}
-					</div>
-					{listing.images.length > 1 && (
-						<div className="flex gap-2 flex-wrap">
-							{listing.images
-								.slice(1, 5)
-								.map((img, i) => (
-									<div
-										key={i}
-										className="w-16 h-16 rounded-lg overflow-hidden border-2 border-border"
-									>
-										<img
-											src={
-												img
-											}
-											alt=""
-											className="w-full h-full object-cover"
-										/>
-									</div>
-								))}
-						</div>
-					)}
-				</div>
-
-				{/* Details */}
-				<div className="flex flex-col gap-4">
-					<div>
-						<p className="text-xs text-muted-foreground mb-1">
-							{listing.account?.name ??
-								"Unknown seller"}
-						</p>
-						<h1 className="font-display text-2xl font-bold text-foreground leading-snug mb-2">
-							{listing.title}
-						</h1>
-
-						{listing.rating_data.rating_count >
-							0 && (
-							<div className="flex items-center gap-1 text-yellow-500 text-sm mb-3">
-								<Star className="h-3.5 w-3.5 fill-current" />
-								<span className="font-semibold">
-									{listing.rating_data.rating_average.toFixed(
-										1,
-									)}
-								</span>
-								<span className="text-muted-foreground text-xs">
-									(
-									{
-										listing
-											.rating_data
-											.rating_count
-									}{" "}
-									reviews)
-								</span>
-							</div>
-						)}
-					</div>
-
-					{/* Price */}
-					{![
-						"information_listing",
-						"video_listing",
-						"requests",
-					].includes(orderType) && (
-						<div className="flex items-center gap-3">
-							<span className="font-display text-2xl font-bold text-coffee-accent">
-								{selectedVariant ? formatVariantPrice(selectedVariantOffer, listing.offer_price.currency) : listing.offer_price.formatted}
-							</span>
-							{selectedVariant ? Number(typeof selectedVariantList === "object" ? selectedVariantList.amount : selectedVariantList) > Number(typeof selectedVariantOffer === "object" ? selectedVariantOffer.amount : selectedVariantOffer) : listing.offer_percent > 0 ? (
-								<>
-									<span className="text-muted-foreground text-base line-through">
-										{selectedVariant ? formatVariantPrice(selectedVariantList, listing.list_price.currency) : listing.list_price.formatted}
-									</span>
-									{!selectedVariant && <Badge className="bg-destructive text-destructive-foreground text-xs">{listing.offer_percent}% off</Badge>}
-								</>
-							) : null}
-						</div>
-					)}
-
-					{/* Stock */}
-					{listing.stock === 0 ? (
-						<p className="text-sm text-destructive font-semibold">
-							Out of stock
-						</p>
-					) : listing.stock <= 5 ? (
-						<p className="text-sm text-yellow-600 font-semibold">
-							Only {listing.stock} left
-						</p>
-					) : null}
-
-					{/* Donation progress */}
-					{orderType === "donation" &&
-						listing.goal_price.amount > 0 && (
-							<div>
-								<div className="h-1.5 bg-muted rounded-full overflow-hidden mb-1.5">
-									<div
-										className="h-full bg-coffee-accent rounded-full transition-all"
-										style={{
-											width: `${raisedPercent}%`,
-										}}
-									/>
-								</div>
-								<p className="text-xs text-muted-foreground">
-									Goal:{" "}
-									{
-										listing
-											.goal_price
-											.formatted
-									}
-								</p>
-							</div>
-						)}
-
-					<Separator />
-
-					{variantsLoading && <p className="text-sm text-muted-foreground">Loading options…</p>}
+			<ListingHero data={heroData}>
+				{variantsLoading && <p className="text-sm text-muted-foreground">Loading options…</p>}
 					{variants.length > 0 && (
 						<section aria-label="Product options" className="space-y-2">
 							<p className="text-sm font-medium">Choose an option</p>
@@ -764,27 +678,7 @@ export default function ListingDetailPage() {
 							</span>
 						)}
 					</Button>
-
-					{/* Description */}
-					{listing.description && (
-						<>
-							<Separator />
-							<div>
-								<h3 className="font-display text-base font-bold text-foreground mb-3">
-									About this
-									listing
-								</h3>
-								<div
-									className="text-sm text-muted-foreground leading-relaxed"
-									dangerouslySetInnerHTML={{
-										__html: listing.description,
-									}}
-								/>
-							</div>
-						</>
-					)}
-				</div>
-			</div>
+			</ListingHero>
 			<ListingSocialPanel listingId={listing.id} />
 		</Layout>
 	);
