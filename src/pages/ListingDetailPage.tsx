@@ -9,6 +9,7 @@ import { useAddToCartMutation, useClearCartMutation } from "@/state/cart/api";
 import { useGetListingVariantsQuery } from "@/state/variants/api";
 import { useGetBundleItemsQuery, useGetBundlePoolQuery, useLazyGetBundleStockQuery, useSubmitBundleSelectionMutation } from "@/state/bundles/api";
 import { useCreateMembershipMutation } from "@/state/memberships/api";
+import ListingSocialPanel from "@/src/features/listing-social/ListingSocialPanel";
 import { useAuthSelector } from "@/state/auth/selectors";
 import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
@@ -784,6 +785,7 @@ export default function ListingDetailPage() {
 					)}
 				</div>
 			</div>
+			<ListingSocialPanel listingId={listing.id} />
 		</Layout>
 	);
 }

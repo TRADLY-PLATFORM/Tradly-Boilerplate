@@ -132,6 +132,24 @@ export const authSlice = createSlice({
       setCookie(key('new_user_verify_id'), action.payload)
     },
 
+    updateProfileFields: (state, action: PayloadAction<Partial<Pick<User, 'first_name' | 'last_name' | 'mobile' | 'dial_code'>>>) => {
+      const profile = action.payload
+      if (profile.first_name !== undefined) state.firstName = profile.first_name
+      if (profile.last_name !== undefined) state.lastName = profile.last_name
+      if (profile.mobile !== undefined) state.mobile = profile.mobile
+      if (profile.dial_code !== undefined) state.dialCode = profile.dial_code
+      try {
+        const stored = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) ?? '{}')
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify({
+          ...stored,
+          first_name: state.firstName,
+          last_name: state.lastName,
+          mobile: state.mobile,
+          dial_code: state.dialCode,
+        }))
+      } catch { /* storage unavailable */ }
+    },
+
     updateTokens: (state, action: PayloadAction<UserTokens>) => {
       state.authKey = action.payload.auth_key
       state.refreshKey = action.payload.refresh_key
@@ -167,6 +185,7 @@ export const authSlice = createSlice({
 export const {
   setCredentials,
   setVerifyId,
+  updateProfileFields,
   updateTokens,
   setCountries,
   setTenantCountries,

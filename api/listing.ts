@@ -5,6 +5,7 @@ import type {
 	GetListingsParams,
 	TradlyListingSdkResponse,
 } from "@/types/listing.types";
+import { AppConfig } from "@/config/app.config";
 
 // Listings list
 // SDK expects: { bodyParam: { page, ... }, pkKey, authKey, currency, language }
@@ -92,9 +93,33 @@ export const createListing = (
 	language: string,
 ): Promise<TradlyListingSdkResponse<{ listing: Listing }>> =>
 	(TradlySDK as any).app.postListing({
-		pkKey: undefined,
+		pkKey: AppConfig.pkKey,
 		authKey,
 		currency,
 		language,
 		data: { listing },
 	});
+
+export const updateListing = (
+	id: number | string,
+	listing: Record<string, unknown>,
+	authKey: string,
+	currency: string,
+	language: string,
+): Promise<TradlyListingSdkResponse<{ listing: Listing }>> =>
+	(TradlySDK as any).app.postListing({
+		id: String(id), pkKey: AppConfig.pkKey, authKey, currency, language,
+		data: { listing },
+	});
+
+export const deleteListing = (id: number | string, authKey: string, currency: string, language: string): Promise<any> =>
+	(TradlySDK as any).app.deleteListing({ id: String(id), pkKey: AppConfig.pkKey, authKey, currency, language });
+
+export const markListingSold = (id: number | string, authKey: string, currency: string, language: string): Promise<any> =>
+	(TradlySDK as any).app.commonFuntion({ path: `/v1/listings/${id}/sold`, Method: 'POST', pkKey: AppConfig.pkKey, authKey, currency, language });
+
+export const getListingSuggestions = (params: Record<string, unknown>, authKey: string, currency: string, language: string): Promise<any> =>
+	(TradlySDK as any).app.getListingsSuggestion({ bodyParam: params, pkKey: AppConfig.pkKey, authKey, currency, language });
+
+export const getListingLocations = (params: Record<string, unknown>, authKey: string, currency: string, language: string): Promise<any> =>
+	(TradlySDK as any).app.getListingsLocations({ bodyParam: params, pkKey: AppConfig.pkKey, authKey, currency, language });

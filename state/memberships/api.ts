@@ -35,7 +35,39 @@ export const membershipsApi = createApi({
       },
       invalidatesTags: ['Membership'],
     }),
+    getMembershipDetail: builder.query<{ membership: any }, { membershipId: string; listingId: number }>({
+      queryFn: async ({ membershipId, listingId }, { getState }) => {
+        const ctx = context(getState() as LocalState)
+        try {
+          const result = normalizeTradlyResponse(await membershipsAPI.getMembershipDetail(membershipId, listingId, ctx.authKey, ctx.currency, ctx.language), 'Could not load membership details', ['membership'])
+          if (result.error) return { error: { status: 'CUSTOM_ERROR', error: result.error.message ?? 'Could not load membership details' } }
+          return { data: { membership: (result.data as any).membership } }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      },
+      providesTags: (_result, _error, { membershipId }) => [{ type: 'Membership', id: membershipId }],
+    }),
+    recordMembershipContribution: builder.mutation<{ contribution: any }, { membershipId: string; listing_id: number; order_id: number }>({
+      queryFn: async ({ membershipId, ...input }, { getState }) => {
+        const ctx = context(getState() as LocalState)
+        try {
+          const result = normalizeTradlyResponse(await membershipsAPI.recordMembershipContribution(membershipId, input, ctx.authKey, ctx.currency, ctx.language), 'Could not record membership contribution', ['contribution'])
+          if (result.error) return { error: { status: 'CUSTOM_ERROR', error: result.error.message ?? 'Could not record membership contribution' } }
+          return { data: { contribution: (result.data as any).contribution } }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      },
+      invalidatesTags: ['Membership'],
+    }),
+    getMembershipPriceLogs: builder.query<Record<string, unknown>, { listing_id: number; page?: number; per_page?: number }>({
+      queryFn: async (params, { getState }) => {
+        const ctx = context(getState() as LocalState)
+        try {
+          const result = normalizeTradlyResponse(await membershipsAPI.getMembershipPriceLogs(params, ctx.authKey, ctx.currency, ctx.language), 'Could not load membership price history')
+          if (result.error) return { error: { status: 'CUSTOM_ERROR', error: result.error.message ?? 'Could not load membership price history' } }
+          return { data: (result as any).data ?? {} }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      },
+    }),
   }),
 })
 
-export const { useGetMembershipsQuery, useCreateMembershipMutation } = membershipsApi
+export const { useGetMembershipsQuery, useCreateMembershipMutation, useGetMembershipDetailQuery, useRecordMembershipContributionMutation, useGetMembershipPriceLogsQuery } = membershipsApi

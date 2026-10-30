@@ -1,5 +1,6 @@
 import TradlySDK from "tradly";
 import { buildSdkPayload } from "./sdk-context.ts";
+import { AppConfig } from "@/config/app.config";
 import { getDeviceUUID } from "../config/uuid.ts";
 import type {
 	User,
@@ -129,3 +130,14 @@ export const refreshAuth = (
 		firebase_token?: string;
 	}>
 > => TradlySDK.init.refreshAPI(refreshKey);
+
+export const updateUserProfile = (
+	userId: string,
+	data: Record<string, unknown>,
+	authKey: string,
+	currency: string,
+	language: string,
+): Promise<TradlySdkResponse<{ user: User }>> =>
+	(TradlySDK as any).app.updateUserInfo({
+		id: userId, data, pkKey: AppConfig.pkKey, authKey, currency, language,
+	});

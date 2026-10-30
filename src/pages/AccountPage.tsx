@@ -2,7 +2,9 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Package, Store, UserRound } from 'lucide-react'
 import Layout from '../components/Layout'
 import { useAuthSelector } from '@/state/auth/selectors'
+import { useUpdateUserProfileMutation } from '@/state/auth/api'
 import { locale } from '../components/layout/locale'
+import { useState } from 'react'
 
 export default function AccountPage() {
   const firstName = useAuthSelector(state => state.firstName)
@@ -11,6 +13,9 @@ export default function AccountPage() {
   const mobile = useAuthSelector(state => state.mobile)
   const dialCode = useAuthSelector(state => state.dialCode)
   const profilePic = useAuthSelector(state => state.profilePic)
+  const [updateProfile, { isLoading: savingProfile }] = useUpdateUserProfileMutation()
+  const [profileMessage, setProfileMessage] = useState('')
+  const [profileError, setProfileError] = useState('')
   const fullName = [firstName, lastName].filter(Boolean).join(' ') || locale.labels.account
   const phoneNumber = [dialCode, mobile].filter(Boolean).join(' ')
 
@@ -48,6 +53,30 @@ export default function AccountPage() {
             </div>
           </dl>
         </section>
+
+        <form className="mt-5 rounded-2xl border border-border bg-card p-6 sm:p-8" onSubmit={async event => {
+          event.preventDefault()
+          setProfileMessage(''); setProfileError('')
+          const form = new FormData(event.currentTarget)
+          const result = await updateProfile({
+            first_name: String(form.get('first_name') ?? '').trim(),
+            last_name: String(form.get('last_name') ?? '').trim(),
+            mobile: String(form.get('mobile') ?? '').trim(),
+            dial_code: dialCode,
+          })
+          if ('error' in result) setProfileError('Could not save your profile. Please try again.')
+          else setProfileMessage('Profile saved.')
+        }}>
+          <h2 className="mb-4 font-semibold text-foreground">Edit profile</h2>
+          {profileMessage && <p role="status" className="mb-3 text-sm text-foreground">{profileMessage}</p>}
+          {profileError && <p role="alert" className="mb-3 text-sm text-destructive">{profileError}</p>}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-medium text-foreground">First name<input name="first_name" required defaultValue={firstName} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2" /></label>
+            <label className="text-sm font-medium text-foreground">Last name<input name="last_name" defaultValue={lastName} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2" /></label>
+            <label className="text-sm font-medium text-foreground">{locale.labels.phone}<input name="mobile" defaultValue={mobile} className="mt-1 w-full rounded-lg border border-input bg-background px-3 py-2" /></label>
+          </div>
+          <button disabled={savingProfile} className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">{savingProfile ? 'Saving…' : 'Save profile'}</button>
+        </form>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <Link to="/orders" className="group flex items-center justify-between rounded-xl border border-border bg-card p-5 hover:bg-muted">

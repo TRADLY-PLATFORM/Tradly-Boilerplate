@@ -16,10 +16,14 @@ import * as checkout from '../api/checkout.ts'
 import * as commissions from '../api/commissions.ts'
 import * as listing from '../api/listing.ts'
 import * as memberships from '../api/memberships.ts'
+import * as negotiations from '../api/negotiations.ts'
 import * as orders from '../api/orders.ts'
 import * as paymentMethods from '../api/payment-methods.ts'
+import * as reviews from '../api/reviews.ts'
 import * as schedules from '../api/schedules.ts'
 import * as shippingMethods from '../api/shipping-methods.ts'
+import * as subscriptions from '../api/subscriptions.ts'
+import * as transactions from '../api/transactions.ts'
 import * as variants from '../api/variants.ts'
 import { AppConfig } from '../config/app.config.ts'
 import { getTradlyResponseError } from '../state/api-response.ts'
@@ -54,6 +58,7 @@ const cartId = 707
 const endpoints: EndpointCase[] = [
   { id: 'accounts.getMyAccounts', method: 'get', path: '/v1/accounts', invoke: () => accounts.getMyAccounts('contract-user', authKey, currency, language) },
   { id: 'accounts.createAccount', method: 'post', path: '/v1/accounts', invoke: () => accounts.createAccount({ name: 'Contract Shop', type: 'accounts' }, authKey, currency, language) },
+  { id: 'accounts.updateAccount', method: 'put', path: `/v1/accounts/${listingId}`, invoke: () => accounts.updateAccount(listingId, { name: 'Contract Shop Updated' }, authKey, currency, language) },
   { id: 'attributes.getAttributes', method: 'get', path: '/v1/attributes', invoke: () => attributes.getAttributes({ type: 'listings', category_id: categoryId }, authKey, currency, language) },
 
   { id: 'bundles.getBundleItems', method: 'get', path: `/v1/bundles/${listingId}/items`, invoke: () => bundles.getBundleItems(listingId, authKey, currency, language) },
@@ -77,6 +82,7 @@ const endpoints: EndpointCase[] = [
   { id: 'auth.socialSignIn', method: 'post', path: '/v1/users/social_login', invoke: () => auth.socialSignIn({ provider: 'google', token: 'invalid', platform: 'web', type: 'customer' }, currency, language) },
   { id: 'auth.signOut', method: 'post', path: '/v1/users/logout', invoke: () => auth.signOut(authKey, currency, language) },
   { id: 'auth.refreshAuth', method: 'get', path: '/v1/users/token/refresh', invoke: () => auth.refreshAuth('contract-refresh-key') },
+  { id: 'auth.updateUserProfile', method: 'patch', path: '/v1/users/contract-user', invoke: () => auth.updateUserProfile('contract-user', { first_name: 'Contract' }, authKey, currency, language) },
 
   { id: 'cart.getCart', method: 'get', path: '/v1/cart', invoke: () => cart.getCart(authKey, currency, language) },
   { id: 'cart.addToCart', method: 'post', path: '/v1/cart', invoke: () => cart.addToCart({ listing_id: 0, quantity: 0 }, authKey, currency, language) },
@@ -104,9 +110,23 @@ const endpoints: EndpointCase[] = [
   { id: 'listing.getListingDetail', method: 'get', path: '/v1/listings/by_slug/contract-listing', invoke: () => listing.getListingDetail('contract-listing', false, authKey, currency, language) },
   { id: 'listing.likeListing', method: 'post', path: `/v1/listings/${listingId}/likes`, invoke: () => listing.likeListing(listingId, authKey, currency, language) },
   { id: 'listing.unlikeListing', method: 'delete', path: `/v1/listings/${listingId}/unlikes`, invoke: () => listing.unlikeListing(listingId, authKey, currency, language) },
+  { id: 'listing.updateListing', method: 'patch', path: `/v1/listings/${listingId}`, invoke: () => listing.updateListing(listingId, { title: 'Updated listing', images: ['https://example.test/image.jpg'] }, authKey, currency, language) },
+  { id: 'listing.deleteListing', method: 'delete', path: `/v1/listings/${listingId}`, invoke: () => listing.deleteListing(listingId, authKey, currency, language) },
+  { id: 'listing.markListingSold', method: 'post', path: `/v1/listings/${listingId}/sold`, invoke: () => listing.markListingSold(listingId, authKey, currency, language) },
+  { id: 'listing.getListingSuggestions', method: 'get', path: '/v1/listings/search/suggestions', invoke: () => listing.getListingSuggestions({ query: 'gym' }, authKey, currency, language) },
+  { id: 'listing.getListingLocations', method: 'get', path: '/v1/listings/unique/locations', invoke: () => listing.getListingLocations({ page: 1, per_page: 30 }, authKey, currency, language) },
 
   { id: 'memberships.createMembership', method: 'post', path: '/v1/memberships', invoke: () => memberships.createMembership({ listing_id: listingId, membership_id: 'contract-member' }, authKey, currency, language), expectedBody: { membership: { listing_id: listingId, membership_id: 'contract-member' } } },
   { id: 'memberships.getMemberships', method: 'get', path: '/v1/memberships', invoke: () => memberships.getMemberships({ listing_id: listingId }, authKey, currency, language), expectedQuery: { listing_id: String(listingId) } },
+  { id: 'memberships.getMembershipDetail', method: 'get', path: '/v1/memberships/contract-member', invoke: () => memberships.getMembershipDetail('contract-member', listingId, authKey, currency, language), expectedQuery: { listing_id: String(listingId) } },
+  { id: 'memberships.recordMembershipContribution', method: 'post', path: '/v1/memberships/contract-member/contributions', invoke: () => memberships.recordMembershipContribution('contract-member', { listing_id: listingId, order_id: orderId }, authKey, currency, language), expectedBody: { listing_id: listingId, order_id: orderId } },
+  { id: 'memberships.getMembershipPriceLogs', method: 'get', path: '/v1/memberships/price_logs', invoke: () => memberships.getMembershipPriceLogs({ listing_id: listingId, page: 1 }, authKey, currency, language), expectedQuery: { listing_id: String(listingId), page: '1' } },
+
+  { id: 'negotiations.createNegotiation', method: 'post', path: `/v1/listings/${listingId}/negotiations`, invoke: () => negotiations.createNegotiation(listingId, { price: 25 }, authKey, currency, language), expectedBody: { price: 25 } },
+  { id: 'negotiations.updateNegotiation', method: 'patch', path: `/v1/listings/${listingId}/negotiations/1`, invoke: () => negotiations.updateNegotiation(listingId, 1, { status: 2 }, authKey, currency, language), expectedBody: { status: 2 } },
+  { id: 'reviews.getReviews', method: 'get', path: '/v1/reviews', invoke: () => reviews.getReviews({ listing_id: listingId }, authKey, currency, language) },
+  { id: 'reviews.createReview', method: 'post', path: '/v1/reviews', invoke: () => reviews.createReview({ listing_id: listingId, rating: 5, comment: 'Contract review' }, authKey, currency, language) },
+  { id: 'reviews.setReviewReaction', method: 'patch', path: '/v1/reviews/1/like', invoke: () => reviews.setReviewReaction(1, 1, authKey, currency, language), expectedBody: { status: 1 } },
 
   { id: 'variants.getVariantTypes', method: 'get', path: '/v1/variant_types', invoke: () => variants.getVariantTypes(authKey, currency, language) },
   { id: 'variants.getVariantTypeValues', method: 'get', path: '/v1/variant_types/2/values', invoke: () => variants.getVariantTypeValues(2, authKey, currency, language) },
@@ -119,11 +139,24 @@ const endpoints: EndpointCase[] = [
   { id: 'orders.updateOrderStatus', method: 'patch', path: `/v1/orders/${orderId}/status`, invoke: () => orders.updateOrderStatus({ id: orderId, status: 'pending' } as never, authKey, currency, language) },
   { id: 'orders.updateShipmentStatus', method: 'patch', path: `/v1/orders/${orderId}/shipments/${shipmentId}/status`, invoke: () => orders.updateShipmentStatus({ order_id: orderId, shipment_id: shipmentId, status: 'pending' } as never, authKey, currency, language) },
   { id: 'orders.verifyOrderDetails', method: 'post', path: '/v1/orders/order_detail_item_attributes/validate', invoke: () => orders.verifyOrderDetails({ id: orderId } as never, authKey, currency, language) },
+  { id: 'orders.getDonationsList', method: 'get', path: '/v1/orders/listings/donations', invoke: () => orders.getDonationsList(listingId, { page: 1 }, authKey, currency, language), expectedQuery: { listing_id: String(listingId), page: '1' } },
+
+  { id: 'subscriptions.getSubscriptionProducts', method: 'get', path: '/v1/subscription_products', invoke: () => subscriptions.getSubscriptionProducts({ page: 1 }, authKey, currency, language) },
+  { id: 'subscriptions.getSubscriptionProduct', method: 'get', path: '/v1/subscription_products/12', invoke: () => subscriptions.getSubscriptionProduct(12, authKey, currency, language) },
+  { id: 'subscriptions.getAvailableSubscriptionProducts', method: 'get', path: '/v1/subscriptions/subscribe/products', invoke: () => subscriptions.getAvailableSubscriptionProducts({ account_id: 12 }, authKey, currency, language), expectedQuery: { account_id: '12' } },
+  { id: 'subscriptions.subscribeWithReceipt', method: 'post', path: '/v1/subscriptions/subscribe', invoke: () => subscriptions.subscribeWithReceipt({ account_id: 12, subscription_product_id: 13, token: 'receipt' }, authKey, currency, language), expectedBody: { account_id: 12, subscription_product_id: 13, token: 'receipt' } },
+  { id: 'subscriptions.confirmSubscriptionWithReceipt', method: 'post', path: '/v1/subscriptions/subscribe/confirm', invoke: () => subscriptions.confirmSubscriptionWithReceipt({ account_id: 12, subscription_product_id: 13, token: 'receipt' }, authKey, currency, language), expectedBody: { account_id: 12, subscription_product_id: 13, token: 'receipt' } },
+  { id: 'subscriptions.triggerSubscriptionEmail', method: 'post', path: '/v1/subscriptions/email_trigger', invoke: () => subscriptions.triggerSubscriptionEmail(12, authKey, currency, language), expectedBody: { account_id: 12 } },
+  { id: 'subscriptions.cancelSubscription', method: 'delete', path: '/v1/subscriptions/unsubscribe', invoke: () => subscriptions.cancelSubscription(12, authKey, currency, language), expectedBody: { account_id: 12 } },
+  { id: 'subscriptions.getSubscriptionManageUrl', method: 'get', path: '/v1/subscriptions/subscribe/manage', invoke: () => subscriptions.getSubscriptionManageUrl('account-unique', 'tenant-unique', authKey, currency, language), expectedQuery: { account_id: 'account-unique', tenant_id: 'tenant-unique' } },
+  { id: 'transactions.getTransactions', method: 'get', path: '/v1/transactions', invoke: () => transactions.getTransactions({ page: 1, super_type: 2 }, authKey, currency, language), expectedQuery: { page: '1', super_type: '2' } },
+  { id: 'transactions.getEarnings', method: 'get', path: '/v1/earnings', invoke: () => transactions.getEarnings({ page: 1, account_id: listingId }, authKey, currency, language), expectedQuery: { page: '1', account_id: String(listingId) } },
 
   { id: 'paymentMethods.getPaymentMethods', method: 'get', path: '/v1/tenants/payment_methods', invoke: () => paymentMethods.getPaymentMethods(authKey, currency, language) },
 
   { id: 'schedules.getSchedules', method: 'get', path: `/v1/listings/${listingId}/schedules_per_day`, invoke: () => schedules.getSchedules(listingId, '2026-10-05', 30, authKey, currency, language) },
   { id: 'schedules.createSchedule', method: 'put', path: `/v1/listings/${listingId}/schedules`, invoke: () => schedules.createSchedule(listingId, [{ start_date: '2026-11-01', end_date: '2026-11-30', start_time: '09:00', end_time: '17:00', schedule_type: 1, active: true, total_stocks: 4 }], authKey, currency, language) },
+  { id: 'schedules.getTimeSlots', method: 'get', path: '/v1/timeslots', invoke: () => schedules.getTimeSlots({ type: 1 }, authKey, currency, language), expectedQuery: { type: '1' } },
 
   { id: 'shippingMethods.getShippingMethods', method: 'get', path: '/v1/tenants/shipping_methods', invoke: () => shippingMethods.getShippingMethods({ type: 'tenant' }, authKey, currency, language) },
   { id: 'shippingMethods.getSendCloudShipmentMethods', method: 'get', path: '/v1/shipments/sendcloud/shipping_methods', invoke: () => shippingMethods.getSendCloudShipmentMethods({ shipping_method_id: shippingMethodId, country: 'US' }, authKey, currency, language) },
@@ -146,6 +179,7 @@ const nonEndpointExports = new Set([
 const stateEndpointToApiWrapper: Record<string, string> = {
   'accounts.getMyAccounts': 'accounts.getMyAccounts',
   'accounts.createAccount': 'accounts.createAccount',
+  'accounts.updateAccount': 'accounts.updateAccount',
   'attributes.getAttributes': 'attributes.getAttributes',
   'bundles.getBundleItems': 'bundles.getBundleItems',
   'bundles.addBundleItem': 'bundles.addBundleItem',
@@ -166,6 +200,7 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'auth.resendOtp': 'auth.resendOtp',
   'auth.socialSignIn': 'auth.socialSignIn',
   'auth.refreshAuth': 'auth.refreshAuth',
+  'auth.updateUserProfile': 'auth.updateUserProfile',
   'cart.getCart': 'cart.getCart',
   'cart.addToCart': 'cart.addToCart',
   'cart.deleteCartItem': 'cart.deleteCartItem',
@@ -185,12 +220,26 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'listing.getListingDetail': 'listing.getListingDetail',
   'listing.likeListing': 'listing.likeListing',
   'listing.unlikeListing': 'listing.unlikeListing',
+  'listing.getListingSuggestions': 'listing.getListingSuggestions',
+  'listing.getListingLocations': 'listing.getListingLocations',
+  'listing.updateListing': 'listing.updateListing',
+  'listing.deleteListing': 'listing.deleteListing',
+  'listing.markListingSold': 'listing.markListingSold',
   'memberships.createMembership': 'memberships.createMembership',
   'memberships.getMemberships': 'memberships.getMemberships',
+  'memberships.getMembershipDetail': 'memberships.getMembershipDetail',
+  'memberships.recordMembershipContribution': 'memberships.recordMembershipContribution',
+  'memberships.getMembershipPriceLogs': 'memberships.getMembershipPriceLogs',
+  'negotiations.createNegotiation': 'negotiations.createNegotiation',
+  'negotiations.updateNegotiation': 'negotiations.updateNegotiation',
+  'reviews.getReviews': 'reviews.getReviews',
+  'reviews.createReview': 'reviews.createReview',
+  'reviews.setReviewReaction': 'reviews.setReviewReaction',
   'orders.checkout': 'checkout.checkout',
   'orders.paymentIntent': 'checkout.getPaymentIntent',
   'orders.directCheckout': 'checkout.directCheckout',
   'orders.getOrders': 'orders.getOrders',
+  'orders.getDonationsList': 'orders.getDonationsList',
   'orders.getOrderDetail': 'orders.getOrderDetail',
   'orders.updateOrderStatus': 'orders.updateOrderStatus',
   'orders.updateShipmentStatus': 'orders.updateShipmentStatus',
@@ -198,6 +247,7 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'payment-methods.getPaymentMethods': 'paymentMethods.getPaymentMethods',
   'schedules.getSchedules': 'schedules.getSchedules',
   'schedules.createSchedule': 'schedules.createSchedule',
+  'schedules.getTimeSlots': 'schedules.getTimeSlots',
   'shipping-methods.getShippingMethods': 'shippingMethods.getShippingMethods',
   'shipping-methods.getSendCloudShipmentMethods': 'shippingMethods.getSendCloudShipmentMethods',
   'shipping-methods.getExternalShipmentMethods': 'shippingMethods.getExternalShipmentMethods',
@@ -206,6 +256,16 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'variants.getListingVariants': 'variants.getListingVariants',
   'variants.createListingVariant': 'variants.createListingVariant',
   'variants.deleteListingVariant': 'variants.deleteListingVariant',
+  'subscriptions.getSubscriptionProducts': 'subscriptions.getSubscriptionProducts',
+  'subscriptions.getSubscriptionProduct': 'subscriptions.getSubscriptionProduct',
+  'subscriptions.getAvailableSubscriptions': 'subscriptions.getAvailableSubscriptionProducts',
+  'subscriptions.subscribeWithReceipt': 'subscriptions.subscribeWithReceipt',
+  'subscriptions.confirmSubscriptionWithReceipt': 'subscriptions.confirmSubscriptionWithReceipt',
+  'subscriptions.triggerSubscriptionEmail': 'subscriptions.triggerSubscriptionEmail',
+  'subscriptions.cancelSubscription': 'subscriptions.cancelSubscription',
+  'subscriptions.getSubscriptionManageUrl': 'subscriptions.getSubscriptionManageUrl',
+  'transactions.getTransactions': 'transactions.getTransactions',
+  'transactions.getEarnings': 'transactions.getEarnings',
 }
 
 const discoverEndpointExports = (): string[] => {
@@ -381,7 +441,7 @@ test('shared API response guard rejects missing, failed, and incomplete SDK enve
 })
 
 if (process.env.E2E_RUN_LIVE_API_ENDPOINTS === '1') {
-  test('all 44 wrapper requests reach the Tradly sandbox and receive an HTTP response', async () => {
+  test('every wrapper request reaches the Tradly sandbox and receives an HTTP response', async () => {
     if (AppConfig.env !== 'sandbox') {
       throw new Error('Live endpoint probes require VITE_TRADLY_ENV=sandbox.')
     }

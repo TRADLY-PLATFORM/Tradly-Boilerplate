@@ -32,6 +32,26 @@ export interface CreateScheduleInput {
   total_stocks?: number
 }
 
+export type GetTimeSlotsParams = Record<string, string | number | boolean | undefined>
+
+// Tradly 1.2.15's getTimeSlots builds `v1/timeslots` without the leading slash.
+// Keep the SDK transport/context but send the confirmed SDK path through commonFuntion.
+export const getTimeSlots = (
+  params: GetTimeSlotsParams,
+  authKey: string,
+  currency: string,
+  language: string,
+): Promise<any> =>
+  (TradlySDK as any).app.commonFuntion({
+    path: '/v1/timeslots',
+    Method: 'GET',
+    bodyParam: params,
+    pkKey: AppConfig.pkKey,
+    authKey,
+    currency,
+    language,
+  })
+
 export const createSchedule = (
   listingId: number | string,
   schedules: CreateScheduleInput[],

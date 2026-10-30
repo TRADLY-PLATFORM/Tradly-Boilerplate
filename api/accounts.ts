@@ -34,3 +34,15 @@ export const createAccount = (
     language,
     data: { account },
   })
+
+export const updateAccount = (
+  accountId: number | string,
+  account: Record<string, unknown>,
+  authKey: string,
+  currency: string,
+  language: string,
+): Promise<TradlyListingSdkResponse<{ account: SellerAccount }>> =>
+  (TradlySDK as any).app.postAccounts({
+    id: String(accountId), pkKey: AppConfig.pkKey, authKey, currency, language,
+    data: { account },
+  })

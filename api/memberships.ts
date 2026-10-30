@@ -30,3 +30,21 @@ export const getMemberships = (params: GetMembershipsParams, authKey: string, cu
     path: '/v1/memberships', Method: 'GET', bodyParam: params,
     pkKey: AppConfig.pkKey, authKey, currency, language,
   })
+
+export const getMembershipDetail = (membershipId: string, listingId: number, authKey: string, currency: string, language: string): Promise<any> =>
+  (TradlySDK as any).app.commonFuntion({
+    path: `/v1/memberships/${encodeURIComponent(membershipId)}`, Method: 'GET', bodyParam: { listing_id: listingId },
+    pkKey: AppConfig.pkKey, authKey, currency, language,
+  })
+
+export const recordMembershipContribution = (membershipId: string, input: { listing_id: number; order_id: number }, authKey: string, currency: string, language: string): Promise<any> =>
+  (TradlySDK as any).app.commonFuntion({
+    path: `/v1/memberships/${encodeURIComponent(membershipId)}/contributions`, Method: 'POST', data: input,
+    pkKey: AppConfig.pkKey, authKey, currency, language,
+  })
+
+export const getMembershipPriceLogs = (params: { listing_id: number; page?: number; per_page?: number }, authKey: string, currency: string, language: string): Promise<any> =>
+  (TradlySDK as any).app.commonFuntion({
+    path: '/v1/memberships/price_logs', Method: 'GET', bodyParam: params,
+    pkKey: AppConfig.pkKey, authKey, currency, language,
+  })

@@ -8,6 +8,8 @@ export const locale = {
     sell: 'Sell',
     myOrders: 'My Orders',
     myAccount: 'My Account',
+    manageListings: 'Manage listings',
+    sellerInsights: 'Seller insights',
     profile: 'Profile',
     email: 'Email',
     phone: 'Phone',

@@ -89,25 +89,28 @@ SDK calls it.
 | Purpose | Endpoint | Source | Wired here |
 |---|---|---|---|
 | Add to cart (incl. `custom_price` for donations) | `POST /v1/cart` | Docs | Yes (`api/cart.ts`) |
+| Listing search suggestions and unique locations | `GET /v1/listings/search/suggestions`, `GET /v1/listings/unique/locations` | Docs | Yes (`api/listing.ts`, `state/listing/`) |
+| Edit, delete or mark a listing sold | `PATCH /v1/listings/{id}`, `DELETE /v1/listings/{id}`, `POST /v1/listings/{id}/sold` | Docs / SDK | Yes (`api/listing.ts`, `state/listing/`) |
+| Update seller account / user profile | `PUT /v1/accounts/{id}`, `PATCH /v1/users/{id}` | Docs / SDK | Yes (`api/accounts.ts`, `api/auth.ts`) |
 | Listing variants | `/v1/variant_types`, `/v1/listings/{id}/variants` | Docs | Yes (`api/variants.ts`, `state/variants/`) |
 | Fixed and mix-and-match bundle components, choices and stock | `/v1/bundles/{id}/items`, `/pool`, `/stock`, `/select`, `/selections/{id}` | Docs | Yes (`api/bundles.ts`, `state/bundles/`) |
-| Membership list and creation | `GET` / `POST /v1/memberships` | Docs | Yes (`api/memberships.ts`, `state/memberships/`) |
+| Membership list, creation, detail, contributions and price history | `/v1/memberships`, `/v1/memberships/{id}`, `/contributions`, `/price_logs` | Docs | Yes (`api/memberships.ts`, `state/memberships/`) |
 | Check out (incl. `schedule_start_at`, `schedule_end_at`, `anonymous_donation`) | `POST /v1/cart/checkout` | Docs | Yes (`api/checkout.ts`) |
 | Available slots for a listing | `GET /v1/listings/{id}/schedules_per_day?start_at=&days=` | Docs | Yes (`api/schedules.ts`) |
-| Seller sets a listing's schedule | `PUT /v1/listings/{id}/schedules` (SDK `createSchedule`) | SDK only | No |
-| Time slot templates | `GET /v1/timeslots` (SDK `getTimeSlots`) | SDK only | No |
-| Donations received by a listing | `GET /v1/orders/listings/donations?listing_id=` (SDK `getDonationsList`) | SDK only | No |
-| My orders / order detail | `GET /v1/orders`, `GET /v1/orders/{id}` | Docs | Yes |
-| Offer / bid on a listing | `POST /v1/listings/{id}/negotiations` | Docs | No |
-| Reviews | `GET` / `POST /v1/reviews` | Docs | No |
-| Coupons | `POST` / `DELETE /v1/cart/coupon` (SDK `applyCoupon`, `removeCoupon`) | SDK only | No |
-| Subscriptions, memberships | `/v1/subscription_products`, `/v1/subscriptions/...`, Memberships section | Docs | No |
+| Seller sets a listing's schedule | `PUT /v1/listings/{id}/schedules` (SDK `createSchedule`) | SDK only | Yes (`api/schedules.ts`, `state/schedules/`) |
+| Seller time-slot templates | `GET /v1/timeslots` (SDK `getTimeSlots`; routed through `commonFuntion` to fix the SDK's missing leading slash) | SDK only | Yes (`api/schedules.ts`, `state/schedules/`) |
+| Donations received by a listing | `GET /v1/orders/listings/donations?listing_id=` | SDK only | Yes (`api/orders.ts`, `state/orders/`) |
+| My orders / order detail | `GET /v1/orders`, `GET /v1/orders/{id}` | Docs | Yes (`api/orders.ts`) |
+| Offer / bid on a listing | `POST` / `PATCH /v1/listings/{id}/negotiations/...` | Docs | Yes (`api/negotiations.ts`, `state/negotiations/`) |
+| Reviews and like/dislike | `GET` / `POST /v1/reviews`, `PATCH /v1/reviews/{id}/like` | Docs | Yes (`api/reviews.ts`, `state/reviews/`) |
+| Coupons | `POST` / `DELETE /v1/cart/coupon` (SDK `applyCoupon`, `removeCoupon`) | SDK only | Yes (`api/cart.ts`, `state/cart/`) |
+| Subscription products and customer lifecycle | `/v1/subscription_products`, `/v1/subscriptions/...` | Docs | Yes (`api/subscriptions.ts`, `state/subscriptions/`) |
+| Transactions and earnings | `GET /v1/transactions`, `GET /v1/earnings` | Docs | Yes (`api/transactions.ts`, `state/transactions/`) |
 
-Notes for the endpoints that aren't wired: use `TradlySDK.app.commonFuntion` with the path above
-if the SDK method looks broken. Two known problems in `tradly@1.2.14`: `getTimeSlots` builds a
-bad URL (missing leading slash; fixed in the SDK source, not yet in a published version), and
-`subscribe` issues a `GET` that the live API rejects with 405 (not fixed; use the Subscriptions
-pages in the docs and `commonFuntion`).
+Admin-only subscription plan management and membership price-log creation stay in the Tradly
+dashboard. No rental API is listed in the endpoint index or SDK; do not guess a rental endpoint or
+payload until Tradly publishes its contract. Use `commonFuntion` for documented paths that lack a
+reliable SDK wrapper.
 
 ## Forms: contact, enquiry, lead capture, applications, waitlists, surveys, feedback
 

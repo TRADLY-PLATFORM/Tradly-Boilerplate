@@ -8,4 +8,8 @@ export const layoutConfig = {
   orders: true,
   signIn: true,
   signUp: true,
+  features: {
+    manageListings: true,
+    sellerInsights: true,
+  },
 }

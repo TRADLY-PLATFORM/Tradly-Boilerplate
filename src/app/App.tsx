@@ -21,6 +21,9 @@ import PaymentPage from '../pages/PaymentPage'
 import PaymentReturnPage from '../pages/PaymentReturnPage'
 import SellPage from '../pages/SellPage'
 import AccountPage from '../pages/AccountPage'
+import ManageListingsPage from '../pages/ManageListingsPage'
+import SellerInsightsPage from '../pages/SellerInsightsPage'
+import { layoutConfig } from '@/src/components/layout/layout.config'
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -75,6 +78,8 @@ export default function App() {
           {/* Protected */}
           <Route path="/sell" element={<ProtectedRoute><SellPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+          {layoutConfig.features.manageListings && <Route path="/manage-listings" element={<ProtectedRoute><ManageListingsPage /></ProtectedRoute>} />}
+          {layoutConfig.features.sellerInsights && <Route path="/seller/insights" element={<ProtectedRoute><SellerInsightsPage /></ProtectedRoute>} />}
           <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
           <Route path="/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />

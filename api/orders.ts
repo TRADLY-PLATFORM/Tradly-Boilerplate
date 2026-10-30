@@ -1,5 +1,6 @@
 import TradlySDK from 'tradly'
 import { buildAppQueryPayload, buildAppMutationPayload, buildAppDirectPayload } from './sdk-context.ts'
+import { AppConfig } from '@/config/app.config'
 import type {
   GetOrdersParams,
   GetOrdersResponse,
@@ -71,3 +72,20 @@ export const verifyOrderDetails = (
   (TradlySDK as any).app.verifyOrderDetails(
     buildAppMutationPayload(input, authKey, currency, language),
   )
+
+export const getDonationsList = (
+  listingId: number | string,
+  params: Record<string, unknown>,
+  authKey: string,
+  currency: string,
+  language: string,
+): Promise<any> =>
+  (TradlySDK as any).app.commonFuntion({
+    path: '/v1/orders/listings/donations',
+    Method: 'GET',
+    bodyParam: { listing_id: listingId, ...params },
+    pkKey: AppConfig.pkKey,
+    authKey,
+    currency,
+    language,
+  })

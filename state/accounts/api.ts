@@ -39,7 +39,20 @@ export const accountsApi = createApi({
       },
       invalidatesTags: ['Account'],
     }),
+    updateAccount: builder.mutation<{ account: SellerAccount }, { accountId: number | string; account: Record<string, unknown> }>({
+      queryFn: async ({ accountId, account }, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.updateAccount(accountId, account, state.auth.authKey, state.app.currency, state.app.language), 'Could not update seller account', ['account'])
+          if (response?.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not update seller account' } }
+          return { data: { account: response.data!.account } }
+        } catch (error) {
+          return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } }
+        }
+      },
+      invalidatesTags: ['Account'],
+    }),
   }),
 })
 
-export const { useGetMyAccountsQuery, useCreateAccountMutation } = accountsApi
+export const { useGetMyAccountsQuery, useCreateAccountMutation, useUpdateAccountMutation } = accountsApi

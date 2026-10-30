@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import * as authAPI from '@/api/auth'
-import { setCredentials, setVerifyId, updateTokens, logout } from './slice'
+import { setCredentials, setVerifyId, updateTokens, updateProfileFields, logout } from './slice'
 import { parseSignUpResponse } from './signup-response'
 import { normalizeTradlyResponse } from '@/state/api-response'
 import { cartApi } from '@/state/cart/api'
@@ -23,7 +23,7 @@ import type {
 
 // Minimal local type — avoids circular dependency with store.ts
 interface LocalState {
-  auth: { authKey: string; refreshKey: string; tokenSetAt: number | null }
+  auth: { authKey: string; refreshKey: string; tokenSetAt: number | null; userId: string }
   app: { currency: string; language: string }
 }
 
@@ -62,6 +62,21 @@ export const authApi = createApi({
           return { data: { user } }
         } catch (err) {
           return { error: { status: 'CUSTOM_ERROR', error: (err instanceof Error ? err.message : 'Unexpected error') } }
+        }
+      },
+    }),
+
+    updateUserProfile: builder.mutation<Record<string, unknown>, { first_name?: string; last_name?: string; mobile?: string; dial_code?: string }>({
+      queryFn: async (user, { getState, dispatch }) => {
+        const state = getState() as LocalState
+        try {
+          const res = normalizeTradlyResponse(await authAPI.updateUserProfile(state.auth.userId, user, state.auth.authKey, state.app.currency, state.app.language), 'Could not update profile')
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not update profile' } }
+          // The response can omit fields; apply submitted values after the API confirms success.
+          dispatch(updateProfileFields(user))
+          return { data: ((res as any).data ?? {}) as Record<string, unknown> }
+        } catch (err) {
+          return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } }
         }
       },
     }),
@@ -223,6 +238,7 @@ export const authApi = createApi({
 })
 
 export const {
+  useUpdateUserProfileMutation,
   useSignInMutation,
   useSignUpMutation,
   useVerifyOtpMutation,

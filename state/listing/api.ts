@@ -158,6 +158,28 @@ export const listingApi = createApi({
       },
     }),
 
+    getListingSuggestions: builder.query<Record<string, unknown>, Record<string, unknown>>({
+      queryFn: async (params, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await listingAPI.getListingSuggestions(params, authKey, currency, language), 'Could not load search suggestions')
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not load search suggestions' } }
+          return { data: (res as any).data ?? {} }
+        } catch (err) { return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } } }
+      },
+    }),
+
+    getListingLocations: builder.query<Record<string, unknown>, Record<string, unknown>>({
+      queryFn: async (params, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await listingAPI.getListingLocations(params, authKey, currency, language), 'Could not load listing locations')
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not load listing locations' } }
+          return { data: (res as any).data ?? {} }
+        } catch (err) { return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } } }
+      },
+    }),
+
     createListing: builder.mutation<{ listing: import('@/types/listing.types').Listing }, Record<string, unknown>>({
       queryFn: async (listing, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
@@ -172,13 +194,54 @@ export const listingApi = createApi({
       invalidatesTags: ['Listing'],
     }),
 
+    updateListing: builder.mutation<{ listing: import('@/types/listing.types').Listing }, { id: number | string; listing: Record<string, unknown> }>({
+      queryFn: async ({ id, listing }, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await listingAPI.updateListing(id, listing, authKey, currency, language), 'Could not update listing', ['listing'])
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not update listing' } }
+          return { data: { listing: res.data!.listing } }
+        } catch (err) { return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } } }
+      },
+      invalidatesTags: ['Listing'],
+    }),
+
+    deleteListing: builder.mutation<void, number | string>({
+      queryFn: async (id, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await listingAPI.deleteListing(id, authKey, currency, language), 'Could not delete listing')
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not delete listing' } }
+          return { data: undefined }
+        } catch (err) { return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } } }
+      },
+      invalidatesTags: ['Listing'],
+    }),
+
+    markListingSold: builder.mutation<void, number | string>({
+      queryFn: async (id, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await listingAPI.markListingSold(id, authKey, currency, language), 'Could not mark listing as sold')
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not mark listing as sold' } }
+          return { data: undefined }
+        } catch (err) { return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } } }
+      },
+      invalidatesTags: ['Listing'],
+    }),
+
   }),
 })
 
 export const {
   useGetListingsQuery,
   useGetListingDetailQuery,
+  useGetListingSuggestionsQuery,
+  useGetListingLocationsQuery,
   useLikeListingMutation,
   useUnlikeListingMutation,
   useCreateListingMutation,
+  useUpdateListingMutation,
+  useDeleteListingMutation,
+  useMarkListingSoldMutation,
 } = listingApi

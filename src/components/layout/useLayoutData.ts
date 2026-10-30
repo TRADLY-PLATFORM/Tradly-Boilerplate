@@ -78,6 +78,8 @@ export function useLayoutData(brandName: string): LayoutData {
         { label: locale.labels.myAccount, to: '/account' },
         { label: locale.labels.sell, to: '/sell' },
         ...(layoutConfig.orders ? [{ label: locale.labels.myOrders, to: '/orders' }] : []),
+        ...(layoutConfig.features.manageListings ? [{ label: locale.labels.manageListings, to: '/manage-listings' }] : []),
+        ...(layoutConfig.features.sellerInsights ? [{ label: locale.labels.sellerInsights, to: '/seller/insights' }] : []),
       ]
     : []
 

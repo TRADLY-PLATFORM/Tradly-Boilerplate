@@ -98,6 +98,17 @@ export const ordersApi = createApi({
       providesTags: ['Order'],
     }),
 
+    getDonationsList: builder.query<Record<string, unknown>, { listingId: number | string; page?: number; per_page?: number }>({
+      queryFn: async ({ listingId, ...params }, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await ordersAPI.getDonationsList(listingId, params, authKey, currency, language), 'Could not load donations')
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not load donations' } }
+          return { data: (res as any).data ?? {} }
+        } catch (err) { return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } } }
+      },
+    }),
+
     getOrderDetail: builder.query<GetOrderDetailResponse, string | number>({
       queryFn: async (id, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
@@ -165,6 +176,7 @@ export const {
   usePaymentIntentMutation,
   useDirectCheckoutMutation,
   useGetOrdersQuery,
+  useGetDonationsListQuery,
   useGetOrderDetailQuery,
   useUpdateOrderStatusMutation,
   useUpdateShipmentStatusMutation,

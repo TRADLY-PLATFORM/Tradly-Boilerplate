@@ -1,6 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import * as schedulesAPI from '@/api/schedules'
-import type { CreateScheduleInput, SchedulesPerDay } from '@/api/schedules'
+import type { CreateScheduleInput, GetTimeSlotsParams, SchedulesPerDay } from '@/api/schedules'
 import { getTradlyResponseError, normalizeTradlyResponse } from '@/state/api-response'
 
 interface LocalState {
@@ -69,7 +69,20 @@ export const schedulesApi = createApi({
       invalidatesTags: (_result, _error, { listingId }) => [{ type: 'Schedule', id: String(listingId) }],
     }),
 
+    getTimeSlots: builder.query<Record<string, unknown>, GetTimeSlotsParams>({
+      queryFn: async (params, { getState }) => {
+        const { authKey, currency, language } = ctx(getState() as LocalState)
+        try {
+          const result = normalizeTradlyResponse(await schedulesAPI.getTimeSlots(params, authKey, currency, language), 'Failed to load time slot templates')
+          if (result.error) return { error: { status: 'CUSTOM_ERROR', error: result.error.message ?? 'Failed to load time slot templates' } }
+          return { data: (result as any).data ?? {} }
+        } catch (error) {
+          return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } }
+        }
+      },
+    }),
+
   }),
 })
 
-export const { useGetSchedulesQuery, useCreateScheduleMutation } = schedulesApi
+export const { useGetSchedulesQuery, useCreateScheduleMutation, useGetTimeSlotsQuery } = schedulesApi
