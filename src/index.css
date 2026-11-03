@@ -57,10 +57,10 @@
 
 @layer components {
   .btn-hero {
-    @apply bg-coffee-accent text-coffee-accent-foreground hover:bg-coffee-primary transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl;
+    @apply inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-coffee-accent text-coffee-accent-foreground hover:bg-coffee-primary transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl;
   }
   .btn-secondary {
-    @apply bg-coffee-secondary text-coffee-secondary-foreground hover:bg-coffee-warm border border-coffee-accent/20 transition-all duration-300;
+    @apply inline-flex items-center justify-center rounded-md px-6 py-3 font-medium bg-coffee-secondary text-coffee-secondary-foreground hover:bg-coffee-warm border border-coffee-accent/20 transition-all duration-300;
   }
   .card-product {
     @apply bg-card border border-border rounded-xl shadow-md hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden;
@@ -81,6 +81,21 @@
   /* Full-bleed accent strip — use on a section wrapper for a colored band */
   .section-accent {
     @apply bg-coffee-primary text-coffee-primary-foreground;
+  }
+  /* Text on the band keeps the band's own colour, so light-page text colours can never end up dark-on-dark.
+     A card placed on the band (bg-card and friends) gets its normal colours back. Attribute selectors keep
+     Tailwind from rewriting these rules as it does for classes used with @apply. */
+  .section-accent :is([class~="text-foreground"], [class~="text-subtitle"], [class~="text-muted-foreground"], [class~="text-card-foreground"]) {
+    color: inherit !important;
+  }
+  .section-accent :is([class~="bg-card"], [class~="bg-background"], [class~="bg-white"], [class~="bg-surface"], [class~="bg-muted"]) [class~="text-foreground"] {
+    color: hsl(var(--foreground)) !important;
+  }
+  .section-accent :is([class~="bg-card"], [class~="bg-background"], [class~="bg-white"], [class~="bg-surface"], [class~="bg-muted"]) :is([class~="text-subtitle"], [class~="text-muted-foreground"]) {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+  .section-accent :is([class~="bg-card"], [class~="bg-background"], [class~="bg-white"], [class~="bg-surface"], [class~="bg-muted"]) [class~="text-card-foreground"] {
+    color: hsl(var(--card-foreground)) !important;
   }
   /* Horizontal scroll row — use on a flex container for cards/tiles */
   .scroll-row {

@@ -10,6 +10,7 @@ import ResetPasswordPage from '../pages/ResetPasswordPage'
 import HomePage from '../pages/HomePage'
 import ListingDetailPage from '../pages/ListingDetailPage'
 import BookingListingPage from '../pages/BookingListingPage'
+import RentalListingPage from '../pages/RentalListingPage'
 import BookingOrderPage from '../pages/BookingOrderPage'
 import CartPage from '../pages/CartPage'
 import CheckoutPage from '../pages/CheckoutPage'
@@ -73,6 +74,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/listing/:slug" element={<ListingDetailPage />} />
           <Route path="/booking/:slug" element={<BookingListingPage />} />
+          {layoutConfig.features.rental && <Route path="/rental/:slug" element={<RentalListingPage />} />}
           <Route path="/lc/:slug" element={<CategoryListingsPage />} />
 
           {/* Protected */}

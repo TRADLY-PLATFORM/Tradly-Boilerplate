@@ -42,6 +42,7 @@ Always read `listing.order_type` to decide which action handler to call.
 | `digital` | Buy Now | No | No (480 handles conflict) | No | Digital download, no shipping display |
 | `events` | Book Now | **Yes** | **Yes** | No | One event per cart, clear before add |
 | `appointments` | Book Appointment | **Yes** | **Yes** | No | Same as events |
+| `rental` | Rent now | **Yes** | **Yes** | No | Select a date range on `/rental/:slug`; availability is checked before checkout and dates are sent as checkout schedule timestamps |
 | `donation` | Fund Now | No | **Yes** | **Yes** | Requires `custom_price` from user input |
 | `membership` | Join Now | **Yes** | **Yes** | No | Create the Tradly membership record, then shipping-free checkout; recurring billing is configured separately |
 | `information_listing` | Contact / Enquire | No | — | — | No cart — lead/enquiry only |

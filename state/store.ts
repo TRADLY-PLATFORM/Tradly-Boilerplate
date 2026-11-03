@@ -20,6 +20,7 @@ import { negotiationsApi } from './negotiations/api'
 import { reviewsApi } from './reviews/api'
 import { subscriptionsApi } from './subscriptions/api'
 import { transactionsApi } from './transactions/api'
+import { rentalsApi } from './rentals/api'
 import { authSlice } from './auth/slice'
 import { appSlice } from './app/slice'
 
@@ -64,6 +65,7 @@ const rootReducer = combineReducers({
   [reviewsApi.reducerPath]: reviewsApi.reducer,
   [subscriptionsApi.reducerPath]: subscriptionsApi.reducer,
   [transactionsApi.reducerPath]: transactionsApi.reducer,
+  [rentalsApi.reducerPath]: rentalsApi.reducer,
 })
 
 export type RootState = ReturnType<typeof rootReducer>
@@ -93,7 +95,8 @@ export const store = configureStore({
       .concat(negotiationsApi.middleware)
       .concat(reviewsApi.middleware)
       .concat(subscriptionsApi.middleware)
-      .concat(transactionsApi.middleware),
+      .concat(transactionsApi.middleware)
+      .concat(rentalsApi.middleware),
 })
 
 export const persistor = persistStore(store)

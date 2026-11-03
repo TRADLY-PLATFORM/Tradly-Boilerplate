@@ -29,7 +29,10 @@ import {
 	useGetDemandCommissionsQuery,
 } from "@/state/commissions/api";
 import { useGetSchedulesQuery } from "@/state/schedules/api";
+import { useGetRentalAvailabilityQuery } from "@/state/rentals/api";
+import { isRentalAvailabilityConfirmed } from "@/src/features/rental/availability";
 import { useAuthSelector } from "@/state/auth/selectors";
+import { locale } from "@/src/components/layout/locale";
 import { AppConfig } from "@/config/app.config";
 import {
 	buildPaymentIntentUrl,
@@ -375,6 +378,7 @@ export default function CheckoutPage() {
 	const isScheduleType = SCHEDULE_TYPES.includes(checkoutType);
 	const isDonation = checkoutType === "donation";
 	const isDigital = checkoutType === "digital";
+	const isRental = checkoutType === "rental" || checkoutType === "rentals";
 	const needsShipping = !isSpecialType && !isDigital;
 	const sellerAccountId = (items[0] as any)?.listing?.account?.id;
 
@@ -440,6 +444,17 @@ export default function CheckoutPage() {
 		(s) => s.schedules.length > 0,
 	);
 	const dates = schedulesPerDay.map((s) => s.day);
+	const rentalStartAt = searchParams.get("rental_start_at") ?? "";
+	const rentalEndAt = searchParams.get("rental_end_at") ?? "";
+	const rentalUnits = Math.max(1, Number(searchParams.get("rental_units")) || Number((items[0] as any)?.quantity) || 1);
+	const rentalRangeValid = !!rentalStartAt && !!rentalEndAt && dayjs(rentalStartAt).isValid() && dayjs(rentalEndAt).isValid() && dayjs(rentalEndAt).isAfter(dayjs(rentalStartAt));
+	const { data: rentalAvailabilityData, isFetching: rentalAvailabilityLoading, isSuccess: rentalAvailabilityChecked, isError: rentalAvailabilityError } = useGetRentalAvailabilityQuery({
+		listing_id: Number(firstListing?.id) || 0,
+		start_at: rentalStartAt,
+		end_at: rentalEndAt,
+		units: rentalUnits,
+	}, { skip: !isRental || !firstListing?.id || !rentalRangeValid });
+	const rentalAvailabilityConfirmed = rentalAvailabilityChecked && isRentalAvailabilityConfirmed(rentalAvailabilityData, rentalUnits);
 
 	useEffect(() => {
 		const scheduleId = Number(searchParams.get("booking_schedule_id"));
@@ -546,6 +561,10 @@ export default function CheckoutPage() {
 	const validate = (): string | null => {
 		if (isScheduleType && selectedSlotIdx === null)
 			return "Please select a date and time for your booking.";
+		if (isRental && !rentalRangeValid)
+			return locale.labels.rentalCheckoutDateError;
+		if (isRental && (rentalAvailabilityLoading || rentalAvailabilityError || !rentalAvailabilityConfirmed))
+			return locale.labels.rentalAvailabilityCheckoutError;
 		if (needsShipping && !selectedShipping) return "Select a shipping method.";
 		if (needsShipping && selectedShipping?.type === "delivery" && isAuthenticated && !selectedAddress)
 			return "Select a delivery address.";
@@ -584,6 +603,10 @@ export default function CheckoutPage() {
 			scheduleId = (slot as any).id;
 			scheduleStartAt = `${day} ${slot.start_time}:00`;
 			scheduleEndAt = `${day} ${slot.end_time}:00`;
+		}
+		if (isRental && rentalRangeValid) {
+			scheduleStartAt = dayjs(rentalStartAt).format("YYYY-MM-DD HH:mm:ss");
+			scheduleEndAt = dayjs(rentalEndAt).format("YYYY-MM-DD HH:mm:ss");
 		}
 
 		const payload: FullCheckoutPayload = {
@@ -762,6 +785,14 @@ export default function CheckoutPage() {
 									{schedulesPerDay[selectedDateIdx].schedules[selectedSlotIdx].end_time}
 								</p>
 							)}
+						</SectionBox>
+					)}
+					{isRental && rentalRangeValid && (
+						<SectionBox title={locale.labels.rentalOrderDates}>
+							<p className="text-sm text-muted-foreground">{dayjs(rentalStartAt).format('YYYY-MM-DD HH:mm')} – {dayjs(rentalEndAt).format('YYYY-MM-DD HH:mm')} · {rentalUnits} unit{rentalUnits === 1 ? '' : 's'}</p>
+							{rentalAvailabilityLoading && <p className="mt-2 text-xs text-muted-foreground">{locale.labels.rentalAvailabilityRechecking}</p>}
+							{rentalAvailabilityError && <p role="alert" className="mt-2 text-xs text-destructive">{locale.labels.rentalAvailabilityRecheckError}</p>}
+							{rentalAvailabilityChecked && !rentalAvailabilityConfirmed && <p role="status" className="mt-2 text-xs text-muted-foreground">{locale.labels.rentalAvailabilityUnverified}</p>}
 						</SectionBox>
 					)}
 

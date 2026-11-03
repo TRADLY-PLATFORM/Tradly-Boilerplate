@@ -99,6 +99,7 @@ SDK calls it.
 | Available slots for a listing | `GET /v1/listings/{id}/schedules_per_day?start_at=&days=` | Docs | Yes (`api/schedules.ts`) |
 | Seller sets a listing's schedule | `PUT /v1/listings/{id}/schedules` (SDK `createSchedule`) | SDK only | Yes (`api/schedules.ts`, `state/schedules/`) |
 | Seller time-slot templates | `GET /v1/timeslots` (SDK `getTimeSlots`; routed through `commonFuntion` to fix the SDK's missing leading slash) | SDK only | Yes (`api/schedules.ts`, `state/schedules/`) |
+| Rental settings and availability | `POST /v1/rentals/settings`, `GET /v1/rentals/availability?listing_id=&start_at=&end_at=&units=` | Full docs index only | Yes (`api/rentals.ts`, `state/rentals/`) |
 | Donations received by a listing | `GET /v1/orders/listings/donations?listing_id=` | SDK only | Yes (`api/orders.ts`, `state/orders/`) |
 | My orders / order detail | `GET /v1/orders`, `GET /v1/orders/{id}` | Docs | Yes (`api/orders.ts`) |
 | Offer / bid on a listing | `POST` / `PATCH /v1/listings/{id}/negotiations/...` | Docs | Yes (`api/negotiations.ts`, `state/negotiations/`) |
@@ -108,9 +109,11 @@ SDK calls it.
 | Transactions and earnings | `GET /v1/transactions`, `GET /v1/earnings` | Docs | Yes (`api/transactions.ts`, `state/transactions/`) |
 
 Admin-only subscription plan management and membership price-log creation stay in the Tradly
-dashboard. No rental API is listed in the endpoint index or SDK; do not guess a rental endpoint or
-payload until Tradly publishes its contract. Use `commonFuntion` for documented paths that lack a
-reliable SDK wrapper.
+dashboard. Rental endpoints are documented in the full index at `https://developer.tradly.app/llms-full.txt`
+but are missing from the standard index and SDK. The public docs example uses `rate_unit: "day"`; the
+connected Tradly tool contract supports `hour`, `day`, and `week`, with `buffer_time` measured in hours.
+The availability response shape is unspecified. Keep that response opaque and don't treat a successful
+lookup as proof that units are available. Use `commonFuntion` for these documented paths.
 
 ## Forms: contact, enquiry, lead capture, applications, waitlists, surveys, feedback
 

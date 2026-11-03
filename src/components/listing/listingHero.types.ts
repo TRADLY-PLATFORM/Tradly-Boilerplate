@@ -21,8 +21,25 @@ export interface ListingHeroData {
   donation: { percent: number; goalLabel: string } | null
   /** HTML from the seller's description editor; render it with dangerouslySetInnerHTML. */
   descriptionHtml: string
-  /** Fixed UI words (labels.noImage etc.) in the site's language. */
-  labels: { noImage: string; reviews: string; aboutThisListing: string }
+  /** Index into `images` of the picture shown large; thumbnails call `onSelectImage(index)` to change it. */
+  activeImageIndex: number
+  onSelectImage: (index: number) => void
+  /** Specifications as label/value pairs (category, SKU, availability, attributes). Empty when there are none. */
+  facts: { label: string; value: string }[]
+  /** The seller; null when unknown. `avatar` is '' when they have no picture. */
+  seller: { name: string; avatar: string; listingCount: number } | null
+  /** Other listings from the same category, already linked: `href` is an in-app path such as /listing/slug. */
+  related: { title: string; href: string; image: string; priceLabel: string }[]
+  /** Fixed UI words in the site's language. */
+  labels: {
+    noImage: string
+    reviews: string
+    aboutThisListing: string
+    details: string
+    soldBy: string
+    relatedTitle: string
+    listingsCount: string
+  }
 }
 
 export interface ListingHeroProps {

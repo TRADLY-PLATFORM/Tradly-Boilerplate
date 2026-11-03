@@ -18,6 +18,8 @@ import { Separator } from "@/src/components/ui/separator";
 import ListingHero from "@/src/components/listing/ListingHero";
 import type { ListingHeroData } from "@/src/components/listing/listingHero.types";
 import { locale } from "@/src/components/layout/locale";
+import { layoutConfig } from "@/src/components/layout/layout.config";
+import { buildHeroExtras, useListingHeroExtras } from "@/src/features/listing-hero/useListingHeroExtras";
 import { Heart, ShoppingCart, Minus, Plus } from "lucide-react";
 import type { AddToCartInput } from "@/types/cart.types";
 
@@ -51,6 +53,7 @@ export default function ListingDetailPage() {
 
 	const { data, isLoading, isError } = useGetListingDetailQuery({ slug });
 	const listingId = data?.listing.id;
+	const heroState = useListingHeroExtras(data?.listing);
 	const isBundle = data?.listing.type === "bundle";
 	const isMembership = data?.listing.type === "membership" || data?.listing.order_type === "membership";
 	const { data: variants = [], isLoading: variantsLoading } = useGetListingVariantsQuery(listingId!, { skip: !listingId || !data || data.listing.order_type !== "listings" || isBundle || isMembership });
@@ -64,6 +67,14 @@ export default function ListingDetailPage() {
 	useEffect(() => {
 		if (shouldRedirectToBooking) navigate(`/booking/${slug}`, { replace: true });
 	}, [navigate, shouldRedirectToBooking, slug]);
+	// Rental listings have their own page (dates, units, availability, deposit); ?view=standard opens this page anyway.
+	const shouldRedirectToRental =
+		layoutConfig.features.rental &&
+		(resolvedOrderType === "rental" || resolvedOrderType === "rentals") &&
+		searchParams.get("view") !== "standard";
+	useEffect(() => {
+		if (shouldRedirectToRental) navigate(`/rental/${slug}`, { replace: true });
+	}, [navigate, shouldRedirectToRental, slug]);
 	const [likeListing, { isLoading: isLiking }] = useLikeListingMutation();
 	const [unlikeListing, { isLoading: isUnliking }] =
 		useUnlikeListingMutation();
@@ -111,11 +122,11 @@ export default function ListingDetailPage() {
 		return (
 			<Layout>
 				<div className="text-center py-20 text-destructive text-sm">
-					Listing not found.
+					{locale.labels.listingNotFound}
 				</div>
 			</Layout>
 		);
-	if (shouldRedirectToBooking)
+	if (shouldRedirectToBooking || shouldRedirectToRental)
 		return <Layout><div className="py-20 text-center text-sm text-muted-foreground">Opening booking…</div></Layout>;
 
 	const { listing } = data;
@@ -336,6 +347,7 @@ export default function ListingDetailPage() {
 		title: listing.title,
 		sellerName: listing.account?.name ?? locale.labels.unknownSeller,
 		images: listing.images,
+		...buildHeroExtras(listing, orderType, showPrice, heroState),
 		rating:
 			listing.rating_data.rating_count > 0
 				? { average: listing.rating_data.rating_average, count: listing.rating_data.rating_count }
@@ -363,7 +375,6 @@ export default function ListingDetailPage() {
 				? { percent: raisedPercent, goalLabel: `${locale.labels.goal}: ${listing.goal_price.formatted}` }
 				: null,
 		descriptionHtml: listing.description ?? "",
-		labels: { noImage: locale.labels.noImage, reviews: locale.labels.reviews, aboutThisListing: locale.labels.aboutThisListing },
 	};
 
 	return (
@@ -405,10 +416,10 @@ export default function ListingDetailPage() {
 			)}
 
 			<ListingHero data={heroData}>
-				{variantsLoading && <p className="text-sm text-muted-foreground">Loading options…</p>}
+				{variantsLoading && <p className="text-sm text-muted-foreground">{locale.labels.loadingOptions}</p>}
 					{variants.length > 0 && (
 						<section aria-label="Product options" className="space-y-2">
-							<p className="text-sm font-medium">Choose an option</p>
+							<p className="text-sm font-medium">{locale.labels.chooseOption}</p>
 							<div className="flex flex-wrap gap-2">
 								{variants.map((variant) => {
 									const price = formatVariantPrice(variant.offer_price ?? variant.list_price, listing.offer_price.currency);
@@ -453,7 +464,7 @@ export default function ListingDetailPage() {
 						listing.stock > 0 && (
 							<div className="flex items-center gap-4">
 								<span className="text-sm text-muted-foreground">
-									Quantity
+									{locale.labels.quantity}
 								</span>
 								<div className="flex items-center gap-3 border border-border rounded-lg p-1">
 									<button
@@ -505,7 +516,7 @@ export default function ListingDetailPage() {
 					{orderType === "donation" && (
 						<div>
 							<label className="text-sm font-medium text-foreground block mb-1.5">
-								Your contribution (
+								{locale.labels.yourContribution} (
 								{
 									listing
 										.offer_price
@@ -530,7 +541,7 @@ export default function ListingDetailPage() {
 										),
 									)
 								}
-								placeholder="Enter amount"
+								placeholder={locale.labels.enterAmount}
 							/>
 						</div>
 					)}
@@ -539,7 +550,7 @@ export default function ListingDetailPage() {
 					<div className="flex gap-3 flex-wrap">
 						{orderType === "membership" && (
 							<Button className="btn-hero flex-1" disabled={isAdding || isJoining} onClick={handleJoinMembership}>
-								{isJoining || isAdding ? "Joining…" : "Join now"}
+								{isJoining || isAdding ? locale.labels.joining : locale.labels.joinNow}
 							</Button>
 						)}
 						{orderType === "listings" && (
@@ -558,9 +569,9 @@ export default function ListingDetailPage() {
 									}
 								>
 									<ShoppingCart className="h-4 w-4 mr-1.5" />
-									{isSelectingBundle ? "Saving choices…" : listing.in_cart
-										? "Add more"
-										: "Add to cart"}
+									{isSelectingBundle ? locale.labels.savingChoices : listing.in_cart
+										? locale.labels.addMore
+										: locale.labels.addToCart}
 								</Button>
 								<Button
 									variant="outline"
@@ -574,7 +585,7 @@ export default function ListingDetailPage() {
 											);
 									}}
 								>
-									Buy now
+									{locale.labels.buyNow}
 								</Button>
 							</>
 						)}
@@ -591,7 +602,7 @@ export default function ListingDetailPage() {
 										);
 								}}
 							>
-								Buy now
+								{locale.labels.buyNow}
 							</Button>
 						)}
 						{(orderType === "events" ||
@@ -602,8 +613,8 @@ export default function ListingDetailPage() {
 								onClick={() => navigate(`/booking/${slug}`)}
 							>
 								{orderType === "events"
-									? "Book now"
-									: "Book appointment"}
+									? locale.labels.bookNow
+									: locale.labels.bookAppointment}
 							</Button>
 						)}
 						{orderType === "donation" && (
@@ -611,7 +622,7 @@ export default function ListingDetailPage() {
 								className="btn-hero flex-1"
 								onClick={handleFundNow}
 							>
-								Fund now
+								{locale.labels.fundNow}
 							</Button>
 						)}
 						{orderType ===
@@ -624,7 +635,7 @@ export default function ListingDetailPage() {
 									)
 								}
 							>
-								Enquire
+								{locale.labels.enquire}
 							</Button>
 						)}
 						{orderType === "video_listing" && (
@@ -636,7 +647,7 @@ export default function ListingDetailPage() {
 									)
 								}
 							>
-								Watch
+								{locale.labels.watch}
 							</Button>
 						)}
 						{orderType === "requests" && (
@@ -655,7 +666,7 @@ export default function ListingDetailPage() {
 										);
 								}}
 							>
-								Submit request
+								{locale.labels.submitRequest}
 							</Button>
 						)}
 					</div>
@@ -671,7 +682,7 @@ export default function ListingDetailPage() {
 						<Heart
 							className={`h-4 w-4 ${listing.liked ? "fill-current text-destructive" : ""}`}
 						/>
-						{listing.liked ? "Liked" : "Like"}
+						{listing.liked ? locale.labels.liked : locale.labels.like}
 						{listing.likes > 0 && (
 							<span className="text-muted-foreground">
 								({listing.likes})

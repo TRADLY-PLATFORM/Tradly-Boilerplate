@@ -20,6 +20,7 @@ import * as negotiations from '../api/negotiations.ts'
 import * as orders from '../api/orders.ts'
 import * as paymentMethods from '../api/payment-methods.ts'
 import * as reviews from '../api/reviews.ts'
+import * as rentals from '../api/rentals.ts'
 import * as schedules from '../api/schedules.ts'
 import * as shippingMethods from '../api/shipping-methods.ts'
 import * as subscriptions from '../api/subscriptions.ts'
@@ -154,6 +155,9 @@ const endpoints: EndpointCase[] = [
 
   { id: 'paymentMethods.getPaymentMethods', method: 'get', path: '/v1/tenants/payment_methods', invoke: () => paymentMethods.getPaymentMethods(authKey, currency, language) },
 
+  { id: 'rentals.createRentalSettings', method: 'post', path: '/v1/rentals/settings', invoke: () => rentals.createRentalSettings({ listing_id: listingId, rate_unit: 'day', rate_amount: 50, min_duration: 1, max_duration: 30, buffer_time: 0, deposit_amount: 100, max_units: 2 }, authKey, currency, language), expectedBody: { listing_id: listingId, rate_unit: 'day', rate_amount: 50, min_duration: 1, max_duration: 30, buffer_time: 0, deposit_amount: 100, max_units: 2 } },
+  { id: 'rentals.getRentalAvailability', method: 'get', path: '/v1/rentals/availability', invoke: () => rentals.getRentalAvailability({ listing_id: listingId, start_at: '2026-11-05T00:00:00Z', end_at: '2026-11-07T23:59:59Z', units: 1 }, authKey, currency, language), expectedQuery: { listing_id: String(listingId), start_at: '2026-11-05T00:00:00Z', end_at: '2026-11-07T23:59:59Z', units: '1' } },
+
   { id: 'schedules.getSchedules', method: 'get', path: `/v1/listings/${listingId}/schedules_per_day`, invoke: () => schedules.getSchedules(listingId, '2026-10-05', 30, authKey, currency, language) },
   { id: 'schedules.createSchedule', method: 'put', path: `/v1/listings/${listingId}/schedules`, invoke: () => schedules.createSchedule(listingId, [{ start_date: '2026-11-01', end_date: '2026-11-30', start_time: '09:00', end_time: '17:00', schedule_type: 1, active: true, total_stocks: 4 }], authKey, currency, language) },
   { id: 'schedules.getTimeSlots', method: 'get', path: '/v1/timeslots', invoke: () => schedules.getTimeSlots({ type: 1 }, authKey, currency, language), expectedQuery: { type: '1' } },
@@ -245,6 +249,8 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'orders.updateShipmentStatus': 'orders.updateShipmentStatus',
   'orders.verifyOrder': 'orders.verifyOrderDetails',
   'payment-methods.getPaymentMethods': 'paymentMethods.getPaymentMethods',
+  'rentals.createRentalSettings': 'rentals.createRentalSettings',
+  'rentals.getRentalAvailability': 'rentals.getRentalAvailability',
   'schedules.getSchedules': 'schedules.getSchedules',
   'schedules.createSchedule': 'schedules.createSchedule',
   'schedules.getTimeSlots': 'schedules.getTimeSlots',

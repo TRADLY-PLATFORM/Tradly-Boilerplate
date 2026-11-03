@@ -4,6 +4,14 @@ import { useCreateNegotiationMutation } from '@/state/negotiations/api'
 import { useCreateReviewMutation, useGetReviewsQuery, useSetReviewReactionMutation } from '@/state/reviews/api'
 
 type Review = Record<string, unknown>
+const errorText = (error: unknown): string | undefined => {
+  if (!error || typeof error !== 'object') return undefined
+  const value = error as { error?: unknown; message?: unknown; data?: { message?: unknown } }
+  if (typeof value.error === 'string' && value.error) return value.error
+  if (typeof value.data?.message === 'string' && value.data.message) return value.data.message
+  if (typeof value.message === 'string' && value.message) return value.message
+  return undefined
+}
 const records = (data: Record<string, unknown> | undefined): Review[] => {
   if (!data) return []
   for (const key of ['reviews', 'items']) if (Array.isArray(data[key])) return data[key] as Review[]
@@ -38,7 +46,7 @@ export default function ListingSocialPanel({ listingId }: { listingId: number })
     const form = event.currentTarget
     const fields = new FormData(form)
     const result = await createOffer({ listingId, offer: { price: Number(fields.get('price')) } })
-    if ('error' in result) setError('Could not send your offer. Please try again.')
+    if ('error' in result) setError(errorText(result.error) ?? 'Could not send your offer. Please try again.')
     else { form.reset(); setMessage('Your offer was sent.') }
   }
 

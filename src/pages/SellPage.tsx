@@ -13,16 +13,19 @@ import { useCreateListingMutation } from '@/state/listing/api'
 import { useCreateScheduleMutation } from '@/state/schedules/api'
 import { useAddBundleItemMutation, useAddBundlePoolItemMutation } from '@/state/bundles/api'
 import { useCreateListingVariantMutation, useGetVariantTypeValuesQuery, useGetVariantTypesQuery } from '@/state/variants/api'
+import { useCreateRentalSettingsMutation } from '@/state/rentals/api'
 import { useGetListingsQuery } from '@/state/listing/api'
 import { useUploadImagesMutation } from '@/state/uploads/api'
 import type { Category } from '@/types/category.types'
 import type { SellerAccount } from '@/api/accounts'
+import { locale } from '@/src/components/layout/locale'
 
 const ORDER_TYPES = [
   { value: 'listings', label: 'Product or free item' },
   { value: 'donation', label: 'Donation' },
   { value: 'events', label: 'Event' },
   { value: 'appointments', label: 'Appointment or booking' },
+  { value: 'rental', label: locale.labels.rental },
   { value: 'digital', label: 'Digital product' },
   { value: 'information_listing', label: 'Information listing' },
   { value: 'video_listing', label: 'Video listing' },
@@ -89,6 +92,7 @@ export default function SellPage() {
   const [addBundleItem, bundleItemState] = useAddBundleItemMutation()
   const [addBundlePoolItem, bundlePoolState] = useAddBundlePoolItemMutation()
   const [createListingVariant, variantState] = useCreateListingVariantMutation()
+  const [createRentalSettings, rentalState] = useCreateRentalSettingsMutation()
 
   const accounts = accountsData?.accounts ?? []
   const listingCategories = useMemo(() => flattenCategories(listingCategoriesData?.categories ?? []), [listingCategoriesData])
@@ -128,6 +132,12 @@ export default function SellPage() {
   const [scheduleEndTime, setScheduleEndTime] = useState('17:00')
   const [scheduleCapacity, setScheduleCapacity] = useState('1')
   const [scheduleRepeat, setScheduleRepeat] = useState(false)
+  const [rentalMinDuration, setRentalMinDuration] = useState('1')
+  const [rentalMaxDuration, setRentalMaxDuration] = useState('30')
+  const [rentalRateUnit, setRentalRateUnit] = useState<'hour' | 'day' | 'week'>('day')
+  const [rentalBufferTime, setRentalBufferTime] = useState('0')
+  const [rentalDeposit, setRentalDeposit] = useState('0')
+  const [rentalMaxUnits, setRentalMaxUnits] = useState('1')
   const [publishedListing, setPublishedListing] = useState<{ slug: string; id: number } | null>(null)
   const [membershipDuration, setMembershipDuration] = useState('')
   const [bundleMode, setBundleMode] = useState<'fixed' | 'mix_match'>('fixed')
@@ -224,6 +234,10 @@ export default function SellPage() {
       setError('Enter a valid availability date range and end time after the start time.')
       return
     }
+    if (orderType === 'rental' && (Number(rentalMinDuration) < 1 || Number(rentalMaxDuration) < Number(rentalMinDuration) || Number(rentalBufferTime) < 0 || Number(rentalDeposit) < 0 || Number(rentalMaxUnits) < 1 || Number(price) < 0)) {
+      setError(locale.labels.rentalInvalidDates)
+      return
+    }
     const owner = selectedAccount ?? accountState.data!.account
     const payload: Record<string, unknown> = {
       title: title.trim(),
@@ -233,10 +247,11 @@ export default function SellPage() {
       account_id: Number(owner.id),
       ...(categoryId ? { category_id: [Number(categoryId)] } : {}),
       images: imageUrls,
-      stock: Math.max(1, Number(stock) || 1),
+      stock: orderType === 'rental' ? Math.max(1, Number(rentalMaxUnits) || 1) : Math.max(1, Number(stock) || 1),
       list_price: Number(price) || 0,
     }
     if (maxQuantity) payload.max_quantity = Math.max(1, Number(maxQuantity) || 1)
+    else if (orderType === 'rental') payload.max_quantity = Math.max(1, Number(rentalMaxUnits) || 1)
     if (offerPercent) payload.offer_percent = Math.min(100, Math.max(0, Number(offerPercent) || 0))
     if (shippingCharges !== '') payload.shipping_charges = Number(shippingCharges)
     if (sku.trim()) payload.sku = sku.trim()
@@ -338,6 +353,26 @@ export default function SellPage() {
       navigate(`/booking/${listing.slug ?? listing.id}`)
       return
     }
+    if (orderType === 'rental' && listing?.id) {
+      setPublishedListing({ id: listing.id, slug: listing.slug ?? String(listing.id) })
+      const settingsResult = await createRentalSettings({
+        listing_id: listing.id,
+        rate_unit: rentalRateUnit,
+        rate_amount: Number(price) || 0,
+        min_duration: Number(rentalMinDuration),
+        max_duration: Number(rentalMaxDuration),
+        buffer_time: Number(rentalBufferTime),
+        deposit_amount: Number(rentalDeposit) || 0,
+        max_units: Number(rentalMaxUnits),
+      })
+      if ('error' in settingsResult) {
+        setSuccess('')
+        setError(`Your listing was created, but rental settings could not be saved: ${errorMessage(settingsResult.error, 'Please try again later.')}`)
+        return
+      }
+      navigate(`/rental/${listing.slug ?? listing.id}`)
+      return
+    }
     if (listing?.slug) navigate(`/listing/${listing.slug}`)
   }
 
@@ -395,9 +430,20 @@ export default function SellPage() {
               </div>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={scheduleRepeat} onChange={event => setScheduleRepeat(event.target.checked)} /> Repeat every day in this date range</label>
             </section>}
+            {orderType === 'rental' && <section className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
+              <div><h3 className="font-semibold">{locale.labels.rentalSettings}</h3><p className="text-xs text-muted-foreground">{locale.labels.rentalSettingsHelp}</p></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5"><Label htmlFor="rental-rate-unit">{locale.labels.rentalRateUnit}</Label><select id="rental-rate-unit" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={rentalRateUnit} onChange={event => setRentalRateUnit(event.target.value as 'hour' | 'day' | 'week')}><option value="hour">{locale.labels.rentalHour}</option><option value="day">{locale.labels.rentalDay}</option><option value="week">{locale.labels.rentalWeek}</option></select></div>
+                <div className="space-y-1.5"><Label htmlFor="rental-min-duration">{locale.labels.rentalMinimumDuration} ({rentalRateUnit}s)</Label><Input id="rental-min-duration" type="number" min="1" step="1" value={rentalMinDuration} onChange={event => setRentalMinDuration(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="rental-max-duration">{locale.labels.rentalMaximumDuration} ({rentalRateUnit}s)</Label><Input id="rental-max-duration" type="number" min={rentalMinDuration} step="1" value={rentalMaxDuration} onChange={event => setRentalMaxDuration(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="rental-buffer">{locale.labels.rentalBufferHours}</Label><Input id="rental-buffer" type="number" min="0" step="1" value={rentalBufferTime} onChange={event => setRentalBufferTime(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="rental-deposit">{locale.labels.rentalDeposit}</Label><Input id="rental-deposit" type="number" min="0" step="0.01" value={rentalDeposit} onChange={event => setRentalDeposit(event.target.value)} required /></div>
+                <div className="space-y-1.5"><Label htmlFor="rental-max-units">{locale.labels.rentalRentableUnits}</Label><Input id="rental-max-units" type="number" min="1" step="1" value={rentalMaxUnits} onChange={event => setRentalMaxUnits(event.target.value)} required /></div>
+              </div>
+            </section>}
               <div className="space-y-1.5"><Label htmlFor="listing-category">Category</Label><select id="listing-category" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryId} onChange={event => setCategoryId(event.target.value)}><option value="">No category</option>{listingCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
-              <div className="space-y-1.5"><Label htmlFor="listing-price">{orderType === 'donation' ? 'Suggested amount' : 'Price'}</Label><Input id="listing-price" type="number" min="0" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0.00" required /></div>
-              <div className="space-y-1.5"><Label htmlFor="listing-stock">Available quantity</Label><Input id="listing-stock" type="number" min="1" step="1" value={stock} onChange={event => setStock(event.target.value)} required /></div>
+              <div className="space-y-1.5"><Label htmlFor="listing-price">{orderType === 'donation' ? 'Suggested amount' : orderType === 'rental' ? `${locale.labels.rentalRatePerUnit} ${rentalRateUnit}` : 'Price'}</Label><Input id="listing-price" type="number" min="0" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0.00" required /></div>
+              {orderType !== 'rental' && <div className="space-y-1.5"><Label htmlFor="listing-stock">Available quantity</Label><Input id="listing-stock" type="number" min="1" step="1" value={stock} onChange={event => setStock(event.target.value)} required /></div>}
               {orderType === 'donation' && <div className="space-y-1.5"><Label htmlFor="goal-price">Fundraising goal</Label><Input id="goal-price" type="number" min="0" step="0.01" value={goalPrice} onChange={event => setGoalPrice(event.target.value)} placeholder="Optional" /></div>}
             </div>
             {orderType === 'bundle' && <section className="space-y-4 rounded-xl border border-border bg-muted/20 p-4">
@@ -449,8 +495,8 @@ export default function SellPage() {
               <p className="text-xs text-muted-foreground">Add at least one photo, up to 8. Photos upload securely as you select them.</p>
               {uploadState.isLoading && <p className="text-xs text-muted-foreground">Uploading photos…</p>}
             </div>
-            <Button type="submit" disabled={listingState.isLoading || scheduleState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading || !!publishedListing || uploadState.isLoading || files.length > 0} className="btn-hero w-full sm:w-auto">{listingState.isLoading ? 'Publishing…' : scheduleState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading ? 'Saving listing options…' : 'Publish listing'}</Button>
-            {publishedListing && <p className="text-sm text-muted-foreground">Listing created. <Link className="text-coffee-accent underline" to={`/listing/${publishedListing.slug}`}>View listing</Link> or <Link className="text-coffee-accent underline" to={`/booking/${publishedListing.slug}`}>open booking page</Link>.</p>}
+            <Button type="submit" disabled={listingState.isLoading || scheduleState.isLoading || rentalState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading || !!publishedListing || uploadState.isLoading || files.length > 0} className="btn-hero w-full sm:w-auto">{listingState.isLoading ? 'Publishing…' : scheduleState.isLoading || rentalState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading ? 'Saving listing options…' : 'Publish listing'}</Button>
+            {publishedListing && <p className="text-sm text-muted-foreground">Listing created. <Link className="text-coffee-accent underline" to={`/listing/${publishedListing.slug}`}>View listing</Link> or <Link className="text-coffee-accent underline" to={`${orderType === 'rental' ? '/rental' : needsSchedule ? '/booking' : '/listing'}/${publishedListing.slug}`}>{orderType === 'rental' ? locale.labels.rental : needsSchedule ? 'open booking page' : 'open listing page'}</Link>.</p>}
           </form>
         )}
       </div>

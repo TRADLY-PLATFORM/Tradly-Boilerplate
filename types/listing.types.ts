@@ -206,6 +206,16 @@ export interface Listing {
 	my_review: unknown | null;
 	location: Record<string, unknown>; // {} when no location set
 	metadata?: Record<string, unknown>;
+	/** Rental fields returned by Tradly when rental settings are included in the listing detail. */
+	listing_rental_settings?: {
+		rate_unit: 'hour' | 'day' | 'week';
+		rate_amount: number;
+		min_duration: number;
+		max_duration: number;
+		buffer_time: number;
+		deposit_amount: number;
+		max_units: number;
+	};
 }
 
 // ─── Input types ──────────────────────────────────────────────────────────────

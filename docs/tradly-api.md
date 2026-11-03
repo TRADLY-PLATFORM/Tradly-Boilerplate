@@ -4,6 +4,15 @@ Generated from https://developer.tradly.app/llms.txt (271 endpoints). Each row: 
 
 Path placeholders appear as `{{id}}` or `:id`. See AGENTS.md for how to call these from the app.
 
+## Rental endpoint addendum
+
+The rental contract is present in Tradly's full documentation index even though these endpoints are not yet in the standard `llms.txt` index above. The published contract confirms:
+
+- `POST /v1/rentals/settings` — configure `listing_id`, `rate_unit`, `rate_amount`, `min_duration`, `max_duration`, `buffer_time`, `deposit_amount`, and `max_units`. The public docs example uses `rate_unit: "day"`; the connected Tradly tool contract supports `hour`, `day`, or `week`, and defines `buffer_time` in hours.
+- `GET /v1/rentals/availability` — query with `listing_id`, `start_at`, `end_at`, and `units`. The example uses ISO timestamps such as `2026-10-10T10:00:00Z`.
+
+The docs do not publish the availability response schema. Keep availability responses opaque until a real rental listing can be queried; do not infer a positive availability result from HTTP success alone.
+
 ## Authentication
 
 - `POST /skua/tenant_oauth/token` — Authorization — /authorization

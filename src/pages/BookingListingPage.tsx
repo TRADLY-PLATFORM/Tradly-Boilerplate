@@ -12,6 +12,7 @@ import { Skeleton } from '@/src/components/ui/skeleton'
 import ListingHero from '@/src/components/listing/ListingHero'
 import type { ListingHeroData } from '@/src/components/listing/listingHero.types'
 import { locale } from '@/src/components/layout/locale'
+import { buildHeroExtras, useListingHeroExtras } from '@/src/features/listing-hero/useListingHeroExtras'
 
 export default function BookingListingPage() {
   const { slug = '' } = useParams<{ slug: string }>()
@@ -19,6 +20,7 @@ export default function BookingListingPage() {
   const authenticated = useAuthSelector(state => state.isAuthenticated)
   const { data, isLoading, isError } = useGetListingDetailQuery({ slug })
   const listing = data?.listing
+  const heroState = useListingHeroExtras(listing)
   const startAt = useMemo(() => dayjs().format('YYYY-MM-DD'), [])
   const { data: availability, isLoading: schedulesLoading, isError: schedulesError } = useGetSchedulesQuery(
     { listingId: listing?.id ?? '', startAt, days: 30 },
@@ -64,6 +66,7 @@ export default function BookingListingPage() {
     title: listing.title,
     sellerName: listing.account?.name ?? locale.labels.unknownSeller,
     images: listing.images ?? [],
+    ...buildHeroExtras(listing, listing.order_type, true, heroState),
     rating: listing.rating_data?.rating_count > 0 ? { average: listing.rating_data.rating_average, count: listing.rating_data.rating_count } : null,
     priceLabel: listing.offer_price?.formatted ?? listing.list_price?.formatted ?? null,
     comparePriceLabel: null,
@@ -71,7 +74,6 @@ export default function BookingListingPage() {
     stockNote: null,
     donation: null,
     descriptionHtml: listing.description ?? '',
-    labels: { noImage: locale.labels.noImage, reviews: locale.labels.reviews, aboutThisListing: locale.labels.aboutThisListing },
   }
 
   return <Layout>

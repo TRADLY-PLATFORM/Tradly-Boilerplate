@@ -147,6 +147,12 @@ const needsShipping  = !SPECIAL_TYPES.includes(checkoutType) && checkoutType !==
 const isScheduleType = SCHEDULE_TYPES.includes(checkoutType)
 ```
 
+Rental checkout stays shipping-eligible and passes the selected date range through `schedule_start_at` and
+`schedule_end_at`. `/rental/:slug` checks the range with `GET /v1/rentals/availability`; checkout repeats
+that check using the documented `listing_id`, `start_at`, `end_at`, and `units` parameters before placing
+the order. The availability response schema is not published, so the UI must not infer availability from
+undocumented response fields.
+
 ---
 
 ## Shipping Methods — Two Patterns
