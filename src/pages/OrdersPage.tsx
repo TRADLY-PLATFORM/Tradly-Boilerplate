@@ -6,6 +6,8 @@ import { Button } from '@/src/components/ui/button'
 import { Badge } from '@/src/components/ui/badge'
 import { Package, ChevronRight } from 'lucide-react'
 import type { Order } from '@/types/order.types'
+import { formatOrderDateRange, formatOrderDateTimeRange, getItemOrderType, isBookingOrderType } from '@/src/features/orders/order-item-display'
+import { locale } from '@/src/components/layout/locale'
 
 const STATUS_VARIANT: Record<number, string> = {
   1: 'bg-yellow-100 text-yellow-800',
@@ -39,6 +41,9 @@ function OrderCard({ order }: { order: any }) {
   const firstItem = items[0]
   const extraCount = Math.max(0, items.length - 1)
   const grandTotal = order.grand_total ?? order.offer_total
+  const firstType = getItemOrderType(firstItem, order.type ?? '')
+  const bookingDate = isBookingOrderType(firstType) && firstItem?.schedule_start_at ? formatOrderDateTimeRange(firstItem.schedule_start_at, firstItem.schedule_end_at) : ''
+  const rentalDate = ['rental', 'rentals'].includes(firstType) && firstItem?.schedule_start_at ? formatOrderDateRange(firstItem.schedule_start_at, firstItem.schedule_end_at) : ''
 
   return (
     <Link to={`/orders/${order.id}`} className="bg-card border border-border rounded-xl p-4 flex gap-4 items-center hover:shadow-md transition-shadow">
@@ -63,6 +68,7 @@ function OrderCard({ order }: { order: any }) {
           {firstItem?.listing?.title ?? `Order #${order.reference_number}`}
           {extraCount > 0 ? ` + ${extraCount} more` : ''}
         </p>
+        {(bookingDate || rentalDate) && <p className="mb-2 text-xs font-medium text-coffee-accent">{bookingDate ? locale.labels.bookingOrderDate : locale.labels.rentalOrderDates}: {bookingDate || rentalDate}</p>}
         <div className="flex justify-between items-center">
           <span className="text-[11px] text-muted-foreground">
             {new Date(order.created_at * 1000).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}

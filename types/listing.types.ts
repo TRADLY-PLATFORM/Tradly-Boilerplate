@@ -137,6 +137,7 @@ export interface Listing {
 	list_price: Money; // original price — use for strikethrough display
 	offer_price: Money; // discounted price — use as primary display price
 	goal_price: Money; // donation / fundraising goal
+	raised_amount?: Money | number; // total raised for donation listings, when returned by Tradly
 	offer_percent: number; // discount percentage e.g. 2
 	shipping_charges: Money;
 

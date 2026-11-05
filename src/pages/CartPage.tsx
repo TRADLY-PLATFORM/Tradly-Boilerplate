@@ -1,10 +1,13 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useGetCartQuery, useDeleteCartItemMutation, useClearCartMutation } from '@/state/cart/api'
 import Layout from '../components/Layout'
 import { Button } from '@/src/components/ui/button'
 import { Separator } from '@/src/components/ui/separator'
 import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import RentalItemSummary from '@/src/features/orders/RentalItemSummary'
+import { formatOrderDateTimeRange, getItemOrderType, isBookingOrderType, isRentalItem } from '@/src/features/orders/order-item-display'
+import { locale } from '@/src/components/layout/locale'
 
 function Toast({ msg }: { msg: string }) {
   return (
@@ -16,6 +19,7 @@ function Toast({ msg }: { msg: string }) {
 
 export default function CartPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { data, isLoading, isError } = useGetCartQuery()
   const [deleteCartItem, { isLoading: isDeleting }] = useDeleteCartItemMutation()
   const [clearCart, { isLoading: isClearing }] = useClearCartMutation()
@@ -26,6 +30,19 @@ export default function CartPage() {
   const items = data?.cart_details ?? []
   const summary = data?.cart ?? null
   const priceRows = summary?.pricing_items?.filter(p => p.display) ?? []
+  const selectedRentalStart = searchParams.get('rental_start_at') ?? ''
+  const selectedRentalEnd = searchParams.get('rental_end_at') ?? ''
+  const selectedRentalUnits = Number(searchParams.get('rental_units')) || 0
+  const bookingDay = searchParams.get('booking_day') ?? ''
+  const bookingStart = searchParams.get('booking_start_time') ?? ''
+  const bookingEnd = searchParams.get('booking_end_time') ?? ''
+  const bookingRange = bookingDay && bookingStart ? formatOrderDateTimeRange(`${bookingDay} ${bookingStart}`, bookingEnd ? `${bookingDay} ${bookingEnd}` : undefined) : ''
+  const checkoutQuery = new URLSearchParams()
+  for (const key of ['booking_schedule_id', 'booking_day', 'booking_start_time', 'booking_end_time', 'rental_start_at', 'rental_end_at', 'rental_units']) {
+    const value = searchParams.get(key)
+    if (value) checkoutQuery.set(key, value)
+  }
+  const checkoutPath = `/checkout${checkoutQuery.size ? `?${checkoutQuery.toString()}` : ''}`
 
   const handleDelete = async (listingId: number) => {
     const result = await deleteCartItem({ listing_id: listingId })
@@ -79,6 +96,7 @@ export default function CartPage() {
                     <p className="text-[11px] text-muted-foreground mb-0.5">{item.listing.account?.name ?? 'Unknown seller'}</p>
                     <p className="text-sm font-semibold text-foreground mb-1 line-clamp-2">{item.listing.title}</p>
                     {item.variant && <p className="text-xs text-muted-foreground mb-2">{item.variant.name}</p>}
+                    {isRentalItem(item) || selectedRentalStart ? <RentalItemSummary item={item} orderType="rental" startAt={selectedRentalStart || item.schedule_start_at} endAt={selectedRentalEnd || item.schedule_end_at} units={selectedRentalUnits || item.quantity} /> : bookingRange || (isBookingOrderType(getItemOrderType(item)) && item.schedule_start_at) ? <p className="mt-2 text-xs font-medium text-coffee-accent">{locale.labels.bookingOrderDate}: {bookingRange || formatOrderDateTimeRange(item.schedule_start_at, item.schedule_end_at)}</p> : null}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">{item.listing.offer_price.formatted}</span>
                       <span className="text-xs text-muted-foreground">× {item.quantity}</span>
@@ -98,6 +116,7 @@ export default function CartPage() {
           {summary && (
             <div className="bg-card border border-border rounded-xl p-6 sticky top-24">
               <h2 className="font-display text-lg font-bold text-foreground mb-5">Order summary</h2>
+              {(bookingRange || selectedRentalStart) && <p className="mb-4 rounded-lg bg-coffee-secondary/30 p-3 text-xs text-muted-foreground">{locale.labels.singleBookingCartNotice}</p>}
 
               <div className="space-y-3">
                 {priceRows.map((row, i) => (
@@ -115,7 +134,7 @@ export default function CartPage() {
                 <span className="font-display text-lg text-coffee-accent">{summary.grand_total.formatted}</span>
               </div>
 
-              <Button onClick={() => navigate("/checkout")} className="btn-hero w-full mt-5">
+              <Button onClick={() => navigate(checkoutPath)} className="btn-hero w-full mt-5">
                 Proceed to checkout <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
 

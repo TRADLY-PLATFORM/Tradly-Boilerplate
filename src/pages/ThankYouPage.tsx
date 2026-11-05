@@ -5,6 +5,9 @@ import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
 import { Separator } from "@/src/components/ui/separator";
 import { CheckCircle2 } from "lucide-react";
+import { formatOrderDateTimeRange, getItemOrderType, isBookingOrderType } from '@/src/features/orders/order-item-display'
+import RentalItemSummary from '@/src/features/orders/RentalItemSummary'
+import { locale } from '@/src/components/layout/locale'
 
 export default function ThankYouPage() {
   const { reference = "" } = useParams<{ reference: string }>();
@@ -20,7 +23,6 @@ export default function ThankYouPage() {
   const shippingAddress = order?.shipping_address;
   const paymentMethod = order?.payment_method;
   const orderType: string = order?.type ?? "";
-  const isScheduled = orderType === "events" || orderType === "appointments";
 
   return (
     <Layout>
@@ -60,14 +62,8 @@ export default function ThankYouPage() {
                       <div className="flex-1 text-left">
                         <p className="text-xs font-semibold text-foreground mb-0.5">{item.listing?.title ?? `Item #${item.listing_id}`}</p>
                         <p className="text-[11px] text-muted-foreground">{item.offer_price?.formatted} × {item.quantity}</p>
-                        {isScheduled && item.schedule_start_at && (
-                          <p className="text-[11px] text-coffee-accent font-medium mt-0.5">
-                            📅 {new Date(item.schedule_start_at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                            {" · "}
-                            {new Date(item.schedule_start_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                            {item.schedule_end_at && <> – {new Date(item.schedule_end_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</>}
-                          </p>
-                        )}
+                        {isBookingOrderType(getItemOrderType(item, orderType)) && item.schedule_start_at && <p className="text-[11px] text-coffee-accent font-medium mt-0.5">{locale.labels.bookingOrderDate}: {formatOrderDateTimeRange(item.schedule_start_at, item.schedule_end_at)}</p>}
+                        <RentalItemSummary item={item} orderType={orderType} />
                       </div>
                     </div>
                   ))}

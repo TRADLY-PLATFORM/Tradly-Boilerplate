@@ -4,6 +4,7 @@ import { useAuthSelector } from '@/state/auth/selectors'
 import { useGetMyAccountsQuery } from '@/state/accounts/api'
 import { useDeleteListingMutation, useGetListingsQuery, useMarkListingSoldMutation, useUpdateListingMutation } from '@/state/listing/api'
 import type { Listing } from '@/types/listing.types'
+import ListingOptionsEditor from '@/src/features/manage-listings/ListingOptionsEditor'
 
 export default function ManageListingsPanel() {
   const userId = useAuthSelector(state => state.userId)
@@ -84,6 +85,7 @@ export default function ManageListingsPanel() {
               </div>
             </div>
           )}
+          {editingId !== listing.id && <ListingOptionsEditor listing={listing} />}
         </article>
       ))}
     </section>

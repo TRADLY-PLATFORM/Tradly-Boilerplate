@@ -46,6 +46,17 @@ export interface CartListing {
   account_id: number
   account: CartListingAccount
   max_quantity: number
+  type?: string
+  order_type?: string
+  listing_rental_settings?: {
+    rate_unit: 'hour' | 'day' | 'week'
+    rate_amount: number
+    min_duration: number
+    max_duration: number
+    buffer_time: number
+    deposit_amount: number
+    max_units: number
+  }
 }
 
 // ─── Cart item variant ────────────────────────────────────────────────────────
@@ -64,8 +75,8 @@ export interface CartItem {
   id: number
   quantity: number
   custom_price: string          // "0.0000" — string from API
-  schedule_start_at: number | null
-  schedule_end_at: number | null
+  schedule_start_at: number | string | null
+  schedule_end_at: number | string | null
   quantity_total_price: Money
   quantity_total_offer_price: Money
   tax_total_offer_price: number

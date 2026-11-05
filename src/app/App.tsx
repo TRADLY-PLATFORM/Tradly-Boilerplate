@@ -24,6 +24,9 @@ import SellPage from '../pages/SellPage'
 import AccountPage from '../pages/AccountPage'
 import ManageListingsPage from '../pages/ManageListingsPage'
 import SellerInsightsPage from '../pages/SellerInsightsPage'
+import FormsPage from '../pages/FormsPage'
+import CollectionPage from '../pages/CollectionPage'
+import DonationsPage from '../pages/DonationsPage'
 import { layoutConfig } from '@/src/components/layout/layout.config'
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
@@ -76,17 +79,21 @@ export default function App() {
           <Route path="/booking/:slug" element={<BookingListingPage />} />
           {layoutConfig.features.rental && <Route path="/rental/:slug" element={<RentalListingPage />} />}
           <Route path="/lc/:slug" element={<CategoryListingsPage />} />
+          <Route path="/forms" element={<FormsPage />} />
+          <Route path="/forms/:formId" element={<FormsPage />} />
+          <Route path="/collections/:collectionId" element={<CollectionPage />} />
+          {layoutConfig.features.donations && <Route path="/donations" element={<DonationsPage />} />}
 
           {/* Protected */}
           <Route path="/sell" element={<ProtectedRoute><SellPage /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
           {layoutConfig.features.manageListings && <Route path="/manage-listings" element={<ProtectedRoute><ManageListingsPage /></ProtectedRoute>} />}
           {layoutConfig.features.sellerInsights && <Route path="/seller/insights" element={<ProtectedRoute><SellerInsightsPage /></ProtectedRoute>} />}
-          <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
-          <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-          <Route path="/payment" element={<ProtectedRoute><PaymentPage /></ProtectedRoute>} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
           <Route path="/payment-return" element={<PaymentReturnPage />} />
-          <Route path="/checkouts/:reference/thank-you" element={<ProtectedRoute><ThankYouPage /></ProtectedRoute>} />
+          <Route path="/checkouts/:reference/thank-you" element={<ThankYouPage />} />
           <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
           <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
           <Route path="/booking/orders/:id" element={<ProtectedRoute><BookingOrderPage /></ProtectedRoute>} />

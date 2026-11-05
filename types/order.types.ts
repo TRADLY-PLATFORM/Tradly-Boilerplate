@@ -51,6 +51,19 @@ export interface OrderItemListing {
   title: string
   slug: string
   images: string[]
+  type?: string
+  order_type?: string
+  offer_price?: Money
+  list_price?: Money
+  listing_rental_settings?: {
+    rate_unit: 'hour' | 'day' | 'week'
+    rate_amount: number
+    min_duration: number
+    max_duration: number
+    buffer_time: number
+    deposit_amount: number
+    max_units: number
+  }
 }
 
 export interface OrderItemVariant {
@@ -62,6 +75,8 @@ export interface OrderItem {
   id: number
   listing_id: number
   quantity: number
+  schedule_start_at?: number | string | null
+  schedule_end_at?: number | string | null
   price: Money
   listing: OrderItemListing
   variant?: OrderItemVariant | null
@@ -100,6 +115,7 @@ export interface OrderPaymentMethod {
 export interface Order {
   id: string
   order_reference: string    // public reference used in URLs and thank-you page
+  type?: string
   status: OrderStatus
   created_at: number
   updated_at: number

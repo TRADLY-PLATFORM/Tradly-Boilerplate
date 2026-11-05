@@ -54,8 +54,8 @@ export default function BookingListingPage() {
       return
     }
     const slot = slots[selectedSlot]
-    const params = new URLSearchParams({ booking_schedule_id: String(slot.id), booking_day: activeDate })
-    navigate(`/checkout?${params.toString()}`)
+    const params = new URLSearchParams({ booking_schedule_id: String(slot.id), booking_day: activeDate, booking_start_time: slot.start_time, booking_end_time: slot.end_time })
+    navigate(`/cart?${params.toString()}`)
   }
 
   if (isLoading) return <Layout><div className="grid gap-8 md:grid-cols-2"><Skeleton className="aspect-square rounded-2xl" /><Skeleton className="h-96 rounded-2xl" /></div></Layout>
@@ -88,7 +88,8 @@ export default function BookingListingPage() {
             </>}
           </section>
           {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-          <Button onClick={continueToCheckout} disabled={!dates.length || selectedSlot === null || adding} className="btn-hero w-full">{adding ? 'Preparing booking…' : 'Continue to checkout'}</Button>
+          <Button onClick={continueToCheckout} disabled={!dates.length || selectedSlot === null || adding} className="btn-hero w-full">{adding ? 'Preparing booking…' : locale.labels.bookingContinue}</Button>
+          <p className="text-xs text-muted-foreground">{locale.labels.singleBookingCartNotice}</p>
           <p className="text-xs text-muted-foreground">Your selected time will be confirmed during checkout.</p>
     </ListingHero>
   </Layout>

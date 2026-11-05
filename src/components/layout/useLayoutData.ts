@@ -38,7 +38,7 @@ export interface LayoutData {
   navLinks: NavLink[]
   /** Live top-level categories as /lc/:slug links; empty while loading or when the store has none. */
   categoryLinks: NavLink[]
-  /** True when the cart button should be shown (cart enabled and signed in). */
+  /** True when the cart button should be shown (cart enabled and signed in, or a guest cart has items). */
   showCart: boolean
   cartCount: number
   cartLink: string
@@ -71,6 +71,8 @@ export function useLayoutData(brandName: string): LayoutData {
     label: locale.labels.sell,
     to: isAuthenticated ? '/sell' : '/sign-in?next=%2Fsell',
   })
+  if (layoutConfig.features.visitorForms) navLinks.push({ label: locale.labels.formsTitle, to: '/forms' })
+  if (layoutConfig.features.donations) navLinks.push({ label: locale.labels.donations, to: '/donations' })
   if (isAuthenticated && layoutConfig.orders) navLinks.push({ label: locale.labels.myOrders, to: '/orders' })
 
   const accountMenuLinks: NavLink[] = isAuthenticated
@@ -86,6 +88,8 @@ export function useLayoutData(brandName: string): LayoutData {
   const quickLinks: NavLink[] = [{ label: locale.labels.home, to: '/' }]
   if (layoutConfig.orders) quickLinks.push({ label: locale.labels.myOrders, to: '/orders' })
   if (layoutConfig.cart) quickLinks.push({ label: locale.labels.cart, to: '/cart' })
+  if (layoutConfig.features.visitorForms) quickLinks.push({ label: locale.labels.formsTitle, to: '/forms' })
+  if (layoutConfig.features.donations) quickLinks.push({ label: locale.labels.donations, to: '/donations' })
 
   const accountLinks: NavLink[] = []
   if (layoutConfig.signIn) accountLinks.push({ label: locale.labels.signIn, to: '/sign-in' })
@@ -106,7 +110,7 @@ export function useLayoutData(brandName: string): LayoutData {
     accountMenuLinks,
     navLinks,
     categoryLinks,
-    showCart: isAuthenticated && layoutConfig.cart,
+    showCart: layoutConfig.cart && (isAuthenticated || cartCount > 0),
     cartCount,
     cartLink: '/cart',
     signInLink: layoutConfig.signIn ? '/sign-in' : null,

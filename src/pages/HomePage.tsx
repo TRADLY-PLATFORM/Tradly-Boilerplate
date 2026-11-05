@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useGetListingsQuery } from "@/state/listing/api";
 import { useGetCartQuery } from "@/state/cart/api";
 import { useAuthSelector } from "@/state/auth/selectors";
@@ -10,6 +10,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Search, ShoppingCart, Heart, ArrowRight, Check, Star, Users, Zap } from "lucide-react";
 import type { Listing } from "@/types/listing.types";
+import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
 function ListingCard({ listing }: { listing: Listing }) {
   const image = listing.images[0];
@@ -143,9 +144,12 @@ function StatCard({ value, label }: { value: string; label: string }) {
 }
 
 export default function HomePage() {
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [search, setSearch] = useState(() => searchParams.get("search_key") ?? "");
   const [page, setPage] = useState(1);
   const isAuthenticated = useAuthSelector(s => s.isAuthenticated);
+
+  useEffect(() => { setSearch(searchParams.get("search_key") ?? ""); setPage(1); }, [searchParams]);
 
   const { data, isLoading, isFetching, isError } = useGetListingsQuery({
     page,
@@ -179,7 +183,7 @@ export default function HomePage() {
             className="w-full pl-9 pr-4 py-2.5 rounded-lg border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Search listings…"
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); setSearchParams(e.target.value ? { search_key: e.target.value } : {}, { replace: true }); }}
           />
         </div>
         {/* @sky:end */}
@@ -210,6 +214,8 @@ export default function HomePage() {
           <p className="text-muted-foreground text-sm">No listings found.</p>
         </div>
       )}
+
+      <HomeMarketplaceSections />
 
       {/* Pagination */}
       {totalPages > 1 && (

@@ -10,6 +10,8 @@ import { useGetListingVariantsQuery } from "@/state/variants/api";
 import { useGetBundleItemsQuery, useGetBundlePoolQuery, useLazyGetBundleStockQuery, useSubmitBundleSelectionMutation } from "@/state/bundles/api";
 import { useCreateMembershipMutation } from "@/state/memberships/api";
 import ListingSocialPanel from "@/src/features/listing-social/ListingSocialPanel";
+import ListingComments from "@/src/features/comments/ListingComments";
+import AccountFollowButton from "@/src/features/accounts/AccountFollowButton";
 import { useAuthSelector } from "@/state/auth/selectors";
 import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
@@ -282,10 +284,6 @@ export default function ListingDetailPage() {
 	};
 
 	const handleFundNow = async () => {
-		if (!isAuthenticated) {
-			navigate("/sign-in");
-			return;
-		}
 		if (donationAmount <= 0) {
 			showToast("Enter a valid amount");
 			return;
@@ -690,7 +688,9 @@ export default function ListingDetailPage() {
 						)}
 					</Button>
 			</ListingHero>
+			{listing.account?.id != null && <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4"><div><p className="text-xs text-muted-foreground">{locale.labels.soldBy}</p><p className="mt-1 font-medium text-foreground">{listing.account.name ?? locale.labels.unknownSeller}</p></div><AccountFollowButton accountId={listing.account.id} initialFollowing={listing.account.following} /></div>}
 			<ListingSocialPanel listingId={listing.id} />
+			<ListingComments listingId={listing.id} />
 		</Layout>
 	);
 }

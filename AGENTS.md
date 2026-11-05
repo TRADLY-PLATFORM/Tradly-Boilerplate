@@ -171,8 +171,19 @@ from a prompt later. Nothing else is rewritten at signup, so a feature must neve
 - **Where feature code goes.** Layers are in "Where the Tradly code lives". Put a feature's hooks and
   components in `src/features/<feature>/` and its route in `src/pages/<Feature>Page.tsx`. Split a page by
   listing type (for example `src/features/sell/`) instead of growing one file.
-- **HomePage only composes.** It reads listings and categories and links out. It must not import from
-  `src/features/`, call a feature's API or need new props. Keep its default export.
+- **HomePage only composes.** It reads listings and categories and may include the single stable
+  `src/features/home/HomeMarketplaceSections` aggregator. Keep feature imports inside that aggregator;
+  it composes the reusable feed and discovery sections without adding API logic to `HomePage`. Keep
+  the page's default export and preserve this aggregator when regenerating the homepage.
+- **Reusable visitor components.** `src/features/forms/DynamicTradlyForm.tsx` renders a dashboard
+  configured Tradly form; `src/pages/FormsPage.tsx` lists active forms and provides `/forms/:formId`.
+  `src/features/comments/ListingComments.tsx` and `src/features/accounts/AccountFollowButton.tsx`
+  belong on listing/account views. `src/features/discovery/MarketplaceFeed.tsx` and
+  `MarketplaceDiscoverySections.tsx` can be placed in homepage or other layouts. Keep all data access
+  through the existing RTK Query hooks and the page/component contracts documented above.
+- **Seller option management.** `src/features/manage-listings/ListingOptionsEditor.tsx` exposes the
+  update/delete endpoints for fixed and mix-and-match bundle rows and listing variants from the
+  existing `/manage-listings` page. Keep seller mutations behind its protected route.
 - **Reach the UI through `useLayoutData`.** Give a new page a `navLinks`, `accountMenuLinks` or
   `footerLinkGroups` entry there, and gate it with a flag in `layout.config.ts` (for example
   `features.rental`) so sites without it show no dead link. The regenerated header and footer render

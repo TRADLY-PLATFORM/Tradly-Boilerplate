@@ -12,5 +12,7 @@ export const layoutConfig = {
     manageListings: true,
     sellerInsights: true,
     rental: true,
+    visitorForms: true,
+    donations: true,
   },
 }

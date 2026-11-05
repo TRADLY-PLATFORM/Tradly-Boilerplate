@@ -345,6 +345,7 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'variants.getVariantTypes': 'variants.getVariantTypes',
   'variants.getVariantTypeValues': 'variants.getVariantTypeValues',
   'variants.getListingVariants': 'variants.getListingVariants',
+  'variants.getManageListingVariants': 'variants.getListingVariants',
   'variants.getListingVariantDetail': 'variants.getListingVariantDetail',
   'variants.createListingVariant': 'variants.createListingVariant',
   'variants.updateListingVariant': 'variants.updateListingVariant',

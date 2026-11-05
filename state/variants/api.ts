@@ -51,6 +51,20 @@ export const variantsApi = createApi({
       },
       providesTags: (_result, _error, id) => [{ type: 'ListingVariant', id: String(id) }],
     }),
+    getManageListingVariants: builder.query<ListingVariant[], number | string>({
+      queryFn: async (listingId, { getState }) => {
+        const ctx = context(getState() as LocalState)
+        try {
+          const result = normalizeTradlyResponse(await variantsAPI.getListingVariants(listingId, ctx.authKey, ctx.currency, ctx.language), 'Could not load product variants')
+          if (result.error) return { error: { status: 'CUSTOM_ERROR', error: result.error.message ?? 'Could not load product variants' } }
+          const raw: any = result.data
+          const variants = Array.isArray(raw?.variants) ? raw.variants : Array.isArray(raw) ? raw : undefined
+          if (!variants) return { error: { status: 'CUSTOM_ERROR', error: 'Tradly returned incomplete product variant data.' } }
+          return { data: variants }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      },
+      providesTags: (_result, _error, id) => [{ type: 'ListingVariant', id: String(id) }],
+    }),
     getListingVariantDetail: builder.query<Record<string, unknown>, { listingId: number | string; variantId: number | string }>({
       queryFn: async ({ listingId, variantId }, { getState }) => {
         const ctx = context(getState() as LocalState)
@@ -90,4 +104,4 @@ export const variantsApi = createApi({
   }),
 })
 
-export const { useGetVariantTypesQuery, useGetVariantTypeValuesQuery, useGetListingVariantsQuery, useGetListingVariantDetailQuery, useCreateListingVariantMutation, useUpdateListingVariantMutation, useDeleteListingVariantMutation } = variantsApi
+export const { useGetVariantTypesQuery, useGetVariantTypeValuesQuery, useGetListingVariantsQuery, useGetManageListingVariantsQuery, useGetListingVariantDetailQuery, useCreateListingVariantMutation, useUpdateListingVariantMutation, useDeleteListingVariantMutation } = variantsApi

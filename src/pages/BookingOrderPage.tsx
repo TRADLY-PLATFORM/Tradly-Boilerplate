@@ -5,6 +5,7 @@ import { ArrowLeft, CalendarDays, Clock3, MapPin } from 'lucide-react'
 import { useGetOrderDetailQuery } from '@/state/orders/api'
 import Layout from '../components/Layout'
 import { Button } from '@/src/components/ui/button'
+import { getItemOrderType, isBookingOrderType, normalizeOrderDate } from '@/src/features/orders/order-item-display'
 
 const STATUS: Record<number, string> = { 1: 'Pending', 2: 'Confirmed', 3: 'Processing', 7: 'Completed', 8: 'Cancelled', 9: 'Refunded', 10: 'Failed' }
 
@@ -17,12 +18,12 @@ export default function BookingOrderPage() {
 
   const order: any = data.order
   const items: any[] = order.order_details ?? []
-  const bookingItems = items.filter(item => item.schedule_start_at)
+  const bookingItems = items.filter(item => isBookingOrderType(getItemOrderType(item, order.type ?? '')) && item.schedule_start_at)
   const item = bookingItems[0]
   if (!item) return <Layout><div className="py-20 text-center">This order does not contain a scheduled booking. <Link className="text-coffee-accent underline" to={`/orders/${id}`}>Open standard order details</Link>.</div></Layout>
 
-  const start = dayjs(item.schedule_start_at)
-  const end = item.schedule_end_at ? dayjs(item.schedule_end_at) : null
+  const start = dayjs(normalizeOrderDate(item.schedule_start_at))
+  const end = item.schedule_end_at ? dayjs(normalizeOrderDate(item.schedule_end_at)) : null
   const calendarStart = start.startOf('month').startOf('week')
   const days = Array.from({ length: 42 }, (_, index) => calendarStart.add(index, 'day'))
   const scheduledDate = start.format('YYYY-MM-DD')

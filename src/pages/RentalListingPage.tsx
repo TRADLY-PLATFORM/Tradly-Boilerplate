@@ -78,7 +78,7 @@ export default function RentalListingPage() {
       return
     }
     const params = new URLSearchParams({ rental_start_at: isoStartAt, rental_end_at: isoEndAt, rental_units: String(units) })
-    navigate(`/checkout?${params.toString()}`)
+    navigate(`/cart?${params.toString()}`)
   }
 
   if (isLoading) return <Layout><div className="grid gap-8 md:grid-cols-2"><Skeleton className="aspect-square rounded-2xl" /><Skeleton className="h-96 rounded-2xl" /></div></Layout>
@@ -119,6 +119,7 @@ export default function RentalListingPage() {
         </section>
         {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
         <Button onClick={continueToCheckout} disabled={!validDates || !availabilityConfirmed || checkingAvailability || adding} className="btn-hero w-full">{adding ? locale.labels.rentalPreparing : checkingAvailability ? locale.labels.rentalAvailabilityChecking : locale.labels.rentalContinue}</Button>
+        <p className="text-xs text-muted-foreground">{locale.labels.singleBookingCartNotice}</p>
       </>}
     </ListingHero>
   </Layout>

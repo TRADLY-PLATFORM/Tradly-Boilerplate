@@ -5,6 +5,9 @@ import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
 import { Separator } from "@/src/components/ui/separator";
 import { ArrowLeft } from "lucide-react";
+import { formatOrderDateTimeRange, getItemOrderType, isBookingOrderType } from '@/src/features/orders/order-item-display'
+import RentalItemSummary from '@/src/features/orders/RentalItemSummary'
+import { locale } from '@/src/components/layout/locale'
 
 const STATUS_LABEL: Record<number, string> = {
   1: "Pending", 2: "Confirmed", 3: "Processing", 4: "Ready to ship",
@@ -45,7 +48,7 @@ export default function OrderDetailPage() {
   const order = data?.order as any;
   const orderItems: any[] = order?.order_details ?? [];
   const orderType: string = order?.type ?? "";
-  const hasBooking = orderType === "events" || orderType === "appointments" || orderItems.some((item: any) => item.schedule_start_at);
+  const hasBooking = isBookingOrderType(orderType) || orderItems.some((item: any) => isBookingOrderType(getItemOrderType(item)));
   const shouldRedirectToBooking = hasBooking && searchParams.get("view") !== "standard";
   useEffect(() => {
     if (shouldRedirectToBooking) navigate(`/booking/orders/${id}`, { replace: true });
@@ -102,14 +105,8 @@ export default function OrderDetailPage() {
                     <p className="text-xs text-muted-foreground">
                       {item.offer_price?.formatted ?? item.list_price?.formatted} × {item.quantity}
                     </p>
-                    {isScheduled && item.schedule_start_at && (
-                      <p className="text-[11px] text-coffee-accent font-medium mt-1">
-                        📅 {new Date(item.schedule_start_at).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
-                        {" · "}
-                        {new Date(item.schedule_start_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
-                        {item.schedule_end_at && <> – {new Date(item.schedule_end_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</>}
-                      </p>
-                    )}
+                    {isBookingOrderType(getItemOrderType(item, orderType)) && item.schedule_start_at && <p className="text-[11px] text-coffee-accent font-medium mt-1">{locale.labels.bookingOrderDate}: {formatOrderDateTimeRange(item.schedule_start_at, item.schedule_end_at)}</p>}
+                    <RentalItemSummary item={item} orderType={orderType} />
                   </div>
                   <span className="text-sm font-bold text-foreground flex-shrink-0">
                     {item.offer_price?.formatted ?? item.list_price?.formatted}
