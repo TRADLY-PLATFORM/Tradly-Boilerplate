@@ -78,6 +78,8 @@ export function useLayoutData(brandName: string): LayoutData {
   const accountMenuLinks: NavLink[] = isAuthenticated
     ? [
         { label: locale.labels.myAccount, to: '/account' },
+        ...(layoutConfig.features.savedListings ? [{ label: locale.labels.savedListings, to: '/saved-listings' }] : []),
+        ...(layoutConfig.features.sellerAccounts ? [{ label: locale.labels.sellerAccounts, to: '/seller/accounts' }] : []),
         { label: locale.labels.sell, to: '/sell' },
         ...(layoutConfig.orders ? [{ label: locale.labels.myOrders, to: '/orders' }] : []),
         ...(layoutConfig.features.manageListings ? [{ label: locale.labels.manageListings, to: '/manage-listings' }] : []),

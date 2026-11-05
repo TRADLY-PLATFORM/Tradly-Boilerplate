@@ -84,6 +84,17 @@ export const accountsApi = createApi({
       },
       providesTags: (_result, _error, id) => [{ type: 'Account', id: `followers-${id}` }],
     }),
+    getBlockedAccounts: builder.query<{ accounts: SellerAccount[] }, Record<string, unknown>>({
+      queryFn: async (params, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.getBlockedAccounts(params, state.auth.authKey, state.app.currency, state.app.language), 'Could not load blocked sellers', ['accounts'])
+          if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not load blocked sellers' } }
+          return { data: { accounts: response.data!.accounts as SellerAccount[] } }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      },
+      providesTags: ['Account'],
+    }),
     followAccount: builder.mutation<Record<string, unknown>, number | string>({
       queryFn: async (accountId, { getState }) => {
         const state = getState() as LocalState
@@ -121,4 +132,4 @@ export const accountsApi = createApi({
   }),
 })
 
-export const { useGetMyAccountsQuery, useCreateAccountMutation, useUpdateAccountMutation, usePatchAccountMutation, useGetAccountDetailQuery, useGetAccountFollowersQuery, useFollowAccountMutation, useUnfollowAccountMutation, useBlockAccountMutation, useUnblockAccountMutation } = accountsApi
+export const { useGetMyAccountsQuery, useCreateAccountMutation, useUpdateAccountMutation, usePatchAccountMutation, useGetAccountDetailQuery, useGetAccountFollowersQuery, useGetBlockedAccountsQuery, useFollowAccountMutation, useUnfollowAccountMutation, useBlockAccountMutation, useUnblockAccountMutation } = accountsApi

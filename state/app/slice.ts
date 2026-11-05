@@ -5,6 +5,7 @@ import { AppConfig } from '@/config/app.config'
 export interface AppState {
   currency: string
   language: string
+  countryId: string
 }
 
 const initialState: AppState = {
@@ -12,6 +13,7 @@ const initialState: AppState = {
   // Can be swapped at runtime (e.g. user switches language in settings).
   currency: AppConfig.defaultCurrency,
   language: AppConfig.defaultLanguage,
+  countryId: '',
 }
 
 export const appSlice = createSlice({
@@ -24,7 +26,10 @@ export const appSlice = createSlice({
     setLanguage: (state, action: PayloadAction<string>) => {
       state.language = action.payload
     },
+    setCountryId: (state, action: PayloadAction<string>) => {
+      state.countryId = action.payload
+    },
   },
 })
 
-export const { setCurrency, setLanguage } = appSlice.actions
+export const { setCurrency, setLanguage, setCountryId } = appSlice.actions

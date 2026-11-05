@@ -12,6 +12,7 @@ import { useCreateMembershipMutation } from "@/state/memberships/api";
 import ListingSocialPanel from "@/src/features/listing-social/ListingSocialPanel";
 import ListingComments from "@/src/features/comments/ListingComments";
 import AccountFollowButton from "@/src/features/accounts/AccountFollowButton";
+import AccountBlockButton from "@/src/features/accounts/AccountBlockButton";
 import { useAuthSelector } from "@/state/auth/selectors";
 import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
@@ -688,7 +689,7 @@ export default function ListingDetailPage() {
 						)}
 					</Button>
 			</ListingHero>
-			{listing.account?.id != null && <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-border bg-card p-4"><div><p className="text-xs text-muted-foreground">{locale.labels.soldBy}</p><p className="mt-1 font-medium text-foreground">{listing.account.name ?? locale.labels.unknownSeller}</p></div><AccountFollowButton accountId={listing.account.id} initialFollowing={listing.account.following} /></div>}
+			{listing.account?.id != null && <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-card p-4"><div><p className="text-xs text-muted-foreground">{locale.labels.soldBy}</p><p className="mt-1 font-medium text-foreground">{listing.account.name ?? locale.labels.unknownSeller}</p></div><div className="flex flex-wrap items-center gap-2"><AccountFollowButton accountId={listing.account.id} initialFollowing={listing.account.following} /><AccountBlockButton accountId={listing.account.id} ownerUserId={listing.account.user?.id} /></div></div>}
 			<ListingSocialPanel listingId={listing.id} />
 			<ListingComments listingId={listing.id} />
 		</Layout>

@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Package, Store, UserRound } from 'lucide-react'
+import { ArrowRight, Heart, Package, Store, UserRound } from 'lucide-react'
 import Layout from '../components/Layout'
 import { useAuthSelector } from '@/state/auth/selectors'
 import { useUpdateUserProfileMutation } from '@/state/auth/api'
 import { locale } from '../components/layout/locale'
 import { useState } from 'react'
+import TenantPreferences from '@/src/features/preferences/TenantPreferences'
 
 export default function AccountPage() {
   const firstName = useAuthSelector(state => state.firstName)
@@ -78,7 +79,17 @@ export default function AccountPage() {
           <button disabled={savingProfile} className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">{savingProfile ? 'Saving…' : 'Save profile'}</button>
         </form>
 
+        <TenantPreferences />
+
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <Link to="/saved-listings" className="group flex items-center justify-between rounded-xl border border-border bg-card p-5 hover:bg-muted">
+            <span className="flex items-center gap-3"><Heart className="h-5 w-5 text-coffee-accent" /><span className="text-sm font-medium text-foreground">{locale.labels.savedListings}</span></span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </Link>
+          <Link to="/seller/accounts" className="group flex items-center justify-between rounded-xl border border-border bg-card p-5 hover:bg-muted">
+            <span className="flex items-center gap-3"><Store className="h-5 w-5 text-coffee-accent" /><span className="text-sm font-medium text-foreground">{locale.labels.sellerAccounts}</span></span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </Link>
           <Link to="/orders" className="group flex items-center justify-between rounded-xl border border-border bg-card p-5 hover:bg-muted">
             <span className="flex items-center gap-3">
               <Package className="h-5 w-5 text-coffee-accent" />

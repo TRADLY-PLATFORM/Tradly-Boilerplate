@@ -59,6 +59,10 @@ export const getAccountDetail = (accountId: number | string, authKey: string, cu
 export const getAccountFollowers = (accountId: number | string, authKey: string, currency: string, language: string): Promise<any> =>
   common(`/v1/users/account_followers/${accountId}`, 'GET', authKey, currency, language)
 
+/** SDK-only: the public endpoint index omits this blocked-account feed. */
+export const getBlockedAccounts = (params: Record<string, unknown>, authKey: string, currency: string, language: string): Promise<any> =>
+  (TradlySDK as any).app.getBlockAccounts(buildAppQueryPayload({ page: 1, ...params }, authKey, currency, language))
+
 export const followAccount = (accountId: number | string, authKey: string, currency: string, language: string): Promise<any> =>
   common(`/v1/accounts/${accountId}/follow`, 'POST', authKey, currency, language)
 
