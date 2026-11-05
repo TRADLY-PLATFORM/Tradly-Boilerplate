@@ -181,6 +181,12 @@ from a prompt later. Nothing else is rewritten at signup, so a feature must neve
   belong on listing/account views. `src/features/discovery/MarketplaceFeed.tsx` and
   `MarketplaceDiscoverySections.tsx` can be placed in homepage or other layouts. Keep all data access
   through the existing RTK Query hooks and the page/component contracts documented above.
+- **Account UI and feature catalog.** The account page includes shopper profile editing and
+  `src/features/preferences/TenantPreferences.tsx`; protected `/saved-listings` and `/seller/accounts`
+  pages cover saved listings and owned seller-account editing/status. Listing detail includes
+  `src/features/accounts/AccountBlockButton.tsx` beside the follow control. See
+  `src/features/README.md` for the full reusable UI and route inventory; update it when adding or
+  moving feature pages and components.
 - **Seller option management.** `src/features/manage-listings/ListingOptionsEditor.tsx` exposes the
   update/delete endpoints for fixed and mix-and-match bundle rows and listing variants from the
   existing `/manage-listings` page. Keep seller mutations behind its protected route.
