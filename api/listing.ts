@@ -76,14 +76,17 @@ export const unlikeListing = (
 	currency: string,
 	language: string,
 ): Promise<TradlyListingSdkResponse<Record<string, never>>> =>
-	(TradlySDK as any).app.unlikeListing(
-		buildAppDirectPayload(
-			{ id, isUnLiked: true },
-			authKey,
-			currency,
-			language,
-		),
-	);
+	(TradlySDK as any).app.commonFuntion({
+		path: `/app/v1/listings/${id}/likes`,
+		Method: 'DELETE',
+		pkKey: AppConfig.pkKey,
+		authKey,
+		currency,
+		language,
+	});
+
+export const getListingLikes = (params: Record<string, unknown>, authKey: string, currency: string, language: string): Promise<any> =>
+	(TradlySDK as any).app.commonFuntion({ path: '/v1/listings/likes', Method: 'GET', bodyParam: { page: 1, ...params }, pkKey: AppConfig.pkKey, authKey, currency, language });
 
 // Create a listing for a seller account. Tradly expects the listing payload nested under data.listing.
 export const createListing = (

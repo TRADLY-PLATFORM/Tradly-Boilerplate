@@ -180,6 +180,17 @@ export const listingApi = createApi({
       },
     }),
 
+    getListingLikes: builder.query<Record<string, unknown>, Record<string, unknown>>({
+      queryFn: async (params, { getState }) => {
+        const { authKey, currency, language } = getContext(getState() as LocalState)
+        try {
+          const res = normalizeTradlyResponse(await listingAPI.getListingLikes(params, authKey, currency, language), 'Could not load saved listings')
+          if (res?.error) return { error: { status: 'CUSTOM_ERROR', error: res.error.message ?? 'Could not load saved listings' } }
+          return { data: (res.data ?? {}) as Record<string, unknown> }
+        } catch (err) { return { error: { status: 'CUSTOM_ERROR', error: err instanceof Error ? err.message : 'Unexpected error' } } }
+      },
+    }),
+
     createListing: builder.mutation<{ listing: import('@/types/listing.types').Listing }, Record<string, unknown>>({
       queryFn: async (listing, { getState }) => {
         const { authKey, currency, language } = getContext(getState() as LocalState)
@@ -238,6 +249,7 @@ export const {
   useGetListingDetailQuery,
   useGetListingSuggestionsQuery,
   useGetListingLocationsQuery,
+  useGetListingLikesQuery,
   useLikeListingMutation,
   useUnlikeListingMutation,
   useCreateListingMutation,

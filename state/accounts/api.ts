@@ -52,7 +52,73 @@ export const accountsApi = createApi({
       },
       invalidatesTags: ['Account'],
     }),
+    patchAccount: builder.mutation<Record<string, unknown>, { accountId: number | string; active: boolean }>({
+      queryFn: async ({ accountId, active }, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.patchAccount(accountId, { active }, state.auth.authKey, state.app.currency, state.app.language), 'Could not update account status')
+          if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not update account status' } }
+          return { data: (response.data ?? {}) as Record<string, unknown> }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      }, invalidatesTags: (_result, _error, { accountId }) => [{ type: 'Account', id: String(accountId) }, 'Account'],
+    }),
+    getAccountDetail: builder.query<Record<string, unknown>, number | string>({
+      queryFn: async (accountId, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.getAccountDetail(accountId, state.auth.authKey, state.app.currency, state.app.language), 'Could not load account details')
+          if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not load account details' } }
+          return { data: (response.data ?? {}) as Record<string, unknown> }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      },
+      providesTags: (_result, _error, id) => [{ type: 'Account', id: String(id) }],
+    }),
+    getAccountFollowers: builder.query<Record<string, unknown>, number | string>({
+      queryFn: async (accountId, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.getAccountFollowers(accountId, state.auth.authKey, state.app.currency, state.app.language), 'Could not load account followers')
+          if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not load account followers' } }
+          return { data: (response.data ?? {}) as Record<string, unknown> }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      },
+      providesTags: (_result, _error, id) => [{ type: 'Account', id: `followers-${id}` }],
+    }),
+    followAccount: builder.mutation<Record<string, unknown>, number | string>({
+      queryFn: async (accountId, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.followAccount(accountId, state.auth.authKey, state.app.currency, state.app.language), 'Could not follow account')
+          if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not follow account' } }
+          return { data: (response.data ?? {}) as Record<string, unknown> }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      }, invalidatesTags: (_result, _error, id) => [{ type: 'Account', id: String(id) }, { type: 'Account', id: `followers-${id}` }],
+    }),
+    unfollowAccount: builder.mutation<Record<string, unknown>, number | string>({
+      queryFn: async (accountId, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.unfollowAccount(accountId, state.auth.authKey, state.app.currency, state.app.language), 'Could not unfollow account')
+          if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not unfollow account' } }
+          return { data: (response.data ?? {}) as Record<string, unknown> }
+        } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      }, invalidatesTags: (_result, _error, id) => [{ type: 'Account', id: String(id) }, { type: 'Account', id: `followers-${id}` }],
+    }),
+    blockAccount: builder.mutation<Record<string, unknown>, number | string>({
+      queryFn: async (accountId, { getState }) => {
+        const state = getState() as LocalState
+        try { const response = normalizeTradlyResponse(await accountsAPI.blockAccount(accountId, state.auth.authKey, state.app.currency, state.app.language), 'Could not block account'); if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not block account' } }; return { data: (response.data ?? {}) as Record<string, unknown> } }
+        catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      }, invalidatesTags: ['Account'],
+    }),
+    unblockAccount: builder.mutation<Record<string, unknown>, number | string>({
+      queryFn: async (accountId, { getState }) => {
+        const state = getState() as LocalState
+        try { const response = normalizeTradlyResponse(await accountsAPI.unblockAccount(accountId, state.auth.authKey, state.app.currency, state.app.language), 'Could not unblock account'); if (response.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not unblock account' } }; return { data: (response.data ?? {}) as Record<string, unknown> } }
+        catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      }, invalidatesTags: ['Account'],
+    }),
   }),
 })
 
-export const { useGetMyAccountsQuery, useCreateAccountMutation, useUpdateAccountMutation } = accountsApi
+export const { useGetMyAccountsQuery, useCreateAccountMutation, useUpdateAccountMutation, usePatchAccountMutation, useGetAccountDetailQuery, useGetAccountFollowersQuery, useFollowAccountMutation, useUnfollowAccountMutation, useBlockAccountMutation, useUnblockAccountMutation } = accountsApi

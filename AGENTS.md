@@ -24,7 +24,10 @@ Toolkit Query. Routes live in `src/app/App.tsx`.
 
 Already wired: auth, listing, categories, cart, checkout, orders, addresses, payment methods,
 shipping methods, schedules (bookings), commissions, membership listings, bundles and product
-variants.
+variants, rentals, reviews and offers, subscriptions, seller accounts, account follows, comments,
+social feeds, forms (read and submit), tags, collection and promotion reads, and tenant language,
+currency and country lookups. Account APIs also cover profile edits, status changes, blocking and
+unblocking; the public API docs do not define account deletion.
 
 ## Adding a feature that needs a new Tradly endpoint
 
@@ -91,7 +94,7 @@ SDK calls it.
 | Add to cart (incl. `custom_price` for donations) | `POST /v1/cart` | Docs | Yes (`api/cart.ts`) |
 | Listing search suggestions and unique locations | `GET /v1/listings/search/suggestions`, `GET /v1/listings/unique/locations` | Docs | Yes (`api/listing.ts`, `state/listing/`) |
 | Edit, delete or mark a listing sold | `PATCH /v1/listings/{id}`, `DELETE /v1/listings/{id}`, `POST /v1/listings/{id}/sold` | Docs / SDK | Yes (`api/listing.ts`, `state/listing/`) |
-| Update seller account / user profile | `PUT /v1/accounts/{id}`, `PATCH /v1/users/{id}` | Docs / SDK | Yes (`api/accounts.ts`, `api/auth.ts`) |
+| Update seller account / user profile | `PUT` / `PATCH /v1/accounts/{id}`, `PATCH /v1/users/{id}` | Docs / SDK | Yes (`api/accounts.ts`, `api/auth.ts`) |
 | Listing variants | `/v1/variant_types`, `/v1/listings/{id}/variants` | Docs | Yes (`api/variants.ts`, `state/variants/`) |
 | Fixed and mix-and-match bundle components, choices and stock | `/v1/bundles/{id}/items`, `/pool`, `/stock`, `/select`, `/selections/{id}` | Docs | Yes (`api/bundles.ts`, `state/bundles/`) |
 | Membership list, creation, detail, contributions and price history | `/v1/memberships`, `/v1/memberships/{id}`, `/contributions`, `/price_logs` | Docs | Yes (`api/memberships.ts`, `state/memberships/`) |
@@ -136,8 +139,9 @@ How it works:
 Rules:
 - Check `GET /v1/forms` (filter `status=active`) for an existing form before asking the user to
   create one. If none fits, tell them to create it in the dashboard and which fields to add.
-- Build a reusable `FormPage` / `DynamicForm` component and an RTK Query endpoint in
-  `state/forms/api.ts` (register it in `state/store.ts`). Link to it from the header, footer or
+- The form read and submission APIs are already wrapped in `api/forms.ts` and
+  `state/forms/api.ts` (registered in `state/store.ts`). When the prompt needs a visitor-facing form,
+  build a reusable `FormPage` / `DynamicForm` using those hooks. Link to it from the header, footer or
   homepage only once the route exists in `src/app/App.tsx`.
 - Submitting needs the same `pkKey` + `authKey` context as everything else, so a signed-out visitor
   may be asked to sign in first. Check the response; if it is 401, show the sign-in route.

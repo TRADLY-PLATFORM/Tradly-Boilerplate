@@ -125,7 +125,7 @@ The docs do not publish the availability response schema. Keep availability resp
 - `DELETE /v1/accounts/{{account_id}}/block` — UnBlock Account — /unblock-account
 - `POST /v1/accounts/{{account_id}}/follow` — Follow Account — /follow-account
 - `DELETE /v1/accounts/{{account_id}}/follow` — UnFollow Account — /unfollow-account
-- `DELETE /v1/listings/{{listing_id}}/likes` — UnLike Listing — /unlike-listing
+- `DELETE /app/v1/listings/{{listing_id}}/likes` — UnLike Listing — /unlike-listing
 - `POST /v1/listings/{{listing_id}}/likes` — Like Listing — /like-listing
 - `GET /v1/feeds/following` — Social Feeds : Following — /social-feeds-following
 
@@ -348,3 +348,5 @@ The docs do not publish the availability response schema. Keep availability resp
 - `POST /v1/cart/coupon` - Apply a coupon (SDK applyCoupon)
 - `DELETE /v1/cart/coupon` - Remove a coupon (SDK removeCoupon)
 - `PUT /v1/listings/{id}/schedules` - Seller sets a listing schedule (SDK createSchedule)
+- `GET /v1/accounts/feeds/following?type=accounts` - Accounts followed by the shopper (SDK getFollowingAccounts)
+- `GET /v1/collections_data` - Listings and data for curated collections (SDK getCollectionData)

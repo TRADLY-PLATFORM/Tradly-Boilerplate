@@ -9,10 +9,13 @@ import * as addresses from '../api/addresses.ts'
 import * as accounts from '../api/accounts.ts'
 import * as attributes from '../api/attributes.ts'
 import * as bundles from '../api/bundles.ts'
+import * as comments from '../api/comments.ts'
 import * as auth from '../api/auth.ts'
 import * as cart from '../api/cart.ts'
 import * as categories from '../api/categories.ts'
 import * as checkout from '../api/checkout.ts'
+import * as discovery from '../api/discovery.ts'
+import * as forms from '../api/forms.ts'
 import * as commissions from '../api/commissions.ts'
 import * as listing from '../api/listing.ts'
 import * as memberships from '../api/memberships.ts'
@@ -23,6 +26,8 @@ import * as reviews from '../api/reviews.ts'
 import * as rentals from '../api/rentals.ts'
 import * as schedules from '../api/schedules.ts'
 import * as shippingMethods from '../api/shipping-methods.ts'
+import * as social from '../api/social.ts'
+import * as tenantData from '../api/tenant-data.ts'
 import * as subscriptions from '../api/subscriptions.ts'
 import * as transactions from '../api/transactions.ts'
 import * as variants from '../api/variants.ts'
@@ -60,13 +65,25 @@ const endpoints: EndpointCase[] = [
   { id: 'accounts.getMyAccounts', method: 'get', path: '/v1/accounts', invoke: () => accounts.getMyAccounts('contract-user', authKey, currency, language) },
   { id: 'accounts.createAccount', method: 'post', path: '/v1/accounts', invoke: () => accounts.createAccount({ name: 'Contract Shop', type: 'accounts' }, authKey, currency, language) },
   { id: 'accounts.updateAccount', method: 'put', path: `/v1/accounts/${listingId}`, invoke: () => accounts.updateAccount(listingId, { name: 'Contract Shop Updated' }, authKey, currency, language) },
+  { id: 'accounts.patchAccount', method: 'patch', path: `/v1/accounts/${listingId}`, invoke: () => accounts.patchAccount(listingId, { active: false }, authKey, currency, language), expectedBody: { active: false } },
+  { id: 'accounts.getAccountDetail', method: 'get', path: `/v1/accounts/${listingId}`, invoke: () => accounts.getAccountDetail(listingId, authKey, currency, language) },
+  { id: 'accounts.getAccountFollowers', method: 'get', path: `/v1/users/account_followers/${listingId}`, invoke: () => accounts.getAccountFollowers(listingId, authKey, currency, language) },
+  { id: 'accounts.followAccount', method: 'post', path: `/v1/accounts/${listingId}/follow`, invoke: () => accounts.followAccount(listingId, authKey, currency, language) },
+  { id: 'accounts.unfollowAccount', method: 'delete', path: `/v1/accounts/${listingId}/follow`, invoke: () => accounts.unfollowAccount(listingId, authKey, currency, language) },
+  { id: 'accounts.blockAccount', method: 'post', path: `/v1/accounts/${listingId}/block`, invoke: () => accounts.blockAccount(listingId, authKey, currency, language) },
+  { id: 'accounts.unblockAccount', method: 'delete', path: `/v1/accounts/${listingId}/block`, invoke: () => accounts.unblockAccount(listingId, authKey, currency, language) },
   { id: 'attributes.getAttributes', method: 'get', path: '/v1/attributes', invoke: () => attributes.getAttributes({ type: 'listings', category_id: categoryId }, authKey, currency, language) },
 
   { id: 'bundles.getBundleItems', method: 'get', path: `/v1/bundles/${listingId}/items`, invoke: () => bundles.getBundleItems(listingId, authKey, currency, language) },
   { id: 'bundles.addBundleItem', method: 'post', path: `/v1/bundles/${listingId}/items`, invoke: () => bundles.addBundleItem(listingId, { component_listing_id: 202, quantity: 1 }, authKey, currency, language), expectedBody: { component_listing_id: 202, quantity: 1 } },
+  { id: 'bundles.updateBundleItem', method: 'put', path: `/v1/bundles/${listingId}/items/1`, invoke: () => bundles.updateBundleItem(listingId, 1, { quantity: 2, order_by: 3 }, authKey, currency, language), expectedBody: { quantity: 2, order_by: 3 } },
+  { id: 'bundles.deleteBundleItem', method: 'delete', path: `/v1/bundles/${listingId}/items/1`, invoke: () => bundles.deleteBundleItem(listingId, 1, authKey, currency, language) },
   { id: 'bundles.getBundleStock', method: 'get', path: `/v1/bundles/${listingId}/stock`, invoke: () => bundles.getBundleStock(listingId, 2, authKey, currency, language), expectedQuery: { quantity: '2' } },
   { id: 'bundles.getBundlePool', method: 'get', path: `/v1/bundles/${listingId}/pool`, invoke: () => bundles.getBundlePool(listingId, authKey, currency, language) },
   { id: 'bundles.addBundlePoolItem', method: 'post', path: `/v1/bundles/${listingId}/pool`, invoke: () => bundles.addBundlePoolItem(listingId, { component_listing_id: 202 }, authKey, currency, language), expectedBody: { component_listing_id: 202 } },
+  { id: 'bundles.updateBundlePoolItem', method: 'put', path: `/v1/bundles/${listingId}/pool/1`, invoke: () => bundles.updateBundlePoolItem(listingId, 1, { order_by: 4 }, authKey, currency, language), expectedBody: { order_by: 4 } },
+  { id: 'bundles.deleteBundlePoolItem', method: 'delete', path: `/v1/bundles/${listingId}/pool/1`, invoke: () => bundles.deleteBundlePoolItem(listingId, 1, authKey, currency, language) },
+  { id: 'bundles.getBundleOrderComponents', method: 'get', path: `/v1/bundles/${listingId}/orders/${orderId}/components`, invoke: () => bundles.getBundleOrderComponents(listingId, orderId, authKey, currency, language) },
   { id: 'bundles.submitBundleSelection', method: 'post', path: `/v1/bundles/${listingId}/select`, invoke: () => bundles.submitBundleSelection(listingId, { selected_listing_ids: [202], quantity: 1 }, authKey, currency, language), expectedBody: { selected_listing_ids: [202], quantity: 1 } },
   { id: 'bundles.getBundleSelection', method: 'get', path: `/v1/bundles/${listingId}/selections/1`, invoke: () => bundles.getBundleSelection(listingId, 1, authKey, currency, language) },
   { id: 'addresses.getAddresses', method: 'get', path: '/v1/addresses', invoke: () => addresses.getAddresses(authKey, currency, language) },
@@ -110,7 +127,8 @@ const endpoints: EndpointCase[] = [
   { id: 'listing.createListing', method: 'post', path: '/v1/listings', invoke: () => listing.createListing({ title: 'Contract listing', account_id: 1, attributes: [{ id: 9, values: ['1'] }] }, authKey, currency, language) },
   { id: 'listing.getListingDetail', method: 'get', path: '/v1/listings/by_slug/contract-listing', invoke: () => listing.getListingDetail('contract-listing', false, authKey, currency, language) },
   { id: 'listing.likeListing', method: 'post', path: `/v1/listings/${listingId}/likes`, invoke: () => listing.likeListing(listingId, authKey, currency, language) },
-  { id: 'listing.unlikeListing', method: 'delete', path: `/v1/listings/${listingId}/unlikes`, invoke: () => listing.unlikeListing(listingId, authKey, currency, language) },
+  { id: 'listing.unlikeListing', method: 'delete', path: `/app/v1/listings/${listingId}/likes`, invoke: () => listing.unlikeListing(listingId, authKey, currency, language) },
+  { id: 'listing.getListingLikes', method: 'get', path: '/v1/listings/likes', invoke: () => listing.getListingLikes({ page: 1, per_page: 10 }, authKey, currency, language), expectedQuery: { page: '1', per_page: '10' } },
   { id: 'listing.updateListing', method: 'patch', path: `/v1/listings/${listingId}`, invoke: () => listing.updateListing(listingId, { title: 'Updated listing', images: ['https://example.test/image.jpg'] }, authKey, currency, language) },
   { id: 'listing.deleteListing', method: 'delete', path: `/v1/listings/${listingId}`, invoke: () => listing.deleteListing(listingId, authKey, currency, language) },
   { id: 'listing.markListingSold', method: 'post', path: `/v1/listings/${listingId}/sold`, invoke: () => listing.markListingSold(listingId, authKey, currency, language) },
@@ -128,11 +146,39 @@ const endpoints: EndpointCase[] = [
   { id: 'reviews.getReviews', method: 'get', path: '/v1/reviews', invoke: () => reviews.getReviews({ listing_id: listingId }, authKey, currency, language) },
   { id: 'reviews.createReview', method: 'post', path: '/v1/reviews', invoke: () => reviews.createReview({ listing_id: listingId, rating: 5, comment: 'Contract review' }, authKey, currency, language) },
   { id: 'reviews.setReviewReaction', method: 'patch', path: '/v1/reviews/1/like', invoke: () => reviews.setReviewReaction(1, 1, authKey, currency, language), expectedBody: { status: 1 } },
+  { id: 'comments.getComments', method: 'get', path: '/v1/comments', invoke: () => comments.getComments({ reference_id: listingId, reference_type: 'listings_comments', parent: 0, page: 1, per_page: 20 }, authKey, currency, language), expectedQuery: { reference_id: String(listingId), reference_type: 'listings_comments', parent: '0', page: '1', per_page: '20' } },
+  { id: 'comments.getCommentDetail', method: 'get', path: '/v1/comments/11', invoke: () => comments.getCommentDetail(11, authKey, currency, language) },
+  { id: 'comments.createComment', method: 'post', path: '/v1/comments', invoke: () => comments.createComment({ reference_id: listingId, reference_type: 'listings_comments', message: 'Looks great' }, authKey, currency, language), expectedBody: { comment: { reference_id: listingId, reference_type: 'listings_comments', message: 'Looks great' } } },
+  { id: 'comments.editComment', method: 'put', path: '/v1/comments/11', invoke: () => comments.editComment(11, { message: 'Updated comment' }, authKey, currency, language), expectedBody: { comment: { message: 'Updated comment' } } },
+  { id: 'comments.deleteComment', method: 'delete', path: '/v1/comments/11', invoke: () => comments.deleteComment(11, authKey, currency, language) },
+  { id: 'comments.likeComment', method: 'post', path: '/v1/comments/11/likes', invoke: () => comments.likeComment(11, authKey, currency, language) },
+  { id: 'comments.deleteCommentLike', method: 'delete', path: '/v1/comments/11/likes', invoke: () => comments.deleteCommentLike(11, authKey, currency, language) },
+  { id: 'comments.dislikeComment', method: 'post', path: '/v1/comments/11/unlikes', invoke: () => comments.dislikeComment(11, authKey, currency, language) },
+  { id: 'comments.deleteCommentDislike', method: 'delete', path: '/v1/comments/11/unlikes', invoke: () => comments.deleteCommentDislike(11, authKey, currency, language) },
+  { id: 'forms.getForms', method: 'get', path: '/v1/forms', invoke: () => forms.getForms({ status: 'active', page: 1, per_page: 10 }, authKey, currency, language), expectedQuery: { status: 'active', page: '1', per_page: '10' } },
+  { id: 'forms.getFormDetail', method: 'get', path: '/v1/forms/contact', invoke: () => forms.getFormDetail('contact', authKey, currency, language) },
+  { id: 'forms.submitForm', method: 'post', path: '/v1/forms/42/submissions', invoke: () => forms.submitForm(42, { attribute_values: [{ attribute_id: 9, values: ['hello'] }], metadata: { source: 'storefront' } }, authKey, currency, language), expectedBody: { attribute_values: [{ attribute_id: 9, values: ['hello'] }], metadata: { source: 'storefront' } } },
+  { id: 'social.getHomeFeed', method: 'get', path: '/v1/home', invoke: () => social.getHomeFeed({ page: 1 }, authKey, currency, language), expectedQuery: { page: '1' } },
+  { id: 'social.getActivityFeed', method: 'get', path: '/v1/activities', invoke: () => social.getActivityFeed({ page: 1 }, authKey, currency, language), expectedQuery: { page: '1' } },
+  { id: 'social.getFollowingFeed', method: 'get', path: '/v1/feeds/following', invoke: () => social.getFollowingFeed({ page: 1, type: 'listings', per_page: 30 }, authKey, currency, language), expectedQuery: { page: '1', type: 'listings', per_page: '30' } },
+  { id: 'social.getFollowingAccounts', method: 'get', path: '/v1/accounts/feeds/following', invoke: () => social.getFollowingAccounts({ page: 1, per_page: 30 }, authKey, currency, language), expectedQuery: { type: 'accounts', page: '1', per_page: '30' } },
+  { id: 'discovery.searchTags', method: 'get', path: '/v1/tags/search', invoke: () => discovery.searchTags({}, authKey, currency, language) },
+  { id: 'discovery.getCollections', method: 'get', path: '/v1/collections', invoke: () => discovery.getCollections(authKey, currency, language) },
+  { id: 'discovery.getCollectionDetail', method: 'get', path: '/v1/collections/5', invoke: () => discovery.getCollectionDetail(5, authKey, currency, language) },
+  { id: 'discovery.getCollectionData', method: 'get', path: '/v1/collections_data', invoke: () => discovery.getCollectionData({ collection_id: 5, page: 1 }, authKey, currency, language), expectedQuery: { collection_id: '5', page: '1' } },
+  { id: 'discovery.getPromotions', method: 'get', path: '/v1/promos', invoke: () => discovery.getPromotions({ page: 1, type: 'listings', medium: 'web', placement: 'home' }, authKey, currency, language), expectedQuery: { page: '1', type: 'listings', medium: 'web', placement: 'home' } },
+  { id: 'discovery.getPromotionDetail', method: 'get', path: '/v1/promos/5', invoke: () => discovery.getPromotionDetail(5, authKey, currency, language) },
+  { id: 'tenantData.getTenantLanguages', method: 'get', path: '/v1/tenants/languages', invoke: () => tenantData.getTenantLanguages(authKey, currency, language) },
+  { id: 'tenantData.getCurrencies', method: 'get', path: '/v1/currencies', invoke: () => tenantData.getCurrencies(authKey, currency, language) },
+  { id: 'tenantData.getCurrencyDetail', method: 'get', path: '/v1/currencies/840', invoke: () => tenantData.getCurrencyDetail(840, authKey, currency, language) },
+  { id: 'tenantData.getTenantCountries', method: 'get', path: '/v1/tenants/countries', invoke: () => tenantData.getTenantCountries(authKey, currency, language) },
 
   { id: 'variants.getVariantTypes', method: 'get', path: '/v1/variant_types', invoke: () => variants.getVariantTypes(authKey, currency, language) },
   { id: 'variants.getVariantTypeValues', method: 'get', path: '/v1/variant_types/2/values', invoke: () => variants.getVariantTypeValues(2, authKey, currency, language) },
   { id: 'variants.getListingVariants', method: 'get', path: `/v1/listings/${listingId}/variants`, invoke: () => variants.getListingVariants(listingId, authKey, currency, language) },
+  { id: 'variants.getListingVariantDetail', method: 'get', path: `/v1/listings/${listingId}/variants/3`, invoke: () => variants.getListingVariantDetail(listingId, 3, authKey, currency, language) },
   { id: 'variants.createListingVariant', method: 'post', path: `/v1/listings/${listingId}/variants`, invoke: () => variants.createListingVariant(listingId, { title: 'Small', list_price: 10, stock: 5, active: true, variant_values: [{ variant_type_id: 2, variant_type_value_id: 3 }] }, authKey, currency, language), expectedBody: { variant: { title: 'Small', list_price: 10, stock: 5, active: true, variant_values: [{ variant_type_id: 2, variant_type_value_id: 3 }] } } },
+  { id: 'variants.updateListingVariant', method: 'put', path: `/v1/listings/${listingId}/variants/3`, invoke: () => variants.updateListingVariant(listingId, 3, { title: 'Updated option', stock: 2 }, authKey, currency, language), expectedBody: { variant: { title: 'Updated option', stock: 2 } } },
   { id: 'variants.deleteListingVariant', method: 'delete', path: `/v1/listings/${listingId}/variants/3`, invoke: () => variants.deleteListingVariant(listingId, 3, authKey, currency, language) },
 
   { id: 'orders.getOrders', method: 'get', path: '/v1/orders', invoke: () => orders.getOrders({}, authKey, currency, language) },
@@ -184,12 +230,24 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'accounts.getMyAccounts': 'accounts.getMyAccounts',
   'accounts.createAccount': 'accounts.createAccount',
   'accounts.updateAccount': 'accounts.updateAccount',
+  'accounts.patchAccount': 'accounts.patchAccount',
+  'accounts.getAccountDetail': 'accounts.getAccountDetail',
+  'accounts.getAccountFollowers': 'accounts.getAccountFollowers',
+  'accounts.followAccount': 'accounts.followAccount',
+  'accounts.unfollowAccount': 'accounts.unfollowAccount',
+  'accounts.blockAccount': 'accounts.blockAccount',
+  'accounts.unblockAccount': 'accounts.unblockAccount',
   'attributes.getAttributes': 'attributes.getAttributes',
   'bundles.getBundleItems': 'bundles.getBundleItems',
   'bundles.addBundleItem': 'bundles.addBundleItem',
+  'bundles.updateBundleItem': 'bundles.updateBundleItem',
+  'bundles.deleteBundleItem': 'bundles.deleteBundleItem',
   'bundles.getBundleStock': 'bundles.getBundleStock',
   'bundles.getBundlePool': 'bundles.getBundlePool',
   'bundles.addBundlePoolItem': 'bundles.addBundlePoolItem',
+  'bundles.updateBundlePoolItem': 'bundles.updateBundlePoolItem',
+  'bundles.deleteBundlePoolItem': 'bundles.deleteBundlePoolItem',
+  'bundles.getBundleOrderComponents': 'bundles.getBundleOrderComponents',
   'bundles.submitBundleSelection': 'bundles.submitBundleSelection',
   'bundles.getBundleSelection': 'bundles.getBundleSelection',
   'addresses.getAddresses': 'addresses.getAddresses',
@@ -226,6 +284,7 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'listing.unlikeListing': 'listing.unlikeListing',
   'listing.getListingSuggestions': 'listing.getListingSuggestions',
   'listing.getListingLocations': 'listing.getListingLocations',
+  'listing.getListingLikes': 'listing.getListingLikes',
   'listing.updateListing': 'listing.updateListing',
   'listing.deleteListing': 'listing.deleteListing',
   'listing.markListingSold': 'listing.markListingSold',
@@ -239,6 +298,32 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'reviews.getReviews': 'reviews.getReviews',
   'reviews.createReview': 'reviews.createReview',
   'reviews.setReviewReaction': 'reviews.setReviewReaction',
+  'comments.getComments': 'comments.getComments',
+  'comments.getCommentDetail': 'comments.getCommentDetail',
+  'comments.createComment': 'comments.createComment',
+  'comments.editComment': 'comments.editComment',
+  'comments.deleteComment': 'comments.deleteComment',
+  'comments.likeComment': 'comments.likeComment',
+  'comments.deleteCommentLike': 'comments.deleteCommentLike',
+  'comments.dislikeComment': 'comments.dislikeComment',
+  'comments.deleteCommentDislike': 'comments.deleteCommentDislike',
+  'forms.getForms': 'forms.getForms',
+  'forms.getFormDetail': 'forms.getFormDetail',
+  'forms.submitForm': 'forms.submitForm',
+  'social.getHomeFeed': 'social.getHomeFeed',
+  'social.getActivityFeed': 'social.getActivityFeed',
+  'social.getFollowingFeed': 'social.getFollowingFeed',
+  'social.getFollowingAccounts': 'social.getFollowingAccounts',
+  'discovery.searchTags': 'discovery.searchTags',
+  'discovery.getCollections': 'discovery.getCollections',
+  'discovery.getCollectionDetail': 'discovery.getCollectionDetail',
+  'discovery.getCollectionData': 'discovery.getCollectionData',
+  'discovery.getPromotions': 'discovery.getPromotions',
+  'discovery.getPromotionDetail': 'discovery.getPromotionDetail',
+  'tenant-data.getTenantLanguages': 'tenantData.getTenantLanguages',
+  'tenant-data.getCurrencies': 'tenantData.getCurrencies',
+  'tenant-data.getCurrencyDetail': 'tenantData.getCurrencyDetail',
+  'tenant-data.getTenantCountries': 'tenantData.getTenantCountries',
   'orders.checkout': 'checkout.checkout',
   'orders.paymentIntent': 'checkout.getPaymentIntent',
   'orders.directCheckout': 'checkout.directCheckout',
@@ -260,7 +345,9 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'variants.getVariantTypes': 'variants.getVariantTypes',
   'variants.getVariantTypeValues': 'variants.getVariantTypeValues',
   'variants.getListingVariants': 'variants.getListingVariants',
+  'variants.getListingVariantDetail': 'variants.getListingVariantDetail',
   'variants.createListingVariant': 'variants.createListingVariant',
+  'variants.updateListingVariant': 'variants.updateListingVariant',
   'variants.deleteListingVariant': 'variants.deleteListingVariant',
   'subscriptions.getSubscriptionProducts': 'subscriptions.getSubscriptionProducts',
   'subscriptions.getSubscriptionProduct': 'subscriptions.getSubscriptionProduct',
@@ -317,6 +404,15 @@ const discoverUnguardedStateEndpoints = (): string[] => {
 
   return apiFiles.flatMap((path) => {
     const source = readFileSync(path, 'utf8')
+    const helperDeclarations = [...source.matchAll(/^const (\w+) = async\b/gm)]
+    const guardedHelpers = helperDeclarations.flatMap((match, index) => {
+      const start = match.index ?? 0
+      const nextHelper = helperDeclarations[index + 1]?.index
+      const nextExport = source.indexOf('\nexport const', start + match[0].length)
+      const candidates = [nextHelper, nextExport].filter((value): value is number => value !== undefined && value >= 0)
+      const end = candidates.length ? Math.min(...candidates) : source.length
+      return source.slice(start, end).includes('normalizeTradlyResponse') ? [match[1]] : []
+    })
     const endpoints = [...source.matchAll(/^\s*(\w+): builder\.(?:query|mutation)</gm)]
     return endpoints.flatMap((match, index) => {
       const start = match.index ?? 0
@@ -326,7 +422,8 @@ const discoverUnguardedStateEndpoints = (): string[] => {
         body.includes('normalizeTradlyResponse') ||
         body.includes('parseSignUpResponse') ||
         body.includes('getTradlyResponseError') ||
-        body.includes('getThrownErrorMessage')
+        body.includes('getThrownErrorMessage') ||
+        guardedHelpers.some((helper) => body.includes(`${helper}(`))
       return hasResponseGuard ? [] : [`${path.split('/state/')[1]}:${match[1]}`]
     })
   }).sort()

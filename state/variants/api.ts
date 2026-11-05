@@ -51,6 +51,13 @@ export const variantsApi = createApi({
       },
       providesTags: (_result, _error, id) => [{ type: 'ListingVariant', id: String(id) }],
     }),
+    getListingVariantDetail: builder.query<Record<string, unknown>, { listingId: number | string; variantId: number | string }>({
+      queryFn: async ({ listingId, variantId }, { getState }) => {
+        const ctx = context(getState() as LocalState)
+        try { const result = normalizeTradlyResponse(await variantsAPI.getListingVariantDetail(listingId, variantId, ctx.authKey, ctx.currency, ctx.language), 'Could not load product option'); if (result.error) return { error: { status: 'CUSTOM_ERROR', error: result.error.message ?? 'Could not load product option' } }; return { data: (result.data ?? {}) as Record<string, unknown> } }
+        catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      }, providesTags: (_result, _error, { listingId, variantId }) => [{ type: 'ListingVariant', id: `${listingId}-${variantId}` }],
+    }),
     createListingVariant: builder.mutation<void, { listingId: number | string; variant: CreateListingVariantInput }>({
       queryFn: async ({ listingId, variant }, { getState }) => {
         const ctx = context(getState() as LocalState)
@@ -61,6 +68,13 @@ export const variantsApi = createApi({
         } catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
       },
       invalidatesTags: (_result, _error, { listingId }) => [{ type: 'ListingVariant', id: String(listingId) }],
+    }),
+    updateListingVariant: builder.mutation<void, { listingId: number | string; variantId: number | string; variant: Partial<CreateListingVariantInput> }>({
+      queryFn: async ({ listingId, variantId, variant }, { getState }) => {
+        const ctx = context(getState() as LocalState)
+        try { const result = normalizeTradlyResponse(await variantsAPI.updateListingVariant(listingId, variantId, variant, ctx.authKey, ctx.currency, ctx.language), 'Could not update product option'); if (result.error) return { error: { status: 'CUSTOM_ERROR', error: result.error.message ?? 'Could not update product option' } }; return { data: undefined } }
+        catch (error) { return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } } }
+      }, invalidatesTags: (_result, _error, { listingId, variantId }) => [{ type: 'ListingVariant', id: String(listingId) }, { type: 'ListingVariant', id: `${listingId}-${variantId}` }],
     }),
     deleteListingVariant: builder.mutation<void, { listingId: number | string; variantId: number | string }>({
       queryFn: async ({ listingId, variantId }, { getState }) => {
@@ -76,4 +90,4 @@ export const variantsApi = createApi({
   }),
 })
 
-export const { useGetVariantTypesQuery, useGetVariantTypeValuesQuery, useGetListingVariantsQuery, useCreateListingVariantMutation, useDeleteListingVariantMutation } = variantsApi
+export const { useGetVariantTypesQuery, useGetVariantTypeValuesQuery, useGetListingVariantsQuery, useGetListingVariantDetailQuery, useCreateListingVariantMutation, useUpdateListingVariantMutation, useDeleteListingVariantMutation } = variantsApi

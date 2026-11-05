@@ -21,6 +21,11 @@ import { reviewsApi } from './reviews/api'
 import { subscriptionsApi } from './subscriptions/api'
 import { transactionsApi } from './transactions/api'
 import { rentalsApi } from './rentals/api'
+import { formsApi } from './forms/api'
+import { commentsApi } from './comments/api'
+import { socialApi } from './social/api'
+import { discoveryApi } from './discovery/api'
+import { tenantDataApi } from './tenant-data/api'
 import { authSlice } from './auth/slice'
 import { appSlice } from './app/slice'
 
@@ -66,6 +71,11 @@ const rootReducer = combineReducers({
   [subscriptionsApi.reducerPath]: subscriptionsApi.reducer,
   [transactionsApi.reducerPath]: transactionsApi.reducer,
   [rentalsApi.reducerPath]: rentalsApi.reducer,
+  [formsApi.reducerPath]: formsApi.reducer,
+  [commentsApi.reducerPath]: commentsApi.reducer,
+  [socialApi.reducerPath]: socialApi.reducer,
+  [discoveryApi.reducerPath]: discoveryApi.reducer,
+  [tenantDataApi.reducerPath]: tenantDataApi.reducer,
 })
 
 export type RootState = ReturnType<typeof rootReducer>
@@ -96,7 +106,12 @@ export const store = configureStore({
       .concat(reviewsApi.middleware)
       .concat(subscriptionsApi.middleware)
       .concat(transactionsApi.middleware)
-      .concat(rentalsApi.middleware),
+      .concat(rentalsApi.middleware)
+      .concat(formsApi.middleware)
+      .concat(commentsApi.middleware)
+      .concat(socialApi.middleware)
+      .concat(discoveryApi.middleware)
+      .concat(tenantDataApi.middleware),
 })
 
 export const persistor = persistStore(store)
