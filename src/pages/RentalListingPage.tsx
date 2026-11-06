@@ -5,7 +5,7 @@ import { CalendarDays, ShieldCheck } from 'lucide-react'
 import { useGetListingDetailQuery } from '@/state/listing/api'
 import { useAddToCartMutation, useClearCartMutation } from '@/state/cart/api'
 import { useGetRentalAvailabilityQuery, useGetRentalSettingsQuery } from '@/state/rentals/api'
-import { isRentalAvailabilityConfirmed } from '@/src/features/rental/availability'
+import { isRentalAvailabilityConfirmed, rentalQuotedPrice } from '@/src/features/rental/availability'
 import { useAuthSelector } from '@/state/auth/selectors'
 import Layout from '../components/Layout'
 import { Button } from '@/src/components/ui/button'
@@ -30,8 +30,9 @@ export default function RentalListingPage() {
   const heroState = useListingHeroExtras(listing)
   // Listing detail does not include the rental settings, so read them separately when they are missing.
   const isRentalListing = ['rental', 'rentals'].includes(String(listing?.order_type))
-  const { data: fetchedSettings } = useGetRentalSettingsQuery(listing?.id ?? 0, { skip: !listing?.id || !isRentalListing || !!listing?.listing_rental_settings })
+  const { data: fetchedSettings, isLoading: settingsLoading, isFetching: settingsFetching } = useGetRentalSettingsQuery(listing?.id ?? 0, { skip: !listing?.id || !isRentalListing || !!listing?.listing_rental_settings })
   const settings = listing?.listing_rental_settings ?? fetchedSettings ?? undefined
+  const settingsPending = !settings && (settingsLoading || settingsFetching)
   const [startDate, setStartDate] = useState(() => searchParams.get('start_at') ?? '')
   const [endDate, setEndDate] = useState(() => searchParams.get('end_at') ?? '')
   const [units, setUnits] = useState(() => Math.max(1, Number(searchParams.get('units')) || 1))
@@ -105,7 +106,7 @@ export default function RentalListingPage() {
   return <Layout>
     <div className="mb-5 flex items-center gap-2 text-sm"><Link to={`/listing/${slug}?view=standard`} className="text-coffee-accent hover:underline">{locale.labels.aboutThisListing}</Link><span className="text-muted-foreground">/</span><span>{locale.labels.rental}</span></div>
     <ListingHero data={heroData}>
-      {!settings ? <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{locale.labels.rentalSettingsMissing}</p> : <>
+      {!settings ? settingsPending ? <Skeleton className="h-40 w-full rounded-xl" /> : <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{locale.labels.rentalSettingsMissing}</p> : <>
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold"><CalendarDays className="h-5 w-5 text-coffee-accent" />{locale.labels.rental}</h2>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -117,7 +118,7 @@ export default function RentalListingPage() {
             <span>{locale.labels.rentalDuration}: {settings.min_duration}–{settings.max_duration} {settings.rate_unit}{settings.max_duration === 1 ? '' : 's'}</span>
             <span className="flex items-center gap-1.5"><ShieldCheck className="h-4 w-4" />{locale.labels.rentalDeposit}: {money(settings.deposit_amount, listing.offer_price?.currency ?? listing.list_price?.currency ?? 'USD')}</span>
           </div>
-          {validDates && <p role={availabilityError ? 'alert' : 'status'} className={`text-sm ${availabilityError ? 'text-destructive' : 'text-muted-foreground'}`}>{checkingAvailability ? locale.labels.rentalAvailabilityChecking : availabilityError ? locale.labels.rentalAvailabilityError : availabilityChecked && !availabilityConfirmed ? locale.labels.rentalAvailabilityUnverified : ''}</p>}
+          {validDates && <p role={availabilityError || (availabilityChecked && !availabilityConfirmed) ? 'alert' : 'status'} className={`text-sm ${availabilityError || (availabilityChecked && !availabilityConfirmed) ? 'text-destructive' : 'text-muted-foreground'}`}>{checkingAvailability ? locale.labels.rentalAvailabilityChecking : availabilityError ? locale.labels.rentalAvailabilityError : availabilityChecked && !availabilityConfirmed ? locale.labels.rentalAvailabilityUnverified : availabilityConfirmed ? `${locale.labels.rentalAvailable}${rentalQuotedPrice(availabilityData) ? ` ${locale.labels.rentalQuote}: ${money(rentalQuotedPrice(availabilityData)!, listing.offer_price?.currency ?? listing.list_price?.currency ?? 'USD')}` : ''}` : ''}</p>}
           {!validDates && (startDate || endDate) && <p role="alert" className="text-sm text-destructive">{locale.labels.rentalInvalidDates}</p>}
         </section>
         {error && <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}

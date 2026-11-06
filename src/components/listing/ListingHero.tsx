@@ -14,7 +14,7 @@ export default function ListingHero({ data, children }: ListingHeroProps) {
     <div className="space-y-14">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div>
-          <div className="aspect-square overflow-hidden rounded-2xl bg-coffee-secondary/20 mb-3">
+          <div className={`${main ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden rounded-2xl bg-coffee-secondary/20 mb-3`}>
             {main ? (
               <img src={main} alt={data.title} className="w-full h-full object-cover" />
             ) : (
@@ -89,9 +89,9 @@ export default function ListingHero({ data, children }: ListingHeroProps) {
       </div>
 
       {(data.descriptionHtml || data.facts.length > 0) && (
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
           {data.descriptionHtml && (
-            <div className="md:col-span-2">
+            <div>
               <h2 className="font-display text-lg font-bold text-foreground mb-3">{data.labels.aboutThisListing}</h2>
               <div
                 className="text-sm text-muted-foreground leading-relaxed"
@@ -100,7 +100,7 @@ export default function ListingHero({ data, children }: ListingHeroProps) {
             </div>
           )}
           {data.facts.length > 0 && (
-            <div className={data.descriptionHtml ? '' : 'md:col-span-3'}>
+            <div className={data.descriptionHtml ? '' : 'md:col-span-2'}>
               <h2 className="font-display text-lg font-bold text-foreground mb-3">{data.labels.details}</h2>
               <dl className="divide-y divide-border rounded-2xl border border-border bg-card text-sm">
                 {data.facts.map((fact, index) => (

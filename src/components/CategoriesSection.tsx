@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useGetCategoriesQuery } from '@/state/categories/api'
 import type { Category } from '@/types/category.types'
 
@@ -11,6 +11,8 @@ interface CategoriesSectionProps {
   limit?: number
   title?: string
   subtitle?: string
+  /** 'tiles' (default) is the tile grid linking to /lc/:slug; 'tabs' is a row of filter tabs that sets ?category= on the current page. */
+  variant?: 'tiles' | 'tabs'
 }
 
 /**
@@ -21,11 +23,47 @@ interface CategoriesSectionProps {
  * Use this component on any page that needs a category grid; do not
  * hardcode category data or hrefs.
  */
-export default function CategoriesSection({ limit = 12, title, subtitle }: CategoriesSectionProps) {
+export default function CategoriesSection({ limit = 12, title, subtitle, variant = 'tiles' }: CategoriesSectionProps) {
   const { data, isLoading } = useGetCategoriesQuery({ page: 1, limit })
+  const [searchParams, setSearchParams] = useSearchParams()
   const categories = data?.categories ?? []
 
   if (!isLoading && categories.length === 0) return null
+
+  if (variant === 'tabs') {
+    const active = searchParams.get('category') ?? ''
+    const seen = new Set<string>()
+    const tabs = categories.filter((cat) => {
+      const key = String(cat.name).trim().toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    const choose = (id: string) => {
+      const next = new URLSearchParams(searchParams)
+      if (id) next.set('category', id)
+      else next.delete('category')
+      setSearchParams(next, { replace: true })
+    }
+    const tabClass = (on: boolean) =>
+      `shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${on ? 'border-coffee-accent bg-coffee-accent text-white' : 'border-border bg-card text-foreground hover:border-coffee-accent/50'}`
+    return (
+      <div role="tablist" aria-label="Categories" className="flex gap-2 overflow-x-auto pb-1">
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-8 w-24 shrink-0 animate-pulse rounded-full bg-muted" />)
+        ) : (
+          <>
+            <button type="button" role="tab" aria-selected={!active} className={tabClass(!active)} onClick={() => choose('')}>All</button>
+            {tabs.map((cat) => (
+              <button key={cat.id} type="button" role="tab" aria-selected={active === String(cat.id)} className={tabClass(active === String(cat.id))} onClick={() => choose(String(cat.id))}>
+                {cat.name}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+    )
+  }
 
   return (
     <section>

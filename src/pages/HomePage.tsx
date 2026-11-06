@@ -155,10 +155,14 @@ export default function HomePage() {
 
   useEffect(() => { setSearch(searchParams.get("search_key") ?? ""); setPage(1); }, [searchParams]);
 
+  // ?category= is set by the category tabs (CategoriesSection variant="tabs"); empty means all listings.
+  const categoryId = Number(searchParams.get("category")) || undefined;
+
   const { data, isLoading, isFetching, isError } = useGetListingsQuery({
     page,
     limit: 20,
     ...(search ? { search_key: search } : {}),
+    ...(categoryId ? { category_id: categoryId } : {}),
   });
 
   // Prefetch cart so header count is populated
@@ -196,11 +200,13 @@ export default function HomePage() {
       {/* @sky:slot home-trust — optional strip under the hero (trust, delivery, guarantees) */}
       {/* @sky:slot-end */}
 
+      {/* @sky:slot categories — how the categories are shown: tiles by default, a template may use tabs that filter the listings */}
       {/* @sky:component categories — DO NOT REPLACE with hardcoded data; use CategoriesSection which fetches live from the API */}
       <div className="mb-10">
         <CategoriesSection limit={12} />
       </div>
       {/* @sky:end */}
+      {/* @sky:slot-end */}
 
       {/* States */}
       {isError && (
