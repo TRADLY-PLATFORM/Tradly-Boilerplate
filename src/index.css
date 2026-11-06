@@ -58,7 +58,8 @@
   .font-sans { font-family: 'Inter', sans-serif; }
   /* @sky:slot-end */
   .gradient-coffee { background: linear-gradient(135deg, hsl(var(--coffee-accent)) 0%, hsl(var(--coffee-primary)) 100%); }
-  .gradient-warm { background: linear-gradient(135deg, hsl(var(--coffee-warm)) 0%, hsl(var(--coffee-secondary)) 100%); }
+  /* --hero-from / --hero-to let a template recolour the home hero from the palette slot without touching this rule */
+  .gradient-warm { background: linear-gradient(135deg, hsl(var(--hero-from, var(--coffee-warm))) 0%, hsl(var(--hero-to, var(--coffee-secondary))) 100%); }
 }
 
 @layer components {
