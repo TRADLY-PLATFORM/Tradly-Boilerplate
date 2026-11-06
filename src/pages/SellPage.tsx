@@ -340,8 +340,9 @@ export default function SellPage() {
           end_date: scheduleEndDate,
           start_time: scheduleStartTime,
           end_time: scheduleEndTime,
-          schedule_type: scheduleRepeat ? 2 : 1,
-          ...(scheduleRepeat ? { repeat_days: [1, 2, 3, 4, 5, 6, 7] } : {}),
+          // schedule_type 1 already offers the time every day from the first to the last date. Type 2 (repeat_days) was accepted
+          // but never produced bookable slots in Tradly (repeat_days 1-7 included).
+          schedule_type: 1,
           active: true,
           total_stocks: Math.max(1, Number(scheduleCapacity) || 1),
         }],
