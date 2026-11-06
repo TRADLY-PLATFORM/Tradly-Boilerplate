@@ -56,9 +56,11 @@ function ListingCard({ listing }: { listing: Listing }) {
           </h3>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              {/* @sky:slot card-price — how the price reads on the card */}
               <span className="font-display text-base font-bold text-coffee-accent">
                 {listing.offer_price?.formatted}
               </span>
+              {/* @sky:slot-end */}
               {listing.offer_percent > 0 && (
                 <span className="text-xs text-muted-foreground line-through">
                   {listing.list_price?.formatted}
@@ -66,8 +68,10 @@ function ListingCard({ listing }: { listing: Listing }) {
               )}
             </div>
             <Button size="sm" className="btn-hero h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* @sky:slot card-cta — label on the card button */}
               <ShoppingCart className="h-3 w-3 mr-1" />
               Add
+              {/* @sky:slot-end */}
             </Button>
           </div>
         </div>
@@ -189,6 +193,9 @@ export default function HomePage() {
         {/* @sky:end */}
       </div>
 
+      {/* @sky:slot home-trust — optional strip under the hero (trust, delivery, guarantees) */}
+      {/* @sky:slot-end */}
+
       {/* @sky:component categories — DO NOT REPLACE with hardcoded data; use CategoriesSection which fetches live from the API */}
       <div className="mb-10">
         <CategoriesSection limit={12} />
@@ -199,6 +206,9 @@ export default function HomePage() {
       {isError && (
         <p className="text-center text-destructive py-12 text-sm">Failed to load listings.</p>
       )}
+
+      {/* @sky:slot grid-heading — optional heading above the listings grid */}
+      {/* @sky:slot-end */}
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
@@ -214,6 +224,9 @@ export default function HomePage() {
           <p className="text-muted-foreground text-sm">No listings found.</p>
         </div>
       )}
+
+      {/* @sky:slot home-extra — optional sections for this kind of business (how it works, FAQ, story) */}
+      {/* @sky:slot-end */}
 
       <HomeMarketplaceSections />
 

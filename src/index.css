@@ -1,4 +1,6 @@
+/* @sky:slot fonts — web fonts; the first rule in the file */
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap');
+/* @sky:slot-end */
 
 @tailwind base;
 @tailwind components;
@@ -6,6 +8,7 @@
 
 @layer base {
   :root {
+    /* @sky:slot palette — colour tokens (HSL triples) */
     --background: 30 15% 97%;
     --foreground: 25 35% 15%;
     --card: 30 20% 95%;
@@ -34,6 +37,7 @@
     --input: 28 20% 88%;
     --ring: 25 45% 25%;
     --radius: 0.75rem;
+    /* @sky:slot-end */
   }
 
   .dark {
@@ -49,8 +53,10 @@
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background text-foreground font-sans; }
+  /* @sky:slot typography — heading and body fonts */
   .font-display { font-family: 'Playfair Display', serif; }
   .font-sans { font-family: 'Inter', sans-serif; }
+  /* @sky:slot-end */
   .gradient-coffee { background: linear-gradient(135deg, hsl(var(--coffee-accent)) 0%, hsl(var(--coffee-primary)) 100%); }
   .gradient-warm { background: linear-gradient(135deg, hsl(var(--coffee-warm)) 0%, hsl(var(--coffee-secondary)) 100%); }
 }
