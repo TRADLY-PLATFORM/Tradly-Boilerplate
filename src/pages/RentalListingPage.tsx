@@ -109,8 +109,8 @@ export default function RentalListingPage() {
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5">
           <h2 className="flex items-center gap-2 font-display text-lg font-bold"><CalendarDays className="h-5 w-5 text-coffee-accent" />{locale.labels.rental}</h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1.5 text-sm font-medium">{locale.labels.rentalStartDate}<Input type={isHourly ? 'datetime-local' : 'date'} min={isHourly ? dayjs().format('YYYY-MM-DDTHH:mm') : dayjs().format('YYYY-MM-DD')} value={startDate} onChange={event => setStartDate(event.target.value)} /></label>
-            <label className="space-y-1.5 text-sm font-medium">{locale.labels.rentalEndDate}<Input type={isHourly ? 'datetime-local' : 'date'} min={startDate || (isHourly ? dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm') : dayjs().add(1, 'day').format('YYYY-MM-DD'))} value={endDate} onChange={event => setEndDate(event.target.value)} /></label>
+            <label className="space-y-1.5 text-sm font-medium">{locale.labels.rentalStartDate}<Input type={isHourly ? 'datetime-local' : 'date'} min={isHourly ? dayjs().add(1, 'minute').format('YYYY-MM-DDTHH:mm') : dayjs().add(1, 'day').format('YYYY-MM-DD')} value={startDate} onChange={event => setStartDate(event.target.value)} /></label>
+            <label className="space-y-1.5 text-sm font-medium">{locale.labels.rentalEndDate}<Input type={isHourly ? 'datetime-local' : 'date'} min={startDate || (isHourly ? dayjs().add(1, 'hour').format('YYYY-MM-DDTHH:mm') : dayjs().add(2, 'day').format('YYYY-MM-DD'))} value={endDate} onChange={event => setEndDate(event.target.value)} /></label>
           </div>
           <label className="block max-w-40 space-y-1.5 text-sm font-medium">{locale.labels.rentalUnits}<Input type="number" min={1} max={settings.max_units} step={1} value={units} onChange={event => setUnits(Math.max(1, Math.min(settings.max_units, Number(event.target.value) || 1)))} /></label>
           <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-3 text-sm text-muted-foreground">
