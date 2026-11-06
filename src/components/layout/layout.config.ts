@@ -16,5 +16,9 @@ export const layoutConfig = {
     donations: true,
     savedListings: true,
     sellerAccounts: true,
+    // Appointment checkout asks for an address (pickup and delivery services such as laundry). Off for salons and clinics.
+    /* @sky:slot features-extra */
+    pickupAddress: false,
+    /* @sky:slot-end */
   },
 }

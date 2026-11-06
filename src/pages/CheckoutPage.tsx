@@ -33,6 +33,7 @@ import { useGetRentalAvailabilityQuery } from "@/state/rentals/api";
 import { isRentalAvailabilityConfirmed } from "@/src/features/rental/availability";
 import { useAuthSelector } from "@/state/auth/selectors";
 import { locale } from "@/src/components/layout/locale";
+import { layoutConfig } from "@/src/components/layout/layout.config";
 import { AppConfig } from "@/config/app.config";
 import {
 	buildPaymentIntentUrl,
@@ -380,6 +381,8 @@ export default function CheckoutPage() {
 	const isDigital = checkoutType === "digital";
 	const isRental = checkoutType === "rental" || checkoutType === "rentals";
 	const needsShipping = !isSpecialType && !isDigital;
+	// Services that come to the customer (laundry pickup, home repairs) ask for an address with the booking.
+	const needsPickupAddress = !!(layoutConfig.features as { pickupAddress?: boolean }).pickupAddress && checkoutType === "appointments";
 	const sellerAccountId = (items[0] as any)?.listing?.account?.id;
 
 	// ── Shipping methods — two patterns ──
@@ -565,6 +568,7 @@ export default function CheckoutPage() {
 			return locale.labels.rentalCheckoutDateError;
 		if (isRental && (rentalAvailabilityLoading || rentalAvailabilityError || !rentalAvailabilityConfirmed))
 			return locale.labels.rentalAvailabilityCheckoutError;
+		if (needsPickupAddress && !selectedAddress) return "Choose or add the address for your pickup.";
 		if (needsShipping && !selectedShipping) return "Select a shipping method.";
 		if (needsShipping && selectedShipping?.type === "delivery" && isAuthenticated && !selectedAddress)
 			return "Select a delivery address.";
@@ -613,7 +617,7 @@ export default function CheckoutPage() {
 			...(summary?.id ? { cart: { id: summary.id } } : {}),
 			type: checkoutType,
 			...(needsShipping && selectedShipping ? { shipping_method_id: selectedShipping.id } : {}),
-			...(isAuthenticated && isDelivery && selectedAddress ? { shipping_address_id: selectedAddress.id } : {}),
+			...(isAuthenticated && (isDelivery || needsPickupAddress) && selectedAddress ? { shipping_address_id: selectedAddress.id } : {}),
 			...(!isAuthenticated && isDelivery && guestName
 				? {
 						shipping_address: {
@@ -823,9 +827,9 @@ export default function CheckoutPage() {
 					)}
 
 					{/* 4. Delivery address (authenticated) */}
-					{isAuthenticated && selectedShipping?.type === "delivery" && (
+					{isAuthenticated && (selectedShipping?.type === "delivery" || needsPickupAddress) && (
 						<SectionBox
-							title="Delivery address"
+							title={needsPickupAddress ? "Pickup address" : "Delivery address"}
 							action={
 								!showAddForm ? (
 									<Button size="sm" variant="outline" className="btn-secondary h-7 text-xs" onClick={() => setShowAddForm(true)}>
