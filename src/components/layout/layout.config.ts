@@ -9,11 +9,12 @@ export const layoutConfig = {
   signIn: true,
   signUp: true,
   features: {
+    // Forms and Support a cause are for sites that need them (Sky Builder turns donations on for fundraisers).
     manageListings: true,
     sellerInsights: true,
     rental: true,
-    visitorForms: true,
-    donations: true,
+    visitorForms: false,
+    donations: false,
     savedListings: true,
     sellerAccounts: true,
     // Appointment checkout asks for an address (pickup and delivery services such as laundry). Off for salons and clinics.
