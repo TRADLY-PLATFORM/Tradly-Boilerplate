@@ -1,4 +1,5 @@
 import { useGetListingDetailQuery } from '@/state/listing/api'
+import { useGetRentalSettingsQuery } from '@/state/rentals/api'
 import { getItemOrderType, formatOrderDateRange } from './order-item-display'
 import { locale } from '@/src/components/layout/locale'
 
@@ -21,8 +22,9 @@ export default function RentalItemSummary({ item, orderType = '', startAt, endAt
   const listing = item?.listing ?? {}
   const isRental = ['rental', 'rentals'].includes(getItemOrderType(item, orderType))
   const { data } = useGetListingDetailQuery({ slug: String(listing.slug ?? '') }, { skip: !isRental || !!listing.listing_rental_settings || !listing.slug })
+  const { data: fetchedSettings } = useGetRentalSettingsQuery(Number(listing.id ?? 0), { skip: !isRental || !listing.id || !!listing.listing_rental_settings })
   if (!isRental) return null
-  const settings = listing.listing_rental_settings ?? data?.listing?.listing_rental_settings
+  const settings = listing.listing_rental_settings ?? data?.listing?.listing_rental_settings ?? fetchedSettings ?? undefined
   const dates = formatOrderDateRange(startAt ?? item.schedule_start_at, endAt ?? item.schedule_end_at)
   const unitCount = units ?? Number(item.quantity ?? 0)
   const currency = listing.offer_price?.currency ?? listing.list_price?.currency ?? 'USD'

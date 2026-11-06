@@ -46,6 +46,15 @@ export const createRentalSettings = (
   language: string,
 ): Promise<any> => call('/v1/rentals/settings', 'POST', authKey, currency, language, input)
 
+// GET /v1/rentals/settings?listing_id= (works with the public key). Listing detail does NOT return the rental
+// settings, so the rental page reads them from here.
+export const getRentalSettings = (
+  listingId: number,
+  authKey: string,
+  currency: string,
+  language: string,
+): Promise<any> => call('/v1/rentals/settings', 'GET', authKey, currency, language, undefined, { listing_id: listingId })
+
 // Tradly docs: GET /v1/rentals/availability?listing_id=&start_at=&end_at=&units=
 export const getRentalAvailability = (
   params: RentalAvailabilityParams,

@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { CalendarDays, ShieldCheck } from 'lucide-react'
 import { useGetListingDetailQuery } from '@/state/listing/api'
 import { useAddToCartMutation, useClearCartMutation } from '@/state/cart/api'
-import { useGetRentalAvailabilityQuery } from '@/state/rentals/api'
+import { useGetRentalAvailabilityQuery, useGetRentalSettingsQuery } from '@/state/rentals/api'
 import { isRentalAvailabilityConfirmed } from '@/src/features/rental/availability'
 import { useAuthSelector } from '@/state/auth/selectors'
 import Layout from '../components/Layout'
@@ -28,7 +28,10 @@ export default function RentalListingPage() {
   const { data, isLoading, isError } = useGetListingDetailQuery({ slug, id: /^\d+$/.test(slug) })
   const listing = data?.listing
   const heroState = useListingHeroExtras(listing)
-  const settings = listing?.listing_rental_settings
+  // Listing detail does not include the rental settings, so read them separately when they are missing.
+  const isRentalListing = ['rental', 'rentals'].includes(String(listing?.order_type))
+  const { data: fetchedSettings } = useGetRentalSettingsQuery(listing?.id ?? 0, { skip: !listing?.id || !isRentalListing || !!listing?.listing_rental_settings })
+  const settings = listing?.listing_rental_settings ?? fetchedSettings ?? undefined
   const [startDate, setStartDate] = useState(() => searchParams.get('start_at') ?? '')
   const [endDate, setEndDate] = useState(() => searchParams.get('end_at') ?? '')
   const [units, setUnits] = useState(() => Math.max(1, Number(searchParams.get('units')) || 1))
