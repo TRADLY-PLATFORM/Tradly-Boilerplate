@@ -16,7 +16,7 @@ function ListingCard({ listing }: { listing: Listing }) {
   const image = listing.images[0];
 
   return (
-    <Link to={`/listing/${listing.slug}`} className="block group">
+    <Link to={`/listing/${listing.slug || listing.id}`} className="block group">
       <div className="card-product">
         {/* Image */}
         <div className="aspect-square overflow-hidden bg-coffee-secondary/20 relative">

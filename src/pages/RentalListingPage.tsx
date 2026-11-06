@@ -25,7 +25,7 @@ export default function RentalListingPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const authenticated = useAuthSelector(state => state.isAuthenticated)
-  const { data, isLoading, isError } = useGetListingDetailQuery({ slug })
+  const { data, isLoading, isError } = useGetListingDetailQuery({ slug, id: /^\d+$/.test(slug) })
   const listing = data?.listing
   const heroState = useListingHeroExtras(listing)
   const settings = listing?.listing_rental_settings

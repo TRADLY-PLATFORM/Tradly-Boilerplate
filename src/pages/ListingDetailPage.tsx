@@ -54,7 +54,7 @@ export default function ListingDetailPage() {
 	const [searchParams] = useSearchParams();
 	const isAuthenticated = useAuthSelector((s) => s.isAuthenticated);
 
-	const { data, isLoading, isError } = useGetListingDetailQuery({ slug });
+	const { data, isLoading, isError } = useGetListingDetailQuery({ slug, id: /^\d+$/.test(slug) });
 	const listingId = data?.listing.id;
 	const heroState = useListingHeroExtras(data?.listing);
 	const isBundle = data?.listing.type === "bundle";

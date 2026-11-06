@@ -128,7 +128,7 @@ export default function CategoryListingsPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
           {listings.map(listing => (
-            <Link key={listing.id} to={`/listing/${listing.slug}`} className="block group">
+            <Link key={listing.id} to={`/listing/${listing.slug || listing.id}`} className="block group">
               <div className="card-product">
                 <div className="aspect-square overflow-hidden bg-coffee-secondary/20 relative">
                   {listing.images[0]

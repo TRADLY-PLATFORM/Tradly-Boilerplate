@@ -18,7 +18,7 @@ export default function BookingListingPage() {
   const { slug = '' } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const authenticated = useAuthSelector(state => state.isAuthenticated)
-  const { data, isLoading, isError } = useGetListingDetailQuery({ slug })
+  const { data, isLoading, isError } = useGetListingDetailQuery({ slug, id: /^\d+$/.test(slug) })
   const listing = data?.listing
   const heroState = useListingHeroExtras(listing)
   const startAt = useMemo(() => dayjs().format('YYYY-MM-DD'), [])
