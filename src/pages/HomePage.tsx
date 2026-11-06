@@ -210,7 +210,7 @@ export default function HomePage() {
       {/* @sky:slot grid-heading — optional heading above the listings grid */}
       {/* @sky:slot-end */}
 
-      {/* Grid */}
+      {/* @sky:slot listing-grid — how the listings are laid out; a template may show a list or menu instead of cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
         {isLoading
           ? Array.from({ length: 10 }).map((_, i) => <ListingCardSkeleton key={i} />)
@@ -218,6 +218,7 @@ export default function HomePage() {
               <ListingCard key={listing.id} listing={listing} />
             ))}
       </div>
+      {/* @sky:slot-end */}
 
       {!isLoading && listings.length === 0 && !isError && (
         <div className="text-center py-20">
