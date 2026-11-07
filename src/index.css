@@ -104,6 +104,17 @@
   .section-accent :is([class~="bg-card"], [class~="bg-background"], [class~="bg-white"], [class~="bg-surface"], [class~="bg-muted"]) [class~="text-card-foreground"] {
     color: hsl(var(--card-foreground)) !important;
   }
+  /* A light button or card that is itself the element with the text class (bg-background text-foreground) needs the same
+     reset; the rules above only reach text nested inside one, which left it light-on-light. */
+  .section-accent :is([class~="bg-card"], [class~="bg-background"], [class~="bg-white"], [class~="bg-surface"], [class~="bg-muted"])[class~="text-foreground"] {
+    color: hsl(var(--foreground)) !important;
+  }
+  .section-accent :is([class~="bg-card"], [class~="bg-background"], [class~="bg-white"], [class~="bg-surface"], [class~="bg-muted"]):is([class~="text-subtitle"], [class~="text-muted-foreground"]) {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+  .section-accent :is([class~="bg-card"], [class~="bg-background"], [class~="bg-white"], [class~="bg-surface"], [class~="bg-muted"])[class~="text-card-foreground"] {
+    color: hsl(var(--card-foreground)) !important;
+  }
   /* Horizontal scroll row — use on a flex container for cards/tiles */
   .scroll-row {
     @apply flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory;
