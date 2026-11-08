@@ -88,7 +88,7 @@ test('booking orders open the calendar by order type, with regular order details
   await expect(screen.getByRole('link', 'View booking calendar')).toBeVisible()
 })
 
-test('rental orders stay on standard details and show dates, units, and deposit', async ({ app, browser, screen }) => {
+test('rental orders open a dedicated reservation page and keep standard order details available', async ({ app, browser, screen }) => {
   await signIn(browser)
   await browser.route('**/v1/users/token/refresh**', route => route.fulfill({ json: { status: true, data: { auth_key: 'booking-auth', refresh_key: 'booking-refresh' } } }))
   await browser.route('**/v1/orders/404**', route => route.fulfill({ json: { status: true, data: { order: {
@@ -96,14 +96,17 @@ test('rental orders stay on standard details and show dates, units, and deposit'
     order_details: [{ id: 8, listing_id: 700, quantity: 2, schedule_start_at: '2026-11-12T00:00:00.000Z', schedule_end_at: '2026-11-14T00:00:00.000Z', listing: { slug: 'rental-bike', title: 'Rental bike', order_type: 'rental', images: [], listing_rental_settings: { rate_unit: 'day', rate_amount: 20, min_duration: 1, max_duration: 10, buffer_time: 0, deposit_amount: 50, max_units: 5 }, offer_price: { amount: 20, formatted: '$20.00', currency: 'USD' } } }],
   } } } }))
   await app.open('/orders/404')
-  await expect(screen.getByRole('heading', 'Items')).toBeVisible()
+  await expect(browser).toHaveURL('/rental/orders/404')
+  await expect(screen.getByRole('heading', 'Rental dates')).toBeVisible()
   await expect(screen.getByText('Rental dates:')).toBeVisible()
-  await expect(screen.getByText(/Nov 12, 2026.*Nov 14, 2026/)).toBeVisible()
+  await expect(screen.getByText(/Nov 12, 2026.*Nov 14, 2026/).first()).toBeVisible()
   await expect(screen.getByText('Units:')).toBeVisible()
-  await expect(screen.getByText('× 2')).toBeVisible()
+  await expect(screen.getByText('Units: 2')).toBeVisible()
   await expect(screen.getByText('Deposit:')).toBeVisible()
   await expect(screen.getByText(/50\.00/)).toBeVisible()
-  await expect(browser).toHaveURL('/orders/404')
+  await app.open('/orders/404?view=standard')
+  await expect(screen.getByRole('heading', 'Items')).toBeVisible()
+  await expect(screen.getByRole('link', 'Rental reservation')).toBeVisible()
 })
 
 test('orders list shows the appointment date and time', async ({ app, browser, screen }) => {

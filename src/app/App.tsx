@@ -11,6 +11,7 @@ import HomePage from '../pages/HomePage'
 import ListingDetailPage from '../pages/ListingDetailPage'
 import BookingListingPage from '../pages/BookingListingPage'
 import RentalListingPage from '../pages/RentalListingPage'
+import RentalOrderPage from '../pages/RentalOrderPage'
 import BookingOrderPage from '../pages/BookingOrderPage'
 import CartPage from '../pages/CartPage'
 import CheckoutPage from '../pages/CheckoutPage'
@@ -101,6 +102,7 @@ export default function App() {
           <Route path="/orders" element={<ProtectedRoute><OrdersPage /></ProtectedRoute>} />
           <Route path="/orders/:id" element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>} />
           <Route path="/booking/orders/:id" element={<ProtectedRoute><BookingOrderPage /></ProtectedRoute>} />
+          <Route path="/rental/orders/:id" element={<ProtectedRoute><RentalOrderPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

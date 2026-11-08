@@ -450,6 +450,8 @@ export default function CheckoutPage() {
 	const rentalStartAt = searchParams.get("rental_start_at") ?? "";
 	const rentalEndAt = searchParams.get("rental_end_at") ?? "";
 	const rentalUnits = Math.max(1, Number(searchParams.get("rental_units")) || Number((items[0] as any)?.quantity) || 1);
+	const rentalAdults = Math.max(1, Number(searchParams.get("rental_adults")) || 1);
+	const rentalChildren = Math.max(0, Number(searchParams.get("rental_children")) || 0);
 	const rentalRangeValid = !!rentalStartAt && !!rentalEndAt && dayjs(rentalStartAt).isValid() && dayjs(rentalEndAt).isValid() && dayjs(rentalEndAt).isAfter(dayjs(rentalStartAt));
 	const { data: rentalAvailabilityData, isFetching: rentalAvailabilityLoading, isSuccess: rentalAvailabilityChecked, isError: rentalAvailabilityError } = useGetRentalAvailabilityQuery({
 		listing_id: Number(firstListing?.id) || 0,
@@ -793,7 +795,7 @@ export default function CheckoutPage() {
 					)}
 					{isRental && rentalRangeValid && (
 						<SectionBox title={locale.labels.rentalOrderDates}>
-							<p className="text-sm text-muted-foreground">{dayjs(rentalStartAt).format('YYYY-MM-DD HH:mm')} – {dayjs(rentalEndAt).format('YYYY-MM-DD HH:mm')} · {rentalUnits} unit{rentalUnits === 1 ? '' : 's'}</p>
+							<p className="text-sm text-muted-foreground">{dayjs(rentalStartAt).format('YYYY-MM-DD HH:mm')} – {dayjs(rentalEndAt).format('YYYY-MM-DD HH:mm')} · {rentalUnits} {locale.labels.rentalUnits.toLowerCase()} · {rentalAdults} {locale.labels.rentalAdults.toLowerCase()}{rentalChildren ? ` · ${rentalChildren} ${locale.labels.rentalChildren.toLowerCase()}` : ''}</p>
 							{rentalAvailabilityLoading && <p className="mt-2 text-xs text-muted-foreground">{locale.labels.rentalAvailabilityRechecking}</p>}
 							{rentalAvailabilityError && <p role="alert" className="mt-2 text-xs text-destructive">{locale.labels.rentalAvailabilityRecheckError}</p>}
 							{rentalAvailabilityChecked && !rentalAvailabilityConfirmed && <p role="status" className="mt-2 text-xs text-muted-foreground">{locale.labels.rentalAvailabilityUnverified}</p>}

@@ -50,13 +50,16 @@ export default function OrderDetailPage() {
   const orderType: string = order?.type ?? "";
   const hasBooking = isBookingOrderType(orderType) || orderItems.some((item: any) => isBookingOrderType(getItemOrderType(item)));
   const shouldRedirectToBooking = hasBooking && searchParams.get("view") !== "standard";
+  const hasRental = ['rental', 'rentals'].includes(orderType) || orderItems.some((item: any) => ['rental', 'rentals'].includes(getItemOrderType(item)));
+  const shouldRedirectToRental = hasRental && searchParams.get("view") !== "standard";
   useEffect(() => {
     if (shouldRedirectToBooking) navigate(`/booking/orders/${id}`, { replace: true });
-  }, [id, navigate, shouldRedirectToBooking]);
+    else if (shouldRedirectToRental) navigate(`/rental/orders/${id}`, { replace: true });
+  }, [id, navigate, shouldRedirectToBooking, shouldRedirectToRental]);
 
   if (isLoading) return <Layout><div className="text-center py-20 text-muted-foreground text-sm">Loading order…</div></Layout>;
   if (isError || !data) return <Layout><div className="text-center py-20 text-destructive text-sm">Order not found.</div></Layout>;
-  if (shouldRedirectToBooking) return <Layout><div className="py-20 text-center text-sm text-muted-foreground">Opening booking calendar…</div></Layout>;
+  if (shouldRedirectToBooking || shouldRedirectToRental) return <Layout><div className="py-20 text-center text-sm text-muted-foreground">Opening reservation details…</div></Layout>;
 
   const items: any[] = orderItems;
   const shipments: any[] = (order as any).shipments ?? [];
@@ -83,6 +86,7 @@ export default function OrderDetailPage() {
         </div>
       </div>
       {isScheduled && <div className="mb-5 flex justify-end"><Link to={`/booking/orders/${id}`} className="text-sm font-medium text-coffee-accent underline">View booking calendar</Link></div>}
+      {hasRental && <div className="mb-5 flex justify-end"><Link to={`/rental/orders/${id}`} className="text-sm font-medium text-coffee-accent underline">{locale.labels.rentalReservation}</Link></div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
         {/* Main column */}

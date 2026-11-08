@@ -138,6 +138,7 @@ export default function SellPage() {
   const [rentalBufferTime, setRentalBufferTime] = useState('0')
   const [rentalDeposit, setRentalDeposit] = useState('0')
   const [rentalMaxUnits, setRentalMaxUnits] = useState('1')
+  const [rentalCancellationPolicy, setRentalCancellationPolicy] = useState('')
   const [publishedListing, setPublishedListing] = useState<{ slug: string; id: number } | null>(null)
   const [membershipDuration, setMembershipDuration] = useState('')
   const [bundleMode, setBundleMode] = useState<'fixed' | 'mix_match'>('fixed')
@@ -155,7 +156,8 @@ export default function SellPage() {
   }, [accountId, accounts])
 
   const selectedAccount = accounts.find(account => String(account.id) === accountId)
-  const { data: variantsTypes = [], isLoading: variantTypesLoading } = useGetVariantTypesQuery(undefined, { skip: orderType !== 'listings' })
+  const supportsVariants = orderType === 'listings' || orderType === 'rental'
+  const { data: variantsTypes = [], isLoading: variantTypesLoading } = useGetVariantTypesQuery(undefined, { skip: !supportsVariants })
   const { data: variantValues = [], isLoading: variantValuesLoading } = useGetVariantTypeValuesQuery(variantTypeId, { skip: !variantTypeId })
   const { data: sellerListingsData, isLoading: sellerListingsLoading } = useGetListingsQuery({ page: 1, limit: 100, account_id: Number(accountId) }, { skip: orderType !== 'bundle' || !accountId })
   const sellerListings = (sellerListingsData?.listings ?? []).filter(listing => String(listing.id) !== publishedListing?.id.toString() && listing.type !== 'bundle')
@@ -226,7 +228,7 @@ export default function SellPage() {
         return
       }
     }
-    if (orderType === 'listings' && variantTypeId && !variantValueIds.length) {
+    if (supportsVariants && variantTypeId && !variantValueIds.length) {
       setError('Choose at least one option value for your variants.')
       return
     }
@@ -279,6 +281,9 @@ export default function SellPage() {
     if (orderType === 'membership' && membershipDuration) {
       payload.metadata = { membership_duration_months: Number(membershipDuration) }
     }
+    if (orderType === 'rental' && rentalCancellationPolicy.trim()) {
+      payload.metadata = { cancellation_policy: rentalCancellationPolicy.trim() }
+    }
     if (orderType === 'bundle') {
       payload.metadata = {
         bundle_mode: bundleMode,
@@ -307,7 +312,7 @@ export default function SellPage() {
       navigate(`/listing/${listing.slug ?? listing.id}`)
       return
     }
-    if (listing?.id && orderType === 'listings' && variantTypeId && variantValueIds.length) {
+    if (listing?.id && supportsVariants && variantTypeId && variantValueIds.length) {
       setPublishedListing({ id: listing.id, slug: listing.slug ?? String(listing.id) })
       for (const valueId of variantValueIds) {
         const value = variantValues.find(item => String(item.id) === valueId)
@@ -318,7 +323,7 @@ export default function SellPage() {
             description: description.trim(),
             list_price: Number(variantPrices[valueId] || price) || 0,
             offer_percent: Number(offerPercent) || 0,
-            stock: Math.max(0, Number(variantStocks[valueId] ?? stock) || 0),
+            stock: Math.max(0, Number(variantStocks[valueId] ?? (orderType === 'rental' ? rentalMaxUnits : stock)) || 0),
             active: true,
             variant_values: [{ variant_type_id: Number(variantTypeId), variant_type_value_id: Number(valueId) }],
           },
@@ -328,8 +333,10 @@ export default function SellPage() {
           return
         }
       }
-      navigate(`/listing/${listing.slug ?? listing.id}`)
-      return
+      if (orderType === 'listings') {
+        navigate(`/listing/${listing.slug ?? listing.id}`)
+        return
+      }
     }
     if (needsSchedule && listing?.id) {
       setPublishedListing({ id: listing.id, slug: listing.slug ?? String(listing.id) })
@@ -441,6 +448,7 @@ export default function SellPage() {
                 <div className="space-y-1.5"><Label htmlFor="rental-deposit">{locale.labels.rentalDeposit}</Label><Input id="rental-deposit" type="number" min="0" step="0.01" value={rentalDeposit} onChange={event => setRentalDeposit(event.target.value)} required /></div>
                 <div className="space-y-1.5"><Label htmlFor="rental-max-units">{locale.labels.rentalRentableUnits}</Label><Input id="rental-max-units" type="number" min="1" step="1" value={rentalMaxUnits} onChange={event => setRentalMaxUnits(event.target.value)} required /></div>
               </div>
+              <div className="space-y-1.5"><Label htmlFor="rental-cancellation-policy">{locale.labels.rentalCancellationPolicy}</Label><textarea id="rental-cancellation-policy" value={rentalCancellationPolicy} onChange={event => setRentalCancellationPolicy(event.target.value)} rows={3} maxLength={2000} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder={locale.labels.rentalCancellationPolicyHelp} /></div>
             </section>}
               <div className="space-y-1.5"><Label htmlFor="listing-category">Category</Label><select id="listing-category" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={categoryId} onChange={event => setCategoryId(event.target.value)}><option value="">No category</option>{listingCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></div>
               <div className="space-y-1.5"><Label htmlFor="listing-price">{orderType === 'donation' ? 'Suggested amount' : orderType === 'rental' ? `${locale.labels.rentalRatePerUnit} ${rentalRateUnit}` : 'Price'}</Label><Input id="listing-price" type="number" min="0" step="0.01" value={price} onChange={event => setPrice(event.target.value)} placeholder="0.00" required /></div>
@@ -454,12 +462,12 @@ export default function SellPage() {
               <label className="flex items-center gap-2 text-sm"><input type="radio" name="bundle-mode" checked={bundleMode === 'mix_match'} onChange={() => setBundleMode('mix_match')} /> Mix and match: buyer selects from the chosen pool</label>
               {bundleMode === 'mix_match' && <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1.5"><Label htmlFor="bundle-min">Minimum choices</Label><Input id="bundle-min" type="number" min="1" value={bundleMinQuantity} onChange={event => setBundleMinQuantity(event.target.value)} /></div><div className="space-y-1.5"><Label htmlFor="bundle-max">Maximum choices</Label><Input id="bundle-max" type="number" min={bundleMinQuantity} value={bundleMaxQuantity} onChange={event => setBundleMaxQuantity(event.target.value)} placeholder={String(bundleComponentIds.length || 'Pool size')} /></div></div>}
             </section>}
-            {orderType === 'listings' && <section className="space-y-4 rounded-xl border border-border p-4">
-              <div><h3 className="font-semibold">Product variants (optional)</h3><p className="text-xs text-muted-foreground">Use variant types and values already configured for this Tradly workspace.</p></div>
+            {supportsVariants && <section className="space-y-4 rounded-xl border border-border p-4">
+              <div><h3 className="font-semibold">{orderType === 'rental' ? locale.labels.rentalRoomCategories : 'Product variants (optional)'}</h3><p className="text-xs text-muted-foreground">{orderType === 'rental' ? locale.labels.rentalRoomCategoriesHelp : 'Use variant types and values already configured for this Tradly workspace.'}</p></div>
               {variantTypesLoading ? <p className="text-sm text-muted-foreground">Loading variant types…</p> : <div className="space-y-1.5"><Label htmlFor="variant-type">Variant type</Label><select id="variant-type" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={variantTypeId} onChange={event => { setVariantTypeId(event.target.value); setVariantValueIds([]) }}><option value="">No variants</option>{variantsTypes.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}</select></div>}
               {variantTypeId && (variantValuesLoading ? <p className="text-sm text-muted-foreground">Loading variant choices…</p> : <div className="space-y-3">{variantValues.length === 0 ? <p className="text-sm text-muted-foreground">No values exist for this variant type. Add its values in Tradly Dashboard first.</p> : variantValues.map(value => {
                 const selected = variantValueIds.includes(String(value.id))
-                return <div key={value.id} className="grid items-center gap-2 sm:grid-cols-[1fr_1fr_1fr]"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected} onChange={event => setVariantValueIds(current => event.target.checked ? [...current, String(value.id)] : current.filter(id => id !== String(value.id)))} />{value.name}</label>{selected && <><Input aria-label={`${value.name} price`} type="number" min="0" step="0.01" value={variantPrices[String(value.id)] ?? price} onChange={event => setVariantPrices(current => ({ ...current, [String(value.id)]: event.target.value }))} /><Input aria-label={`${value.name} stock`} type="number" min="0" step="1" value={variantStocks[String(value.id)] ?? stock} onChange={event => setVariantStocks(current => ({ ...current, [String(value.id)]: event.target.value }))} /></>}</div>
+                return <div key={value.id} className="grid items-center gap-2 sm:grid-cols-[1fr_1fr_1fr]"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={selected} onChange={event => setVariantValueIds(current => event.target.checked ? [...current, String(value.id)] : current.filter(id => id !== String(value.id)))} />{value.name}</label>{selected && <><Input aria-label={`${value.name} ${orderType === 'rental' ? locale.labels.rentalNightlyRate : 'price'}`} type="number" min="0" step="0.01" value={variantPrices[String(value.id)] ?? price} onChange={event => setVariantPrices(current => ({ ...current, [String(value.id)]: event.target.value }))} /><Input aria-label={`${value.name} ${orderType === 'rental' ? locale.labels.rentalRoomInventory : 'stock'}`} type="number" min="0" step="1" value={variantStocks[String(value.id)] ?? (orderType === 'rental' ? rentalMaxUnits : stock)} onChange={event => setVariantStocks(current => ({ ...current, [String(value.id)]: event.target.value }))} /></>}</div>
               })}</div>)}
             </section>}
             {needsSchedule && <p className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">After publishing, add available dates and time slots for this listing in the Tradly Dashboard.</p>}

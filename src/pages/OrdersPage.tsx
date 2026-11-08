@@ -44,9 +44,10 @@ function OrderCard({ order }: { order: any }) {
   const firstType = getItemOrderType(firstItem, order.type ?? '')
   const bookingDate = isBookingOrderType(firstType) && firstItem?.schedule_start_at ? formatOrderDateTimeRange(firstItem.schedule_start_at, firstItem.schedule_end_at) : ''
   const rentalDate = ['rental', 'rentals'].includes(firstType) && firstItem?.schedule_start_at ? formatOrderDateRange(firstItem.schedule_start_at, firstItem.schedule_end_at) : ''
+  const orderPath = ['rental', 'rentals'].includes(firstType) ? `/rental/orders/${order.id}` : `/orders/${order.id}`
 
   return (
-    <Link to={`/orders/${order.id}`} className="bg-card border border-border rounded-xl p-4 flex gap-4 items-center hover:shadow-md transition-shadow">
+    <Link to={orderPath} className="bg-card border border-border rounded-xl p-4 flex gap-4 items-center hover:shadow-md transition-shadow">
       <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-coffee-secondary/20">
         {firstItem?.listing?.images?.[0]
           ? <img src={firstItem.listing.images[0]} alt={firstItem.listing.title} className="w-full h-full object-cover" />

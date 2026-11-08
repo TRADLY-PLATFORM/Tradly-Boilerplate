@@ -153,3 +153,61 @@ test('seller can publish an appointment with date range, daily hours and slot ca
     schedule_type: 1, active: true, total_stocks: 3,
   }] })
 })
+
+test('seller can publish a rental with Tradly room-category variants and rental settings', async ({ app, browser, screen }) => {
+  await browser.addInitScript((prefix: string) => {
+    localStorage.setItem(`${prefix}_user_profile`, JSON.stringify({ id: 'hotel-seller', first_name: 'Hotel', last_name: 'Seller', email: 'hotel@example.test' }))
+    document.cookie = `${prefix}_login=true; path=/`
+    document.cookie = `${prefix}_logged_in_user_id=hotel-seller; path=/`
+    document.cookie = `${prefix}_auth_key=hotel-auth; path=/`
+    document.cookie = `${prefix}_refresh_key=hotel-refresh; path=/`
+  }, AppConfig.domain)
+  await browser.route('**/v1/users/token/refresh**', route => route.fulfill({ json: { status: true, data: { auth_key: 'hotel-auth', refresh_key: 'hotel-refresh' } } }))
+  await browser.route('**/v1/accounts**', route => route.fulfill({ json: { status: true, data: { accounts: [{ id: 77, name: 'Hotel Shop' }] } } }))
+  await browser.route('**/v1/categories**', route => route.fulfill({ json: { status: true, data: { categories: [] } } }))
+  await browser.route('**/v1/attributes**', route => route.fulfill({ json: { status: true, data: { attributes: [] } } }))
+  await browser.route('**/v1/variant_types**', route => route.fulfill({ json: { status: true, data: { variant_types: [{ id: 12, name: 'Room category' }] } } }))
+  await browser.route('**/v1/variant_types/12/values**', route => route.fulfill({ json: { status: true, data: { variant_type_values: [{ id: 31, name: 'Standard room' }] } } }))
+  let listingPayload: any
+  await browser.route('**/v1/listings', async route => {
+    if (route.request.method.toUpperCase() === 'POST') listingPayload = JSON.parse(route.request.postData ?? '{}').listing
+    await route.fulfill({ json: { status: true, data: { listing: { id: 9201, slug: 'e2e-hotel-room', title: 'E2E Hotel' } } } })
+  })
+  let roomVariant: any
+  await browser.route('**/v1/listings/9201/variants', async route => {
+    if (route.request.method.toUpperCase() === 'POST') roomVariant = JSON.parse(route.request.postData ?? '{}').variant
+    else return route.fulfill({ json: { status: true, data: { variants: [] } } })
+    await route.fulfill({ json: { status: true, data: {} } })
+  })
+  let rentalSettings: any
+  await browser.route('**/v1/rentals/settings', async route => {
+    rentalSettings = JSON.parse(route.request.postData ?? '{}')
+    await route.fulfill({ json: { status: true, data: {} } })
+  })
+  await browser.route('**/v1/utils/S3signedUploadURL**', route => route.fulfill({ json: { status: true, data: { result: [{ signedUrl: 'https://upload.example.test/hotel', fileUri: 'https://media.example.test/hotel.jpg' }] } } }))
+  await browser.route('https://upload.example.test/**', route => route.fulfill({ status: 200, body: '' }))
+  await browser.route('**/v1/listings/by_slug/e2e-hotel-room**', route => route.fulfill({ json: { status: true, data: { listing: { id: 9201, slug: 'e2e-hotel-room', title: 'E2E Hotel', description: '', images: [], order_type: 'rental' } } } }))
+
+  await app.open('/sell')
+  await screen.getByLabel('Title').fill('E2E Hotel')
+  await screen.getByLabel('Description').fill('A small hotel listing')
+  await screen.getByLabel('Listing type').selectOption({ value: 'rental' })
+  await screen.getByLabel('Rate unit').selectOption({ value: 'day' })
+  await screen.getByLabel('Rental rate per day').fill('100')
+  await screen.getByLabel('Minimum rental duration (days)').fill('1')
+  await screen.getByLabel('Maximum rental duration (days)').fill('30')
+  await screen.getByLabel('Buffer time (hours)').fill('2')
+  await screen.getByLabel('Deposit').fill('50')
+  await screen.getByLabel('Rentable units').fill('8')
+  await screen.getByLabel('Cancellation policy').fill('Free cancellation up to 48 hours before check-in.')
+  await screen.getByLabel('Variant type').selectOption({ value: '12' })
+  await screen.getByLabel('Standard room').tap()
+  await screen.getByLabel('Standard room rate').fill('120')
+  await screen.getByLabel('Standard room available rooms').fill('5')
+  await screen.getByLabel('Photos').setInputFiles(fileURLToPath(new URL('./fixtures/listing-photo.svg', import.meta.url)))
+  await screen.getByRole('button', 'Publish listing').tap()
+  await expect(browser).toHaveURL('/rental/e2e-hotel-room')
+  expect(listingPayload).toMatchObject({ type: 'rental', order_type: 'rental', metadata: { cancellation_policy: 'Free cancellation up to 48 hours before check-in.' } })
+  expect(roomVariant).toMatchObject({ list_price: 120, stock: 5, variant_values: [{ variant_type_id: 12, variant_type_value_id: 31 }] })
+  expect(rentalSettings).toMatchObject({ listing_id: 9201, rate_unit: 'day', rate_amount: 100, min_duration: 1, max_duration: 30, buffer_time: 2, deposit_amount: 50, max_units: 8 })
+})

@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, HeartHandshake } from 'lucide-react'
 import { Button } from '@/src/components/ui/button'
 import { locale } from '@/src/components/layout/locale'
+import { layoutConfig } from '@/src/components/layout/layout.config'
 
 export default function DonationSpotlight() {
   const { data } = useGetListingsQuery({ type: 'donation', page: 1, limit: 3 })
   const listings = data?.listings ?? []
+  if (!layoutConfig.features.donations) return null
   return <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
     <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
       <div><p className="mb-2 text-coffee-accent"><HeartHandshake className="h-6 w-6" /></p><h2 className="font-display text-2xl font-bold">{locale.labels.donationsTitle}</h2><p className="mt-1 text-sm text-muted-foreground">{locale.labels.donationsDescription}</p></div>

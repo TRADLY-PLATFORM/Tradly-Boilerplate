@@ -102,7 +102,7 @@ SDK calls it.
 | Available slots for a listing | `GET /v1/listings/{id}/schedules_per_day?start_at=&days=` | Docs | Yes (`api/schedules.ts`) |
 | Seller sets a listing's schedule | `PUT /v1/listings/{id}/schedules` (SDK `createSchedule`) | SDK only | Yes (`api/schedules.ts`, `state/schedules/`) |
 | Seller time-slot templates | `GET /v1/timeslots` (SDK `getTimeSlots`; routed through `commonFuntion` to fix the SDK's missing leading slash) | SDK only | Yes (`api/schedules.ts`, `state/schedules/`) |
-| Rental settings and availability | `POST /v1/rentals/settings`, `GET /v1/rentals/availability?listing_id=&start_at=&end_at=&units=` | Full docs index only | Yes (`api/rentals.ts`, `state/rentals/`) |
+| Rental settings and availability | `POST /v1/rentals/settings`, `GET /v1/rentals/availability?listing_id=&start_at=&end_at=&units=` | Full docs index only | Yes (`api/rentals.ts`, `state/rentals/`); `/sell` can create room categories as listing variants with category-specific price and stock; `/rental/:slug` selects a variant and uses its stock cap; reservation detail is `/rental/orders/:id` |
 | Donations received by a listing | `GET /v1/orders/listings/donations?listing_id=` | SDK only | Yes (`api/orders.ts`, `state/orders/`) |
 | My orders / order detail | `GET /v1/orders`, `GET /v1/orders/{id}` | Docs | Yes (`api/orders.ts`) |
 | Offer / bid on a listing | `POST` / `PATCH /v1/listings/{id}/negotiations/...` | Docs | Yes (`api/negotiations.ts`, `state/negotiations/`) |
@@ -113,10 +113,32 @@ SDK calls it.
 
 Admin-only subscription plan management and membership price-log creation stay in the Tradly
 dashboard. Rental endpoints are documented in the full index at `https://developer.tradly.app/llms-full.txt`
-but are missing from the standard index and SDK. The public docs example uses `rate_unit: "day"`; the
-connected Tradly tool contract supports `hour`, `day`, and `week`, with `buffer_time` measured in hours.
-The availability response shape is unspecified. Keep that response opaque and don't treat a successful
-lookup as proof that units are available. Use `commonFuntion` for these documented paths.
+but are missing from the standard index and SDK. The public docs example uses `rate_unit: "day"`.
+The docs omit the availability response schema, but this repo verified a live response containing
+`available`, `requested`, `price`, and `deposit`. Keep the parser in
+`src/features/rental/availability.ts`; require `available >= requested units` and never infer
+availability from HTTP success alone. Use `commonFuntion` for these documented paths.
+
+### Rental and hotel pages
+
+- Tradly listing variants provide their own price and stock. The seller form uses them as room
+  categories; `/manage-listings` can edit or delete them, the buyer selects a `variant_id`, and that
+  variant's stock caps the requested rooms.
+- `/rental/:slug` collects stay dates, room count, adults and children, shows a rate-based estimate,
+  deposit, and any listing cancellation policy. Tradly checkout calculates final taxes and totals.
+- Rental availability is currently checked at the **listing** level, using `listing_id`, date range,
+  and requested units. The published docs omit the response schema; the live shape verified here is
+  parsed by `src/features/rental/availability.ts`. Variant stock alone is not date-specific availability.
+- The documented checkout fields include guest contact fields for guest checkout, but no room guest
+  list, special-request field, or persisted adult/child counts. Policy acceptance is a storefront
+  acknowledgement and is not recorded on the order by a documented field.
+- The public docs indexed here do not define date-based room tariffs, unavailable-date controls,
+  variant-specific schedule payloads, reservation cancellation/refund behavior, or automatic unit
+  release after failed/expired checkout. Don't claim these guarantees or invent payload fields; add
+  them only after the exact developer.tradly.app contract is available.
+- Rental orders open `/rental/orders/:id`, which shows the order reference/status, dates, chosen room
+  variant, units and configured deposit. This is a read-only customer detail page, not a seller
+  reservation-management console.
 
 ## Forms: contact, enquiry, lead capture, applications, waitlists, surveys, feedback
 

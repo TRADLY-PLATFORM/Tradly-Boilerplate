@@ -14,6 +14,7 @@ layout when a generated marketplace needs them.
 | `manage-listings/ListingOptionsEditor` | Update/remove fixed or mix-and-match bundle rows and listing variants. | Protected `/manage-listings` |
 | `home/HomeMarketplaceSections` | Stable homepage composition of the feed and discovery sections. | Homepage |
 | `preferences/TenantPreferences` | Select tenant-supported language and currency for Tradly data requests, plus a saved default country for forms. | Account page |
+| `pages/RentalOrderPage` | Dedicated rental reservation summary with order status, reference, room variant, dates, units and deposit. | Protected `/rental/orders/:id` |
 
 ## Account and saved-listing pages
 

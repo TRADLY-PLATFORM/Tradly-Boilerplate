@@ -23,6 +23,7 @@ export default function ThankYouPage() {
   const shippingAddress = order?.shipping_address;
   const paymentMethod = order?.payment_method;
   const orderType: string = order?.type ?? "";
+  const hasRental = items.some((item: any) => ['rental', 'rentals'].includes(getItemOrderType(item, orderType)));
 
   return (
     <Layout>
@@ -104,7 +105,7 @@ export default function ThankYouPage() {
             )}
 
             <div className="flex flex-col gap-3">
-              <Link to={`/orders/${reference}`}>
+              <Link to={hasRental && order?.id ? `/rental/orders/${order.id}` : `/orders/${reference}`}>
                 <Button className="btn-hero w-full">View order details</Button>
               </Link>
               <Button variant="outline" className="btn-secondary w-full" onClick={() => navigate("/")}>

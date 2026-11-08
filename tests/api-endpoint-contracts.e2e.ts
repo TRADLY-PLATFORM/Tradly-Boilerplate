@@ -203,6 +203,7 @@ const endpoints: EndpointCase[] = [
   { id: 'paymentMethods.getPaymentMethods', method: 'get', path: '/v1/tenants/payment_methods', invoke: () => paymentMethods.getPaymentMethods(authKey, currency, language) },
 
   { id: 'rentals.createRentalSettings', method: 'post', path: '/v1/rentals/settings', invoke: () => rentals.createRentalSettings({ listing_id: listingId, rate_unit: 'day', rate_amount: 50, min_duration: 1, max_duration: 30, buffer_time: 0, deposit_amount: 100, max_units: 2 }, authKey, currency, language), expectedBody: { listing_id: listingId, rate_unit: 'day', rate_amount: 50, min_duration: 1, max_duration: 30, buffer_time: 0, deposit_amount: 100, max_units: 2 } },
+  { id: 'rentals.getRentalSettings', method: 'get', path: '/v1/rentals/settings', invoke: () => rentals.getRentalSettings(listingId, authKey, currency, language), expectedQuery: { listing_id: String(listingId) } },
   { id: 'rentals.getRentalAvailability', method: 'get', path: '/v1/rentals/availability', invoke: () => rentals.getRentalAvailability({ listing_id: listingId, start_at: '2026-11-05T00:00:00Z', end_at: '2026-11-07T23:59:59Z', units: 1 }, authKey, currency, language), expectedQuery: { listing_id: String(listingId), start_at: '2026-11-05T00:00:00Z', end_at: '2026-11-07T23:59:59Z', units: '1' } },
 
   { id: 'schedules.getSchedules', method: 'get', path: `/v1/listings/${listingId}/schedules_per_day`, invoke: () => schedules.getSchedules(listingId, '2026-10-05', 30, authKey, currency, language) },
@@ -337,6 +338,7 @@ const stateEndpointToApiWrapper: Record<string, string> = {
   'orders.verifyOrder': 'orders.verifyOrderDetails',
   'payment-methods.getPaymentMethods': 'paymentMethods.getPaymentMethods',
   'rentals.createRentalSettings': 'rentals.createRentalSettings',
+  'rentals.getRentalSettings': 'rentals.getRentalSettings',
   'rentals.getRentalAvailability': 'rentals.getRentalAvailability',
   'schedules.getSchedules': 'schedules.getSchedules',
   'schedules.createSchedule': 'schedules.createSchedule',

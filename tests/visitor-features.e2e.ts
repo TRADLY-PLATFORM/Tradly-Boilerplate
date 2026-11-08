@@ -33,7 +33,7 @@ test('homepage renders Tradly feeds, tags, collections and promotions', async ({
   await expect(screen.getByRole('heading', 'Explore tags')).toBeVisible()
   await expect(screen.getByRole('heading', 'Collections')).toBeVisible()
   await expect(screen.getByRole('heading', 'Featured promotions')).toBeVisible()
-  await expect(screen.getByRole('link', 'Explore donation campaigns')).toHaveAttribute('href', '/donations')
+  await expect(screen.getByRole('link', 'Explore donation campaigns')).not.toBeVisible()
   await screen.getByRole('button', '#fitness').tap()
   await expect(screen.getByPlaceholder('Search listings…')).toHaveValue('fitness')
 })
@@ -105,4 +105,32 @@ test('seller can edit variant stock and remove a fixed bundle component', async 
   await screen.getByRole('button', 'Remove').nth(0).tap()
   await off()
   await expect(screen.getByText('Bundle item removed.')).toBeVisible()
+})
+
+test('seller can edit a rental room variant price and inventory', async ({ app, browser, screen }) => {
+  await browser.addInitScript((prefix: string) => {
+    localStorage.setItem(`${prefix}_user_profile`, JSON.stringify({ id: 'rental-seller', first_name: 'Rental', last_name: 'Seller', email: 'rental@example.test' }))
+    document.cookie = `${prefix}_login=true; path=/`
+    document.cookie = `${prefix}_logged_in_user_id=rental-seller; path=/`
+    document.cookie = `${prefix}_auth_key=rental-auth; path=/`
+    document.cookie = `${prefix}_refresh_key=rental-refresh; path=/`
+  }, AppConfig.domain)
+  await browser.route('**/v1/users/token/refresh**', route => route.fulfill({ json: { status: true, data: { auth_key: 'rental-auth', refresh_key: 'rental-refresh' } } }))
+  await browser.route('**/v1/accounts**', route => route.fulfill({ json: { status: true, data: { accounts: [{ id: 77, name: 'Rental seller' }] } } }))
+  await browser.route('**/v1/listings**', route => route.fulfill({ json: { status: true, data: { page: 1, total_records: 1, listings: [
+    { id: 703, slug: 'rental-room', title: 'Hotel room', type: 'rental', order_type: 'rental', status: 2, images: [], variants: [{ id: 803 }] },
+  ] } } }))
+  await browser.route('**/v1/listings/703/variants', route => route.fulfill({ json: { status: true, data: { variants: [{ id: 803, title: 'Deluxe room', list_price: 150, stock: 5, active: true, variant_values: [] }] } } }))
+  let updated: any
+  await browser.route('**/v1/listings/703/variants/803', async route => {
+    if (route.request.method.toUpperCase() === 'PUT') updated = JSON.parse(route.request.postData ?? '{}')
+    await route.fulfill({ json: { status: true, data: { variant: { id: 803, title: 'Deluxe room', list_price: 180, stock: 3, active: true, variant_values: [] } } } })
+  })
+
+  await app.open('/manage-listings')
+  await screen.getByLabel('Price').fill('180')
+  await screen.getByLabel('Stock').fill('3')
+  await screen.getByRole('button', 'Save').tap()
+  await expect(screen.getByText('Changes saved.')).toBeVisible()
+  expect(updated).toEqual({ variant: { list_price: 180, stock: 3 } })
 })

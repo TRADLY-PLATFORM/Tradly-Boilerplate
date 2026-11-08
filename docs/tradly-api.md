@@ -11,7 +11,13 @@ The rental contract is present in Tradly's full documentation index even though 
 - `POST /v1/rentals/settings` — configure `listing_id`, `rate_unit`, `rate_amount`, `min_duration`, `max_duration`, `buffer_time`, `deposit_amount`, and `max_units`. The public docs example uses `rate_unit: "day"`; the connected Tradly tool contract supports `hour`, `day`, or `week`, and defines `buffer_time` in hours.
 - `GET /v1/rentals/availability` — query with `listing_id`, `start_at`, `end_at`, and `units`. The example uses ISO timestamps such as `2026-10-10T10:00:00Z`.
 
-The docs do not publish the availability response schema. Keep availability responses opaque until a real rental listing can be queried; do not infer a positive availability result from HTTP success alone.
+The docs do not publish the availability response schema. This repository verified a live rental response with `available`, `requested`, `price`, and `deposit`; `src/features/rental/availability.ts` parses it. Keep the check fail-closed: require `available >= requested units`, and do not infer availability from HTTP success alone.
+
+### Hotel / room-category interpretation
+
+The boilerplate maps room categories to ordinary listing variants because Tradly variants have their own price and stock. The buyer's selected `variant_id` is sent with the cart item, and the variant stock is used to cap the room quantity. Rental availability remains listing-level in the published request (`listing_id`, `start_at`, `end_at`, `units`); there is no documented variant-specific schedule or availability request in the index used for this integration.
+
+The rental page's room subtotal is an estimate based on variant rate × duration × rooms. When present, the Tradly availability quote is shown separately. Taxes and the final checkout total come from Tradly's cart/checkout pricing. Do not treat the local estimate or variant stock as proof that a room is available for the selected dates.
 
 ## Authentication
 

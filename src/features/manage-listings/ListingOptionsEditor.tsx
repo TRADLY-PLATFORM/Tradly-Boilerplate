@@ -24,7 +24,8 @@ const nestedListing = (row: Row) => {
 
 export default function ListingOptionsEditor({ listing }: { listing: Listing }) {
   const isBundle = listing.type === 'bundle'
-  const isVariantProduct = listing.order_type === 'listings' && !isBundle && listing.type !== 'membership' && Array.isArray(listing.variants) && listing.variants.length > 0
+  const supportsListingVariants = ['listings', 'rental', 'rentals'].includes(listing.order_type)
+  const isVariantProduct = supportsListingVariants && !isBundle && listing.type !== 'membership' && Array.isArray(listing.variants) && listing.variants.length > 0
   const [updateBundleItem, bundleUpdate] = useUpdateBundleItemMutation()
   const [deleteBundleItem] = useDeleteBundleItemMutation()
   const [updatePoolItem, poolUpdate] = useUpdateBundlePoolItemMutation()

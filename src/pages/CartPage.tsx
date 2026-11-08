@@ -38,7 +38,7 @@ export default function CartPage() {
   const bookingEnd = searchParams.get('booking_end_time') ?? ''
   const bookingRange = bookingDay && bookingStart ? formatOrderDateTimeRange(`${bookingDay} ${bookingStart}`, bookingEnd ? `${bookingDay} ${bookingEnd}` : undefined) : ''
   const checkoutQuery = new URLSearchParams()
-  for (const key of ['booking_schedule_id', 'booking_day', 'booking_start_time', 'booking_end_time', 'rental_start_at', 'rental_end_at', 'rental_units']) {
+  for (const key of ['booking_schedule_id', 'booking_day', 'booking_start_time', 'booking_end_time', 'rental_start_at', 'rental_end_at', 'rental_units', 'rental_adults', 'rental_children', 'rental_variant_id']) {
     const value = searchParams.get(key)
     if (value) checkoutQuery.set(key, value)
   }
