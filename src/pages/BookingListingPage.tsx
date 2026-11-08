@@ -9,6 +9,7 @@ import { useAuthSelector } from '@/state/auth/selectors'
 import Layout from '../components/Layout'
 import { Button } from '@/src/components/ui/button'
 import { Skeleton } from '@/src/components/ui/skeleton'
+import { saveBookingSelection } from '@/src/features/booking/selection'
 import ListingHero from '@/src/components/listing/ListingHero'
 import type { ListingHeroData } from '@/src/components/listing/listingHero.types'
 import { locale } from '@/src/components/layout/locale'
@@ -55,8 +56,8 @@ export default function BookingListingPage() {
     }
     const slot = slots[selectedSlot]
     const params = new URLSearchParams({ booking_schedule_id: String(slot.id), booking_day: activeDate, booking_start_time: slot.start_time, booking_end_time: slot.end_time })
-    // The booking cart holds only this one appointment, so go straight to checkout instead of an extra cart step.
-    navigate(`/checkout?${params.toString()}`)
+    saveBookingSelection({ listingId: Number(listing.id), scheduleId: Number(slot.id), day: activeDate, start: slot.start_time, end: slot.end_time })
+    navigate(`/cart?${params.toString()}`)
   }
 
   if (isLoading) return <Layout><div className="grid gap-8 md:grid-cols-2"><Skeleton className="aspect-square rounded-2xl" /><Skeleton className="h-96 rounded-2xl" /></div></Layout>
