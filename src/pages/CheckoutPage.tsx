@@ -434,6 +434,8 @@ export default function CheckoutPage() {
 	const startDate = useMemo(() => dayjs().format("YYYY-MM-DD"), []);
 	const [selectedDateIdx, setSelectedDateIdx] = useState(0);
 	const [selectedSlotIdx, setSelectedSlotIdx] = useState<number | null>(null);
+	// A time picked on the booking page is shown as a summary here; the full picker opens only on "Change".
+	const [changingSlot, setChangingSlot] = useState(false);
 
 	const { data: scheduleData } = useGetSchedulesQuery(
 		{
@@ -472,6 +474,7 @@ export default function CheckoutPage() {
 		setSelectedDateIdx(dayIndex);
 		setSelectedSlotIdx(slotIndex);
 	}, [searchParams, scheduleData]);
+	const preselectedSlot = !!searchParams.get("booking_schedule_id") && selectedSlotIdx !== null && !!schedulesPerDay[selectedDateIdx]?.schedules[selectedSlotIdx];
 
 	// ── Guest ──
 	const [guestEmail, setGuestEmail] = useState("");
@@ -774,7 +777,18 @@ export default function CheckoutPage() {
 
 					{/* 2. Schedule — events / appointments */}
 					{isScheduleType && schedulesPerDay.length > 0 && (
-						<SectionBox title="Select date & time">
+						<SectionBox title={preselectedSlot && !changingSlot ? "Your appointment" : "Select date & time"}>
+							{preselectedSlot && !changingSlot ? (
+								<div className="flex items-center justify-between gap-3">
+									<p className="text-sm font-semibold text-foreground">
+										{dayjs(schedulesPerDay[selectedDateIdx].day).format("dddd D MMMM")}, {schedulesPerDay[selectedDateIdx].schedules[selectedSlotIdx as number].start_time} – {schedulesPerDay[selectedDateIdx].schedules[selectedSlotIdx as number].end_time}
+									</p>
+									<button type="button" className="text-sm font-medium text-coffee-accent hover:underline" onClick={() => setChangingSlot(true)}>
+										Change
+									</button>
+								</div>
+							) : (
+							<>
 							<ScheduleSelector
 								dates={dates}
 								schedulesPerDay={schedulesPerDay}
@@ -790,6 +804,8 @@ export default function CheckoutPage() {
 									{" – "}
 									{schedulesPerDay[selectedDateIdx].schedules[selectedSlotIdx].end_time}
 								</p>
+							)}
+							</>
 							)}
 						</SectionBox>
 					)}

@@ -55,7 +55,8 @@ export default function BookingListingPage() {
     }
     const slot = slots[selectedSlot]
     const params = new URLSearchParams({ booking_schedule_id: String(slot.id), booking_day: activeDate, booking_start_time: slot.start_time, booking_end_time: slot.end_time })
-    navigate(`/cart?${params.toString()}`)
+    // The booking cart holds only this one appointment, so go straight to checkout instead of an extra cart step.
+    navigate(`/checkout?${params.toString()}`)
   }
 
   if (isLoading) return <Layout><div className="grid gap-8 md:grid-cols-2"><Skeleton className="aspect-square rounded-2xl" /><Skeleton className="h-96 rounded-2xl" /></div></Layout>
