@@ -5,7 +5,6 @@ import { CalendarDays, Clock3 } from 'lucide-react'
 import { useGetListingDetailQuery } from '@/state/listing/api'
 import { useAddToCartMutation, useClearCartMutation } from '@/state/cart/api'
 import { useGetSchedulesQuery } from '@/state/schedules/api'
-import { useAuthSelector } from '@/state/auth/selectors'
 import Layout from '../components/Layout'
 import { Button } from '@/src/components/ui/button'
 import { Skeleton } from '@/src/components/ui/skeleton'
@@ -18,7 +17,6 @@ import { buildHeroExtras, useListingHeroExtras } from '@/src/features/listing-he
 export default function BookingListingPage() {
   const { slug = '' } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const authenticated = useAuthSelector(state => state.isAuthenticated)
   const { data, isLoading, isError } = useGetListingDetailQuery({ slug, id: /^\d+$/.test(slug) })
   const listing = data?.listing
   const heroState = useListingHeroExtras(listing)
@@ -39,10 +37,7 @@ export default function BookingListingPage() {
 
   const continueToCheckout = async () => {
     if (!listing || !date || selectedSlot === null || !slots[selectedSlot]) return
-    if (!authenticated) {
-      navigate(`/sign-in?next=${encodeURIComponent(`/l/${slug}`)}`)
-      return
-    }
+    // Guests can book: the cart and checkout both work with a device id and the guest email (no account needed).
     setError('')
     const clear = await clearCart()
     if ('error' in clear && (clear.error as any)?.code !== 471) {

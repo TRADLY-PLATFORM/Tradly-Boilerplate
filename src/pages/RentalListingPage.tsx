@@ -7,7 +7,6 @@ import { useAddToCartMutation, useClearCartMutation } from '@/state/cart/api'
 import { useGetRentalAvailabilityQuery, useGetRentalSettingsQuery } from '@/state/rentals/api'
 import { isRentalAvailabilityConfirmed, rentalQuotedPrice } from '@/src/features/rental/availability'
 import { useGetListingVariantsQuery } from '@/state/variants/api'
-import { useAuthSelector } from '@/state/auth/selectors'
 import Layout from '../components/Layout'
 import { Button } from '@/src/components/ui/button'
 import { Input } from '@/src/components/ui/input'
@@ -31,7 +30,6 @@ export default function RentalListingPage() {
   const { slug = '' } = useParams<{ slug: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const authenticated = useAuthSelector(state => state.isAuthenticated)
   const { data, isLoading, isError } = useGetListingDetailQuery({ slug, id: /^\d+$/.test(slug) })
   const listing = data?.listing
   const heroState = useListingHeroExtras(listing)
@@ -87,11 +85,7 @@ export default function RentalListingPage() {
 
   const continueToCheckout = async () => {
     if (!listing || !settings || !validDates || !availabilityConfirmed) return
-    const next = `/l/${slug}?start_at=${encodeURIComponent(startDate)}&end_at=${encodeURIComponent(endDate)}&units=${units}${selectedVariant ? `&variant_id=${selectedVariant.id}` : ''}`
-    if (!authenticated) {
-      navigate(`/sign-in?next=${encodeURIComponent(next)}`)
-      return
-    }
+    // Guests can reserve: the cart and checkout both work with a device id and the guest email (no account needed).
     setError('')
     const cleared = await clearCart()
     if ('error' in cleared && (cleared.error as any)?.code !== 471) {

@@ -187,10 +187,7 @@ export default function ListingDetailPage() {
 	};
 
 	const handleAddToCart = async (): Promise<boolean> => {
-		if (!isAuthenticated) {
-			navigate("/sign-in");
-			return false;
-		}
+		// Guests can add to the cart: it is kept by device id and checkout takes the guest email.
 		if (variantsLoading) {
 			showToast("Product options are still loading");
 			return false;
