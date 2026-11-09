@@ -2,6 +2,7 @@ import TradlySDK from 'tradly'
 import { buildAppQueryPayload, buildAppMutationPayload } from './sdk-context.ts'
 import { getDeviceUUID } from '../config/uuid.ts'
 import type {
+  AddToCartInput,
   TradlyCartSdkResponse,
   GetCartResponse,
 } from '@/types/cart.types'
@@ -24,7 +25,7 @@ export const getCart = (
 // Add item to cart
 // SDK expects: { data: { cart: {...} }, authKey, currency, language }
 export const addToCart = (
-  input: { listing_id: number; quantity: number; variant_id?: number; custom_price?: number },
+  input: AddToCartInput,
   authKey: string,
   currency: string,
   language: string,
@@ -35,6 +36,8 @@ export const addToCart = (
   }
   if (input.variant_id !== undefined) cart.variant_id = input.variant_id
   if (input.custom_price !== undefined) cart.custom_price = input.custom_price
+  if (input.rental_start_at !== undefined) cart.rental_start_at = input.rental_start_at
+  if (input.rental_end_at !== undefined) cart.rental_end_at = input.rental_end_at
   if (!authKey) cart.uuid = getDeviceUUID()
 
   return (TradlySDK as any).app.addToCart(

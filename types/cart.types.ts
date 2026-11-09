@@ -94,6 +94,8 @@ export interface AddToCartInput {
   quantity: number
   variant_id?: number
   custom_price?: number  // for donations
+  rental_start_at?: string
+  rental_end_at?: string
 }
 
 export interface DeleteCartItemInput {

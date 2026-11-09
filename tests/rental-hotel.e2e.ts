@@ -54,5 +54,13 @@ test('buyer selects a room variant, confirms date availability, and adds that va
   await expect(browser).toHaveURL(/\/cart\?rental_start_at=.*rental_adults=2&rental_children=1&rental_variant_id=77/)
   expect(availabilityQuery?.get('listing_id')).toBe('9301')
   expect(availabilityQuery?.get('units')).toBe('2')
-  expect(addedCart).toMatchObject({ listing_id: 9301, quantity: 2, variant_id: 77 })
+  expect(addedCart).toMatchObject({
+    listing_id: 9301,
+    quantity: 2,
+    variant_id: 77,
+    rental_start_at: expect.any(String),
+    rental_end_at: expect.any(String),
+  })
+  expect(addedCart.rental_start_at).toBe(availabilityQuery?.get('start_at'))
+  expect(addedCart.rental_end_at).toBe(availabilityQuery?.get('end_at'))
 })

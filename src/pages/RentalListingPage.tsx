@@ -98,7 +98,13 @@ export default function RentalListingPage() {
       setError((cleared.error as any)?.error ?? 'Could not prepare your rental cart.')
       return
     }
-    const added = await addToCart({ listing_id: listing.id, quantity: units, ...(selectedVariant ? { variant_id: selectedVariant.id } : {}) })
+    const added = await addToCart({
+      listing_id: listing.id,
+      quantity: units,
+      rental_start_at: isoStartAt,
+      rental_end_at: isoEndAt,
+      ...(selectedVariant ? { variant_id: selectedVariant.id } : {}),
+    })
     if ('error' in added) {
       setError((added.error as any)?.error ?? 'Could not add this rental to your cart.')
       return
