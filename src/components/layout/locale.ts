@@ -124,6 +124,8 @@ export const locale = {
     rentalReservation: 'Rental reservation',
     orderReference: 'Order reference',
     formsTitle: 'Forms',
+    enquiryAbout: 'Your enquiry is about',
+    enquiryNoForm: 'The enquiry form is not set up yet. Please try again later.',
     formsDescription: 'Send a message or share your details using a form from this marketplace.',
     formsLoadError: 'Could not load forms.',
     formsEmpty: 'There are no active forms right now.',

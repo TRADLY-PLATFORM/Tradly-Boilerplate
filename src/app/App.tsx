@@ -24,6 +24,7 @@ import AccountPage from '../pages/AccountPage'
 import ManageListingsPage from '../pages/ManageListingsPage'
 import SellerInsightsPage from '../pages/SellerInsightsPage'
 import FormsPage from '../pages/FormsPage'
+import ContactPage from '../pages/ContactPage'
 import CollectionPage from '../pages/CollectionPage'
 import DonationsPage from '../pages/DonationsPage'
 import SavedListingsPage from '../pages/SavedListingsPage'
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="/booking/:slug" element={<LegacyListingRedirect />} />
           <Route path="/rental/:slug" element={<LegacyListingRedirect />} />
           <Route path="/lc/:slug" element={<CategoryListingsPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/forms" element={<FormsPage />} />
           <Route path="/forms/:formId" element={<FormsPage />} />
           <Route path="/collections/:collectionId" element={<CollectionPage />} />
