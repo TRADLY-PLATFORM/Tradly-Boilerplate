@@ -87,7 +87,7 @@ export default function RentalListingPage() {
 
   const continueToCheckout = async () => {
     if (!listing || !settings || !validDates || !availabilityConfirmed) return
-    const next = `/rental/${slug}?start_at=${encodeURIComponent(startDate)}&end_at=${encodeURIComponent(endDate)}&units=${units}${selectedVariant ? `&variant_id=${selectedVariant.id}` : ''}`
+    const next = `/l/${slug}?start_at=${encodeURIComponent(startDate)}&end_at=${encodeURIComponent(endDate)}&units=${units}${selectedVariant ? `&variant_id=${selectedVariant.id}` : ''}`
     if (!authenticated) {
       navigate(`/sign-in?next=${encodeURIComponent(next)}`)
       return
@@ -109,7 +109,7 @@ export default function RentalListingPage() {
 
   if (isLoading) return <Layout><div className="grid gap-8 md:grid-cols-2"><Skeleton className="aspect-square rounded-2xl" /><Skeleton className="h-96 rounded-2xl" /></div></Layout>
   if (isError || !listing) return <Layout><div className="py-20 text-center text-destructive">Listing not found.</div></Layout>
-  if (!['rental', 'rentals'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">{locale.labels.rentalTypeMismatch} <Link className="text-coffee-accent underline" to={`/listing/${slug}?view=standard`}>{locale.labels.aboutThisListing}</Link>.</div></Layout>
+  if (!['rental', 'rentals'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">{locale.labels.rentalTypeMismatch}</div></Layout>
 
   const heroData: ListingHeroData = {
     title: listing.title,
@@ -126,7 +126,6 @@ export default function RentalListingPage() {
   }
 
   return <Layout>
-    <div className="mb-5 flex items-center gap-2 text-sm"><Link to={`/listing/${slug}?view=standard`} className="text-coffee-accent hover:underline">{locale.labels.aboutThisListing}</Link><span className="text-muted-foreground">/</span><span>{locale.labels.rental}</span></div>
     <ListingHero data={heroData}>
       {!settings ? settingsPending ? <Skeleton className="h-40 w-full rounded-xl" /> : <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{locale.labels.rentalSettingsMissing}</p> : <>
         <section className="space-y-4 rounded-2xl border border-border bg-card p-5">

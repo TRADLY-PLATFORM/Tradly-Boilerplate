@@ -22,8 +22,7 @@ A production-ready foundation for building marketplace apps powered by the [Trad
 
 Booking screens are separate routes, so generated storefronts can choose the booking-specific pages while keeping the standard pages available:
 
-- `/listing/:slug` — standard listing details; event and appointment actions open the booking flow.
-- `/booking/:slug` — booking details with available dates and time slots before checkout.
+- `/l/:slug` — the one listing URL for every type: regular details, or available dates and time slots (events, appointments) or stay dates (rentals), chosen from the listing's `order_type`. `/listing/:slug`, `/booking/:slug` and `/rental/:slug` only forward here.
 - `/orders/:id` — standard order route; scheduled orders open the booking calendar based on their order type. Add `?view=standard` to force standard details.
 - `/booking/orders/:id` — order details with the booked date highlighted on a calendar.
 

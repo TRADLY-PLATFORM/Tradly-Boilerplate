@@ -80,7 +80,7 @@ test('seller can publish a free listing with category attributes, stock and ship
   await expect(screen.getByRole('img', 'Listing photo 1')).toBeVisible()
   await screen.getByRole('button', 'Publish listing').tap()
 
-  await expect(browser).toHaveURL('/listing/e2e-free-item')
+  await expect(browser).toHaveURL('/l/e2e-free-item')
   expect(submitted?.listing).toMatchObject({
     title: 'E2E free chair',
     description: 'A free chair in good condition',
@@ -147,7 +147,7 @@ test('seller can publish an appointment with date range, daily hours and slot ca
   await screen.getByLabel('Photos').setInputFiles(fileURLToPath(new URL('./fixtures/listing-photo.svg', import.meta.url)))
   await screen.getByRole('button', 'Publish listing').tap()
 
-  await expect(browser).toHaveURL('/booking/e2e-appointment')
+  await expect(browser).toHaveURL('/l/e2e-appointment')
   expect(availability).toMatchObject({ schedules: [{
     start_date: '2026-11-01', end_date: '2026-11-30', start_time: '10:00', end_time: '17:00',
     schedule_type: 1, active: true, total_stocks: 3,
@@ -206,7 +206,7 @@ test('seller can publish a rental with Tradly room-category variants and rental 
   await screen.getByLabel('Standard room available rooms').fill('5')
   await screen.getByLabel('Photos').setInputFiles(fileURLToPath(new URL('./fixtures/listing-photo.svg', import.meta.url)))
   await screen.getByRole('button', 'Publish listing').tap()
-  await expect(browser).toHaveURL('/rental/e2e-hotel-room')
+  await expect(browser).toHaveURL('/l/e2e-hotel-room')
   expect(listingPayload).toMatchObject({ type: 'rental', order_type: 'rental', metadata: { cancellation_policy: 'Free cancellation up to 48 hours before check-in.' } })
   expect(roomVariant).toMatchObject({ list_price: 120, stock: 5, variant_values: [{ variant_type_id: 12, variant_type_value_id: 31 }] })
   expect(rentalSettings).toMatchObject({ listing_id: 9201, rate_unit: 'day', rate_amount: 100, min_duration: 1, max_duration: 30, buffer_time: 2, deposit_amount: 50, max_units: 8 })

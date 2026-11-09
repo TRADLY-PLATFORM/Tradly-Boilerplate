@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { useRefreshAuthMutation } from '@/state/auth/api'
 import { useAuthSelector } from '@/state/auth/selectors'
 import SignInPage from '../pages/SignInPage'
@@ -9,8 +9,6 @@ import ForgotPasswordPage from '../pages/ForgotPasswordPage'
 import ResetPasswordPage from '../pages/ResetPasswordPage'
 import HomePage from '../pages/HomePage'
 import ListingDetailPage from '../pages/ListingDetailPage'
-import BookingListingPage from '../pages/BookingListingPage'
-import RentalListingPage from '../pages/RentalListingPage'
 import RentalOrderPage from '../pages/RentalOrderPage'
 import BookingOrderPage from '../pages/BookingOrderPage'
 import CartPage from '../pages/CartPage'
@@ -31,6 +29,15 @@ import DonationsPage from '../pages/DonationsPage'
 import SavedListingsPage from '../pages/SavedListingsPage'
 import SellerAccountsPage from '../pages/SellerAccountsPage'
 import { layoutConfig } from '@/src/components/layout/layout.config'
+
+function LegacyListingRedirect() {
+  const { slug = '' } = useParams<{ slug: string }>()
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  params.delete('view')
+  const rest = params.toString()
+  return <Navigate to={`/l/${slug}${rest ? `?${rest}` : ''}`} replace />
+}
 
 function AppInitializer({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -78,9 +85,12 @@ export default function App() {
 
           {/* Public */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/listing/:slug" element={<ListingDetailPage />} />
-          <Route path="/booking/:slug" element={<BookingListingPage />} />
-          {layoutConfig.features.rental && <Route path="/rental/:slug" element={<RentalListingPage />} />}
+          {/* One listing URL for every type; the page itself adapts (product, booking, rental). The older per-type
+              URLs only forward here, so links already sent in emails or saved by visitors keep working. */}
+          <Route path="/l/:slug" element={<ListingDetailPage />} />
+          <Route path="/listing/:slug" element={<LegacyListingRedirect />} />
+          <Route path="/booking/:slug" element={<LegacyListingRedirect />} />
+          <Route path="/rental/:slug" element={<LegacyListingRedirect />} />
           <Route path="/lc/:slug" element={<CategoryListingsPage />} />
           <Route path="/forms" element={<FormsPage />} />
           <Route path="/forms/:formId" element={<FormsPage />} />

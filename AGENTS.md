@@ -70,16 +70,16 @@ event tickets and donations are not separate systems: they are listings with a d
 | Product with variants | `listings` + Tradly variants | Choose an option, then add the selected variant to cart | Seller variant creation, buyer selection and variant stock/price |
 | Membership program | `membership` | Join, then pay through checkout | Membership record and shipping-free checkout; this is not automatic recurring billing |
 | Fixed or mix-and-match bundle | `listings` + listing `type: bundle` | Inspect bundle contents or choose from its pool, then add to cart | Seller composition, buyer selection and bundle stock check |
-| Booking, appointments | `appointments` | Sign in, pick a date + slot, pay | Booking page `/booking/:slug` (`BookingListingPage`), slot picker + payload `schedule_start_at` / `schedule_end_at` carried into `CheckoutPage` (`state/schedules`) |
+| Booking, appointments | `appointments` | Sign in, pick a date + slot, pay | Listing page `/l/:slug`, which shows `BookingListingPage` for it, slot picker + payload `schedule_start_at` / `schedule_end_at` carried into `CheckoutPage` (`state/schedules`) |
 | Events, tickets | `events` | Same as appointments, one event per cart | Same as above; the booked date shows on `/booking/orders/:id` (`BookingOrderPage`) |
 | Crowdfunding, donations | `donation` | Enter an amount, optionally give anonymously | Amount field + goal progress bar in `ListingDetailPage` (`listing.goal_price`, `raised_amount`), `custom_price` on add-to-cart |
 | Enquiry-only listings | `information_listing` | Contact the seller, no cart | Branch exists in the flow guide |
 | Reverse marketplace | `requests` | Buyer posts a need (sign-in required) | Branch exists in the flow guide |
 
 Rules that follow from this:
-- **Link to a listing only as `/listing/:slug`.** One site can sell products, appointments and events side by side, so never pick the route from the site type. `ListingDetailPage` checks each listing's `order_type` at runtime and sends `appointments` and `events` to `/booking/:slug`; `?view=standard` keeps the regular detail page available. Everything else (donations included) stays on `/listing/:slug`. Do not hard-code `/booking/...` links on the homepage or in cards.
+- **Link to a listing only as `/l/:slug`.** It is the one listing URL for every type. One site can sell products, appointments, events and rentals side by side, so never pick the route from the site type and never write `/booking/...`, `/rental/...` or `/listing/...` links (they only forward to `/l/:slug` for old links). `ListingDetailPage` checks each listing's `order_type` at runtime and shows the booking picker (`appointments`, `events`), the rental dates (`rental`) or the regular product page in place, without changing the URL.
 - **Orders:** link to orders at `/orders/:id`. `OrderDetailPage` checks the returned order type at runtime and routes appointments/events to `/booking/orders/:id` (calendar view); `?view=standard` keeps the regular order detail available. Keep both routes.
-- **Homepage and category pages must link into the real thing**: a booking site sends visitors to `/lc/:slug` or `/listing/:slug`, a fundraiser's CTA goes to a campaign at `/listing/:slug`. Do not add a made-up booking form or donate button on the homepage.
+- **Homepage and category pages must link into the real thing**: a booking site sends visitors to `/lc/:slug` or `/l/:slug`, a fundraiser's CTA goes to a campaign at `/l/:slug`. Do not add a made-up booking form or donate button on the homepage.
 - A booking or donation listing only works if the listing itself has the right `order_type` (and schedules, or `goal_price`). Sellers create them on `/sell` (`SellPage`): the form takes the `order_type`, and for `appointments` and `events` it also takes dates, hours and slot capacity, saved through `createSchedule` (`api/schedules.ts`). Point any "Sell", "List your service" or "Host an event" link at `/sell`. Do not build a second listing form.
 - Never skip `clearCart` before adding an event, appointment or donation (see the flow guide).
 
@@ -124,7 +124,7 @@ availability from HTTP success alone. Use `commonFuntion` for these documented p
 - Tradly listing variants provide their own price and stock. The seller form uses them as room
   categories; `/manage-listings` can edit or delete them, the buyer selects a `variant_id`, and that
   variant's stock caps the requested rooms.
-- `/rental/:slug` collects stay dates, room count, adults and children, shows a rate-based estimate,
+- The rental view on `/l/:slug` collects stay dates, room count, adults and children, shows a rate-based estimate,
   deposit, and any listing cancellation policy. Tradly checkout calculates final taxes and totals.
 - Rental availability is currently checked at the **listing** level, using `listing_id`, date range,
   and requested units. The published docs omit the response schema; the live shape verified here is
@@ -218,8 +218,8 @@ from a prompt later. Nothing else is rewritten at signup, so a feature must neve
   those lists, so they never need to know about a feature.
 - **Contracts the generator relies on.** `LayoutData` may gain fields; never rename or remove one. New
   words go in `locale.labels`, never hard-coded English (new labels are translated automatically). Keep
-  the routes `/listing/:slug`, `/sell` and `/account`, and send other listing types from
-  `/listing/:slug` to their own route (`/booking/:slug` today, `/rental/:slug` for rentals).
+  the routes `/l/:slug`, `/sell` and `/account`; `/l/:slug` shows the booking and rental views itself,
+  so there is no separate URL per listing type.
 - **Style with theme tokens.** Use the Tailwind theme classes and CSS variables from `index.css`, never
   fixed colors or fonts, so a restyle carries over to feature pages.
 - **Tenant data may be missing.** A new tenant can have no categories, currency or rental settings.

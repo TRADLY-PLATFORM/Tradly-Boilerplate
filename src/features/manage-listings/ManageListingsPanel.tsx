@@ -78,7 +78,7 @@ export default function ManageListingsPanel() {
                 <div className="min-w-0"><h2 className="truncate font-semibold text-foreground">{listing.title}</h2><p className="mt-1 text-sm text-muted-foreground">{listing.order_type} · {listing.status === 1 ? 'Active' : 'Status ' + listing.status}</p></div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link to={`/listing/${listing.slug}`} className="rounded-lg border border-border px-3 py-2 text-sm">View</Link>
+                <Link to={`/l/${listing.slug}`} className="rounded-lg border border-border px-3 py-2 text-sm">View</Link>
                 <button onClick={() => setEditingId(listing.id)} className="rounded-lg border border-border px-3 py-2 text-sm">Edit</button>
                 <button disabled={soldState.isLoading} onClick={() => void markListingSold(listing)} className="rounded-lg border border-border px-3 py-2 text-sm disabled:opacity-50">Mark sold</button>
                 <button disabled={deleteState.isLoading} onClick={() => void remove(listing)} className="rounded-lg border border-destructive/40 px-3 py-2 text-sm text-destructive disabled:opacity-50">Delete</button>

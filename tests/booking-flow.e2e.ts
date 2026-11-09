@@ -37,7 +37,7 @@ test('buyer sends the selected appointment start and end times in the checkout o
     await route.fulfill({ json: { status: true, data: { order_reference: 'BOOKING-E2E-1' } } })
   })
 
-  await app.open('/booking/e2e-appointment')
+  await app.open('/l/e2e-appointment')
   await expect(screen.getByRole('heading', 'E2E Appointment')).toBeVisible()
   await screen.getByRole('button', '10:00 – 10:30 2 left').tap()
   await screen.getByRole('button', 'Continue to cart').tap()
@@ -54,18 +54,20 @@ test('buyer sends the selected appointment start and end times in the checkout o
   expect(checkoutBody.order.payment_method_id).toBe(9952)
 })
 
-test('scheduled listing URLs route by order type, with a standard-detail override', async ({ app, browser, screen }) => {
+test('every listing opens at /l/:slug and the page shows the booking picker for scheduled listings; old per-type URLs forward there', async ({ app, browser, screen }) => {
   await browser.route('**/v1/listings/by_slug/e2e-appointment**', route => route.fulfill({ json: { status: true, data: { listing: {
     id: 501, slug: 'e2e-appointment', title: 'E2E Appointment', description: 'A test booking slot', images: [], order_type: 'appointments',
     offer_price: { formatted: '$25.00' }, list_price: { formatted: '$25.00' }, account: { name: 'Test Seller' },
     rating_data: { rating_count: 0, rating_average: 0 }, stock: 5, goal_price: { amount: 0 }, likes: 0,
   } } } }))
 
-  await app.open('/listing/e2e-appointment')
-  await expect(browser).toHaveURL('/booking/e2e-appointment')
-  await app.open('/listing/e2e-appointment?view=standard')
+  await app.open('/l/e2e-appointment')
+  await expect(browser).toHaveURL('/l/e2e-appointment')
   await expect(screen.getByRole('heading', 'E2E Appointment')).toBeVisible()
-  await expect(screen.getByRole('button', 'Book appointment')).toBeVisible()
+  await app.open('/booking/e2e-appointment')
+  await expect(browser).toHaveURL('/l/e2e-appointment')
+  await app.open('/listing/e2e-appointment')
+  await expect(browser).toHaveURL('/l/e2e-appointment')
 })
 
 test('booking orders open the calendar by order type, with regular order details available as an override', async ({ app, browser, screen }) => {

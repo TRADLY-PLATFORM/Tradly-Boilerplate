@@ -59,7 +59,7 @@ export function buildHeroExtras(
     related: state.relatedListings
       .filter((item) => item.id !== listing.id)
       .slice(0, 4)
-      .map((item) => ({ title: item.title, href: `/listing/${item.slug}`, image: item.images?.[0] ?? '', priceLabel: item.offer_price?.formatted ?? '' })),
+      .map((item) => ({ title: item.title, href: `/l/${item.slug}`, image: item.images?.[0] ?? '', priceLabel: item.offer_price?.formatted ?? '' })),
     labels: {
       noImage: t.noImage,
       reviews: t.reviews,

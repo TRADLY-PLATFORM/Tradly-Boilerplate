@@ -309,7 +309,7 @@ export default function SellPage() {
           return
         }
       }
-      navigate(`/listing/${listing.slug ?? listing.id}`)
+      navigate(`/l/${listing.slug ?? listing.id}`)
       return
     }
     if (listing?.id && supportsVariants && variantTypeId && variantValueIds.length) {
@@ -334,7 +334,7 @@ export default function SellPage() {
         }
       }
       if (orderType === 'listings') {
-        navigate(`/listing/${listing.slug ?? listing.id}`)
+        navigate(`/l/${listing.slug ?? listing.id}`)
         return
       }
     }
@@ -358,7 +358,7 @@ export default function SellPage() {
         setError(`Your listing was created, but its booking availability could not be saved: ${errorMessage(scheduleResult.error, 'Please try again later.')}`)
         return
       }
-      navigate(`/booking/${listing.slug ?? listing.id}`)
+      navigate(`/l/${listing.slug ?? listing.id}`)
       return
     }
     if (orderType === 'rental' && listing?.id) {
@@ -378,10 +378,10 @@ export default function SellPage() {
         setError(`Your listing was created, but rental settings could not be saved: ${errorMessage(settingsResult.error, 'Please try again later.')}`)
         return
       }
-      navigate(`/rental/${listing.slug ?? listing.id}`)
+      navigate(`/l/${listing.slug ?? listing.id}`)
       return
     }
-    if (listing?.slug) navigate(`/listing/${listing.slug}`)
+    if (listing?.slug) navigate(`/l/${listing.slug}`)
   }
 
   return (
@@ -505,7 +505,7 @@ export default function SellPage() {
               {uploadState.isLoading && <p className="text-xs text-muted-foreground">Uploading photos…</p>}
             </div>
             <Button type="submit" disabled={listingState.isLoading || scheduleState.isLoading || rentalState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading || !!publishedListing || uploadState.isLoading || files.length > 0} className="btn-hero w-full sm:w-auto">{listingState.isLoading ? 'Publishing…' : scheduleState.isLoading || rentalState.isLoading || bundleItemState.isLoading || bundlePoolState.isLoading || variantState.isLoading ? 'Saving listing options…' : 'Publish listing'}</Button>
-            {publishedListing && <p className="text-sm text-muted-foreground">Listing created. <Link className="text-coffee-accent underline" to={`/listing/${publishedListing.slug}`}>View listing</Link> or <Link className="text-coffee-accent underline" to={`${orderType === 'rental' ? '/rental' : needsSchedule ? '/booking' : '/listing'}/${publishedListing.slug}`}>{orderType === 'rental' ? locale.labels.rental : needsSchedule ? 'open booking page' : 'open listing page'}</Link>.</p>}
+            {publishedListing && <p className="text-sm text-muted-foreground">Listing created. <Link className="text-coffee-accent underline" to={`/l/${publishedListing.slug}`}>View listing</Link> or <Link className="text-coffee-accent underline" to={`${orderType === 'rental' ? '/rental' : needsSchedule ? '/booking' : '/listing'}/${publishedListing.slug}`}>{orderType === 'rental' ? locale.labels.rental : needsSchedule ? 'open booking page' : 'open listing page'}</Link>.</p>}
           </form>
         )}
       </div>

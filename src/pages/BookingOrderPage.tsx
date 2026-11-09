@@ -45,7 +45,7 @@ export default function BookingOrderPage() {
         </div>
       </section>
       <aside className="space-y-4 rounded-2xl border border-border bg-card p-6">
-        <div className="flex gap-3">{item.listing?.images?.[0] && <img src={item.listing.images[0]} alt="" className="h-16 w-16 rounded-lg object-cover" />}<div><h2 className="font-semibold">{item.listing?.title ?? 'Appointment'}</h2><Link to={`/booking/${item.listing?.slug ?? item.listing_id}`} className="text-xs text-coffee-accent underline">View booking page</Link></div></div>
+        <div className="flex gap-3">{item.listing?.images?.[0] && <img src={item.listing.images[0]} alt="" className="h-16 w-16 rounded-lg object-cover" />}<div><h2 className="font-semibold">{item.listing?.title ?? 'Appointment'}</h2><Link to={`/l/${item.listing?.slug ?? item.listing_id}`} className="text-xs text-coffee-accent underline">View booking page</Link></div></div>
         <div className="border-t border-border pt-4"><p className="mb-2 flex items-center gap-2 text-sm font-semibold"><CalendarDays className="h-4 w-4 text-coffee-accent" />{start.format('dddd, MMMM D, YYYY')}</p><p className="flex items-center gap-2 text-sm text-muted-foreground"><Clock3 className="h-4 w-4" />{start.format('h:mm A')}{end ? ` – ${end.format('h:mm A')}` : ''}</p></div>
         {order.account?.name && <p className="flex items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground"><MapPin className="h-4 w-4" />{order.account.name}</p>}
         <div className="border-t border-border pt-4 text-xs text-muted-foreground">Order reference: <span className="font-semibold text-foreground">{order.order_reference}</span></div>

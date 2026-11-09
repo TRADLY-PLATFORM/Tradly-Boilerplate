@@ -38,7 +38,7 @@ test('buyer must choose a variant and adds that variant id to cart', async ({ ap
     return route.fulfill({ json: { status: true, data: { cart: { id: 1 }, cart_details: [] } } })
   })
 
-  await app.open('/listing/catalogue-item')
+  await app.open('/l/catalogue-item')
   await expect(screen.getByRole('heading', 'Catalogue item')).toBeVisible()
   await screen.getByRole('button', 'Add to cart').tap()
   await expect(screen.getByText('Choose an option first')).toBeVisible()
@@ -70,7 +70,7 @@ test('buyer joins a membership listing when Tradly marks type but keeps order_ty
   await browser.route('**/v1/tenants/payment_methods**', route => route.fulfill({ json: { status: true, data: { payment_methods: [] } } }))
   await browser.route('**/v1/commissions**', route => route.fulfill({ json: { status: true, data: { commissions: [] } } }))
 
-  await app.open('/listing/catalogue-item')
+  await app.open('/l/catalogue-item')
   await expect(screen.getByRole('heading', 'Strength Program')).toBeVisible()
   await screen.getByRole('button', 'Join now').tap()
   await expect(browser).toHaveURL('/checkout')
@@ -93,7 +93,7 @@ test('buyer can choose mix-and-match bundle items before adding bundle', async (
     return route.fulfill({ json: { status: true, data: { cart: { id: 6 }, cart_details: [] } } })
   })
 
-  await app.open('/listing/catalogue-item')
+  await app.open('/l/catalogue-item')
   await expect(screen.getByText('Choose bundle items (minimum 1)')).toBeVisible()
   await screen.getByLabel('Cup').tap()
   await screen.getByRole('button', 'Add to cart').tap()
@@ -134,7 +134,7 @@ test('seller creates a membership listing with its duration metadata', async ({ 
   await screen.getByLabel('Available quantity').fill('20')
   await screen.getByLabel('Photos').setInputFiles(new URL('./fixtures/listing-photo.svg', import.meta.url).pathname)
   await screen.getByRole('button', 'Publish listing').tap()
-  await expect(browser).toHaveURL('/listing/strength-program')
+  await expect(browser).toHaveURL('/l/strength-program')
   expect(submitted).toMatchObject({ type: 'membership', order_type: 'membership', metadata: { membership_duration_months: 3 }, list_price: 89, stock: 20 })
 })
 
@@ -178,7 +178,7 @@ test('seller creates a fixed bundle with component quantity', async ({ app, brow
   await screen.getByLabel('Available quantity').fill('5')
   await screen.getByLabel('Photos').setInputFiles(new URL('./fixtures/listing-photo.svg', import.meta.url).pathname)
   await screen.getByRole('button', 'Publish listing').tap()
-  await expect(browser).toHaveURL('/listing/coffee-set')
+  await expect(browser).toHaveURL('/l/coffee-set')
   expect(listingPayload).toMatchObject({ type: 'bundle', order_type: 'listings', metadata: { bundle_mode: 'fixed' } })
   expect(componentPayload).toMatchObject({ component_listing_id: 92, quantity: 2 })
 })
@@ -221,7 +221,7 @@ test('seller creates per-option price and inventory variants for a product', asy
   await screen.getByLabel('Large stock').fill('6')
   await screen.getByLabel('Photos').setInputFiles(new URL('./fixtures/listing-photo.svg', import.meta.url).pathname)
   await screen.getByRole('button', 'Publish listing').tap()
-  await expect(browser).toHaveURL('/listing/sizeable-shirt')
+  await expect(browser).toHaveURL('/l/sizeable-shirt')
   expect(variants).toHaveLength(2)
   expect(variants).toEqual(expect.arrayContaining([
     expect.objectContaining({ list_price: 28, stock: 4, variant_values: [{ variant_type_id: 2, variant_type_value_id: 3 }] }),
@@ -245,7 +245,7 @@ test('fixed bundle blocks purchase when Tradly reports an unavailable component'
     await route.fulfill({ json: { status: true, data: { cart: { id: 8 }, cart_details: [] } } })
   })
 
-  await app.open('/listing/catalogue-item')
+  await app.open('/l/catalogue-item')
   await expect(screen.getByText('Coffee mug × 2')).toBeVisible()
   await screen.getByRole('button', 'Add to cart').tap()
   await expect(screen.getByText('Some bundle items are out of stock')).toBeVisible()

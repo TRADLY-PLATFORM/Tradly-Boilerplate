@@ -31,7 +31,7 @@ export default function CollectionPage() {
         const title = text(listing, ['title', 'name']) || locale.labels.feedItem
         const image = text(listing, ['image', 'image_url', 'featured_image'])
         const card = <div className="overflow-hidden rounded-xl border border-border bg-card">{image && <img src={image} alt="" className="aspect-square w-full object-cover" />}<div className="p-3"><p className="line-clamp-2 text-sm font-medium text-foreground">{title}</p></div></div>
-        return slug ? <Link key={text(listing, ['id']) || index} to={`/listing/${slug}`}>{card}</Link> : <div key={index}>{card}</div>
+        return slug ? <Link key={text(listing, ['id']) || index} to={`/l/${slug}`}>{card}</Link> : <div key={index}>{card}</div>
       })}</div> : !data.isLoading && !data.isError ? <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{locale.labels.collectionsEmpty}</p> : null}
     </>}
   </div></Layout>

@@ -36,7 +36,7 @@ export default function MarketplaceFeed() {
       const slug = text(row, ['slug', 'listing_slug'])
       const title = text(row, ['title', 'name', 'message', 'description']) || locale.labels.feedItem
       const image = text(row, ['image', 'image_url', 'featured_image'])
-      const route = slug && (row.listing_id != null || row.order_type != null || row.type === 'listings') ? `/listing/${slug}` : undefined
+      const route = slug && (row.listing_id != null || row.order_type != null || row.type === 'listings') ? `/l/${slug}` : undefined
       const content = <><div className="flex items-center gap-3">{image && <img src={image} alt="" className="h-12 w-12 rounded-lg object-cover" />}<div className="min-w-0"><h3 className="line-clamp-2 text-sm font-semibold text-foreground">{title}</h3><p className="mt-1 text-xs text-muted-foreground">{text(row, ['account_name', 'user_name', 'created_at'])}</p></div></div></>
       return route ? <Link key={id || index} to={route} className="rounded-xl border border-border bg-card p-4 hover:border-primary">{content}</Link> : <article key={id || index} className="rounded-xl border border-border bg-card p-4">{content}</article>
     })}</div> : <p className="mt-4 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">{locale.labels.feedEmpty}</p>}

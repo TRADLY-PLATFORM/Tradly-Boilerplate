@@ -65,7 +65,7 @@ test('signed-in visitor can follow a listing seller and post a listing comment',
     await route.fulfill({ json: { status: true, data: {} } })
   })
 
-  await app.open('/listing/visitor-item')
+  await app.open('/l/visitor-item')
   await screen.getByRole('button', 'Follow seller').tap()
   await screen.getByLabel('Add a comment').fill('Is this still available?')
   await screen.getByRole('button', 'Post comment').tap()

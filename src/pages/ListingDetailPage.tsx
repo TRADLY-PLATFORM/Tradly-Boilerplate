@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import BookingListingPage from "./BookingListingPage";
+import RentalListingPage from "./RentalListingPage";
 import {
 	useGetListingDetailQuery,
 	useLikeListingMutation,
@@ -51,7 +53,6 @@ function formatVariantPrice(value: number | { amount: number; formatted?: string
 export default function ListingDetailPage() {
 	const { slug = "" } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
-	const [searchParams] = useSearchParams();
 	const isAuthenticated = useAuthSelector((s) => s.isAuthenticated);
 
 	const { data, isLoading, isError } = useGetListingDetailQuery({ slug, id: /^\d+$/.test(slug) });
@@ -64,20 +65,6 @@ export default function ListingDetailPage() {
 	const { data: bundlePool, isLoading: bundlePoolLoading, isError: bundlePoolError } = useGetBundlePoolQuery(listingId!, { skip: !listingId || !isBundle || data?.listing.metadata?.bundle_mode !== "mix_match" });
 	const [checkBundleStock] = useLazyGetBundleStockQuery();
 	const resolvedOrderType = data?.listing.order_type;
-	const shouldRedirectToBooking =
-		(resolvedOrderType === "events" || resolvedOrderType === "appointments") &&
-		searchParams.get("view") !== "standard";
-	useEffect(() => {
-		if (shouldRedirectToBooking) navigate(`/booking/${slug}`, { replace: true });
-	}, [navigate, shouldRedirectToBooking, slug]);
-	// Rental listings have their own page (dates, units, availability, deposit); ?view=standard opens this page anyway.
-	const shouldRedirectToRental =
-		layoutConfig.features.rental &&
-		(resolvedOrderType === "rental" || resolvedOrderType === "rentals") &&
-		searchParams.get("view") !== "standard";
-	useEffect(() => {
-		if (shouldRedirectToRental) navigate(`/rental/${slug}`, { replace: true });
-	}, [navigate, shouldRedirectToRental, slug]);
 	const [likeListing, { isLoading: isLiking }] = useLikeListingMutation();
 	const [unlikeListing, { isLoading: isUnliking }] =
 		useUnlikeListingMutation();
@@ -129,8 +116,10 @@ export default function ListingDetailPage() {
 				</div>
 			</Layout>
 		);
-	if (shouldRedirectToBooking || shouldRedirectToRental)
-		return <Layout><div className="py-20 text-center text-sm text-muted-foreground">Opening booking…</div></Layout>;
+	// One URL for every listing: the page shows the booking picker or the rental dates for those types and the
+	// regular product page for everything else.
+	if (resolvedOrderType === "events" || resolvedOrderType === "appointments") return <BookingListingPage />;
+	if (layoutConfig.features.rental && (resolvedOrderType === "rental" || resolvedOrderType === "rentals")) return <RentalListingPage />;
 
 	const { listing } = data;
 	const orderType = listing.type === "membership" ? "membership" : listing.order_type;
@@ -267,7 +256,7 @@ export default function ListingDetailPage() {
 	};
 
 	const handleJoinMembership = async () => {
-		if (!isAuthenticated) { navigate(`/sign-in?next=${encodeURIComponent(`/listing/${slug}`)}`); return; }
+		if (!isAuthenticated) { navigate(`/sign-in?next=${encodeURIComponent(`/l/${slug}`)}`); return; }
 		const cleared = await clearCart();
 		if ("error" in cleared && (cleared.error as any)?.code !== 471) {
 			showToast("Could not prepare membership checkout"); return;
@@ -602,18 +591,6 @@ export default function ListingDetailPage() {
 								}}
 							>
 								{locale.labels.buyNow}
-							</Button>
-						)}
-						{(orderType === "events" ||
-							orderType ===
-								"appointments") && (
-							<Button
-								className="btn-hero flex-1"
-								onClick={() => navigate(`/booking/${slug}`)}
-							>
-								{orderType === "events"
-									? locale.labels.bookNow
-									: locale.labels.bookAppointment}
 							</Button>
 						)}
 						{orderType === "donation" && (

@@ -106,7 +106,7 @@ test('buyer can block and unblock a seller from listing detail', async ({ app, b
     await route.fulfill({ json: { status: true, data: {} } })
   })
 
-  await app.open('/listing/blockable-item')
+  await app.open('/l/blockable-item')
   await expect(screen.getByRole('button', 'Block seller')).toBeVisible()
   await screen.getByRole('button', 'Block seller').tap()
   await expect(screen.getByRole('button', 'Unblock seller')).toBeVisible()

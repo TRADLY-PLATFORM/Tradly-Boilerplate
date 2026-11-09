@@ -38,7 +38,7 @@ test('buyer selects a room variant, confirms date availability, and adds that va
     }, cart_details: [{ id: 1, listing: { id: 9301, slug: 'e2e-hotel', title: 'E2E Hotel', images: [], order_type: 'rental', offer_price: { amount: 130, formatted: '$130.00', currency: 'USD' }, account: { name: 'E2E Hotel' } }, variant: { id: 77, name: 'Deluxe room' }, quantity: 2, quantity_total_offer_price: { amount: 780, formatted: '$780.00' }, schedule_start_at: null, schedule_end_at: null }] } } })
   })
 
-  await app.open('/rental/e2e-hotel?start_at=2026-12-01&end_at=2026-12-04&units=1')
+  await app.open('/l/e2e-hotel?start_at=2026-12-01&end_at=2026-12-04&units=1')
   await expect(screen.getByRole('heading', 'E2E Hotel')).toBeVisible()
   await screen.getByRole('radio', /Deluxe room/).tap()
   await screen.getByLabel('Units').fill('2')

@@ -14,7 +14,7 @@ export default function DonationSpotlight() {
       <div><p className="mb-2 text-coffee-accent"><HeartHandshake className="h-6 w-6" /></p><h2 className="font-display text-2xl font-bold">{locale.labels.donationsTitle}</h2><p className="mt-1 text-sm text-muted-foreground">{locale.labels.donationsDescription}</p></div>
       <Button asChild variant="outline" className="btn-secondary"><Link to="/donations">{locale.labels.exploreDonations}<ArrowRight className="ms-1 h-4 w-4" /></Link></Button>
     </div>
-    {listings.length > 0 && <div className="grid gap-4 sm:grid-cols-3">{listings.map(listing => <Link key={listing.id} to={`/listing/${listing.slug}`} className="group overflow-hidden rounded-xl border border-border">
+    {listings.length > 0 && <div className="grid gap-4 sm:grid-cols-3">{listings.map(listing => <Link key={listing.id} to={`/l/${listing.slug}`} className="group overflow-hidden rounded-xl border border-border">
       <div className="aspect-[16/10] bg-muted">{listing.images?.[0] && <img src={listing.images[0]} alt={listing.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />}</div>
       <p className="p-3 text-sm font-semibold group-hover:text-coffee-accent">{listing.title}</p>
     </Link>)}</div>}

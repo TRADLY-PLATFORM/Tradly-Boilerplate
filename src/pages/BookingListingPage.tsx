@@ -40,7 +40,7 @@ export default function BookingListingPage() {
   const continueToCheckout = async () => {
     if (!listing || !date || selectedSlot === null || !slots[selectedSlot]) return
     if (!authenticated) {
-      navigate(`/sign-in?next=${encodeURIComponent(`/booking/${slug}`)}`)
+      navigate(`/sign-in?next=${encodeURIComponent(`/l/${slug}`)}`)
       return
     }
     setError('')
@@ -62,7 +62,7 @@ export default function BookingListingPage() {
 
   if (isLoading) return <Layout><div className="grid gap-8 md:grid-cols-2"><Skeleton className="aspect-square rounded-2xl" /><Skeleton className="h-96 rounded-2xl" /></div></Layout>
   if (isError || !listing) return <Layout><div className="py-20 text-center text-destructive">Listing not found.</div></Layout>
-  if (!['events', 'appointments'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">This listing does not use booking availability. <Link className="text-coffee-accent underline" to={`/listing/${slug}?view=standard`}>Open the regular listing page</Link>.</div></Layout>
+  if (!['events', 'appointments'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">This listing does not use booking availability.</div></Layout>
 
   const heroData: ListingHeroData = {
     title: listing.title,
@@ -79,7 +79,6 @@ export default function BookingListingPage() {
   }
 
   return <Layout>
-    <div className="mb-5 flex items-center gap-2 text-sm"><Link to={`/listing/${slug}?view=standard`} className="text-coffee-accent hover:underline">Regular listing page</Link><span className="text-muted-foreground">/</span><span>Book</span></div>
     <ListingHero data={heroData}>
           <section className="rounded-2xl border border-border bg-card p-5">
             <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-bold"><CalendarDays className="h-5 w-5 text-coffee-accent" /> Choose a date</h2>
