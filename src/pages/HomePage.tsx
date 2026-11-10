@@ -14,6 +14,7 @@ import type { Listing } from "@/types/listing.types";
 import { locale } from "@/src/components/layout/locale";
 import { useStayAvailability } from "@/src/features/rental/useStayAvailability";
 import WorkshopsSection from "../components/WorkshopsSection";
+import HeroMedia from "../components/HeroMedia";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
 /** Dates and guests chosen in StaySearch ride along to the listing page, which reads them to prefill its picker. */
@@ -187,7 +188,10 @@ export default function HomePage() {
   return (
     <Layout className="py-8">
       {/* Hero strip */}
-      <div className="gradient-warm rounded-2xl px-8 py-10 mb-10 text-center">
+      <div className="gradient-warm relative overflow-hidden rounded-2xl px-8 py-10 mb-10 text-center">
+        {/* @sky:slot hero-media — optional moving background for the hero: <HeroMedia /> (video or WebGL2 animation) */}
+        {/* @sky:slot-end */}
+        <div className="relative z-10">
         {/* @sky:design hero-copy — headline + subtitle. Freely rewrite copy/markup; keep the search block below untouched. */}
         <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
           Discover Amazing Products
@@ -207,6 +211,7 @@ export default function HomePage() {
           />
         </div>
         {/* @sky:end */}
+        </div>
       </div>
 
       {/* @sky:slot home-trust — optional strip under the hero (trust, delivery, guarantees) */}
