@@ -5,6 +5,7 @@ import { useGetCartQuery } from "@/state/cart/api";
 import { useAuthSelector } from "@/state/auth/selectors";
 import Layout from "../components/Layout";
 import CategoriesSection from "../components/CategoriesSection";
+import StaySearch from "../components/StaySearch";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -12,11 +13,18 @@ import { Search, ShoppingCart, Heart, ArrowRight, Check, Star, Users, Zap } from
 import type { Listing } from "@/types/listing.types";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
+/** Dates and guests chosen in StaySearch ride along to the listing page, which reads them to prefill its picker. */
+const STAY_PARAMS = ["start_at", "end_at", "adults", "children"];
+
 function ListingCard({ listing }: { listing: Listing }) {
   const image = listing.images[0];
+  const [searchParams] = useSearchParams();
+  const stay = new URLSearchParams();
+  STAY_PARAMS.forEach((key) => { const value = searchParams.get(key); if (value) stay.set(key, value); });
+  const stayQuery = stay.toString();
 
   return (
-    <Link to={`/l/${listing.slug || listing.id}`} className="block group">
+    <Link to={`/l/${listing.slug || listing.id}${stayQuery ? `?${stayQuery}` : ""}`} className="block group">
       <div className="card-product">
         {/* Image */}
         <div className="aspect-square overflow-hidden bg-coffee-secondary/20 relative">
@@ -216,6 +224,7 @@ export default function HomePage() {
       {/* @sky:slot grid-heading — optional heading above the listings grid */}
       {/* @sky:slot-end */}
 
+      <div id="listings" />
       {/* @sky:slot listing-grid — how the listings are laid out; a template may show a list or menu instead of cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
         {isLoading
