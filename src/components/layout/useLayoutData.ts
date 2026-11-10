@@ -1,5 +1,6 @@
 // Platform code: all header/footer logic lives here (auth, cart, navigation).
 // Header.tsx and Footer.tsx are design-only and must read everything from LayoutData.
+import { policies } from '@/src/features/policies/policies'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
@@ -99,6 +100,7 @@ export function useLayoutData(brandName: string): LayoutData {
 
   const footerLinkGroups: FooterLinkGroup[] = [{ title: locale.labels.quickLinks, links: quickLinks }]
   if (accountLinks.length > 0) footerLinkGroups.push({ title: locale.labels.account, links: accountLinks })
+  footerLinkGroups.push({ title: locale.labels.policies, links: policies.map(policy => ({ label: policy.title, to: `/policy/${policy.slug}` })) })
 
   return {
     brandName,

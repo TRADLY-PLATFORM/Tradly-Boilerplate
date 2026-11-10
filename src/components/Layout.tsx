@@ -3,6 +3,7 @@ import { cn } from '@/src/lib/utils'
 import Header from './layout/Header'
 import Footer from './layout/Footer'
 import { useLayoutData } from './layout/useLayoutData'
+import { BrandContext } from './layout/brandContext'
 
 const BRAND_NAME = 'Tradly'
 
@@ -12,7 +13,7 @@ export default function Layout({ children, className }: { children: React.ReactN
     <div className="min-h-screen bg-background flex flex-col">
       <Header data={data} />
       <main className={cn('flex-1 container mx-auto px-4 py-8', className)}>
-        {children}
+        <BrandContext.Provider value={BRAND_NAME}>{children}</BrandContext.Provider>
       </main>
       <Footer data={data} />
     </div>

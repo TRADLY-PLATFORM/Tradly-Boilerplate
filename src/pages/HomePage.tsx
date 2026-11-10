@@ -11,6 +11,9 @@ import { Badge } from "@/src/components/ui/badge";
 import { Skeleton } from "@/src/components/ui/skeleton";
 import { Search, ShoppingCart, Heart, ArrowRight, Check, Star, Users, Zap } from "lucide-react";
 import type { Listing } from "@/types/listing.types";
+import { locale } from "@/src/components/layout/locale";
+import { useStayAvailability } from "@/src/features/rental/useStayAvailability";
+import WorkshopsSection from "../components/WorkshopsSection";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
 /** Dates and guests chosen in StaySearch ride along to the listing page, which reads them to prefill its picker. */
@@ -176,7 +179,8 @@ export default function HomePage() {
   // Prefetch cart so header count is populated
   useGetCartQuery(undefined, { skip: !isAuthenticated });
 
-  const listings = data?.listings ?? [];
+  const stay = useStayAvailability(data?.listings ?? []);
+  const listings = stay.listings;
   const totalRecords = data?.total_records ?? 0;
   const totalPages = Math.ceil(totalRecords / 20);
 
@@ -225,6 +229,11 @@ export default function HomePage() {
       {/* @sky:slot-end */}
 
       <div id="listings" />
+      {stay.filtering && (
+        <p className="mb-4 text-sm text-muted-foreground" role="status">
+          {stay.checking ? locale.labels.stayChecking : stay.hidden > 0 ? locale.labels.stayHidden.replace("{n}", String(stay.hidden)) : locale.labels.stayAllFree}
+        </p>
+      )}
       {/* @sky:slot listing-grid — how the listings are laid out; a template may show a list or menu instead of cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
         {isLoading
