@@ -13,6 +13,20 @@ export const accountsApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: '/' }),
   tagTypes: ['Account'],
   endpoints: builder => ({
+    // Public list of the store's seller accounts (for "featured sellers" and seller pages).
+    getPublicAccounts: builder.query<{ accounts: SellerAccount[]; total_records: number }, number | void>({
+      queryFn: async (page, { getState }) => {
+        const state = getState() as LocalState
+        try {
+          const response = normalizeTradlyResponse(await accountsAPI.getPublicAccounts(state.auth.authKey, state.app.currency, state.app.language, page || 1), 'Could not load sellers', ['accounts'])
+          if (response?.error) return { error: { status: 'CUSTOM_ERROR', error: response.error.message ?? 'Could not load sellers' } }
+          return { data: { accounts: response.data!.accounts, total_records: Number((response.data as any).total_records) || 0 } }
+        } catch (error) {
+          return { error: { status: 'CUSTOM_ERROR', error: error instanceof Error ? error.message : 'Unexpected error' } }
+        }
+      },
+      providesTags: ['Account'],
+    }),
     getMyAccounts: builder.query<{ accounts: SellerAccount[] }, string>({
       queryFn: async (userId, { getState }) => {
         const state = getState() as LocalState
@@ -132,4 +146,4 @@ export const accountsApi = createApi({
   }),
 })
 
-export const { useGetMyAccountsQuery, useCreateAccountMutation, useUpdateAccountMutation, usePatchAccountMutation, useGetAccountDetailQuery, useGetAccountFollowersQuery, useGetBlockedAccountsQuery, useFollowAccountMutation, useUnfollowAccountMutation, useBlockAccountMutation, useUnblockAccountMutation } = accountsApi
+export const { useGetPublicAccountsQuery, useGetMyAccountsQuery, useCreateAccountMutation, useUpdateAccountMutation, usePatchAccountMutation, useGetAccountDetailQuery, useGetAccountFollowersQuery, useGetBlockedAccountsQuery, useFollowAccountMutation, useUnfollowAccountMutation, useBlockAccountMutation, useUnblockAccountMutation } = accountsApi

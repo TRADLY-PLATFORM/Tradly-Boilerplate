@@ -24,6 +24,15 @@ export const getMyAccounts = (
     buildAppQueryPayload({ user_id: userId, type: 'accounts', page: 1 }, authKey, currency, language),
   )
 
+/** Every public seller account of the store (no user filter), newest first. */
+export const getPublicAccounts = (
+  authKey: string,
+  currency: string,
+  language: string,
+  page = 1,
+): Promise<TradlyListingSdkResponse<{ accounts: SellerAccount[]; page: number; total_records: number }>> =>
+  (TradlySDK as any).app.getAccounts(buildAppQueryPayload({ type: 'accounts', page }, authKey, currency, language))
+
 export const createAccount = (
   account: Record<string, unknown>,
   authKey: string,

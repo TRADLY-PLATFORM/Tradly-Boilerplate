@@ -15,6 +15,7 @@ import { locale } from "@/src/components/layout/locale";
 import { useStayAvailability } from "@/src/features/rental/useStayAvailability";
 import WorkshopsSection from "../components/WorkshopsSection";
 import HeroMedia from "../components/HeroMedia";
+import SellersSection from "../components/SellersSection";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
 /** Dates and guests chosen in StaySearch ride along to the listing page, which reads them to prefill its picker. */
