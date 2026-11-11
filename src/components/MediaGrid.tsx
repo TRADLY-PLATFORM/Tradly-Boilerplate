@@ -9,7 +9,7 @@ import { locale } from '@/src/components/layout/locale'
  * page's search and category choice (`?search_key=`, `?category=`). With none published it shows a short note for the
  * owner (or nothing at all with `hideEmpty`, for secondary sections).
  */
-export default function MediaGrid({ orderType = 'video_listing', limit = 12, title, subtitle, hideEmpty = false, className = '' }: { orderType?: string; limit?: number; title?: string; subtitle?: string; hideEmpty?: boolean; className?: string }) {
+export default function MediaGrid({ orderType = 'video', limit = 12, title, subtitle, hideEmpty = false, className = '' }: { orderType?: string; limit?: number; title?: string; subtitle?: string; hideEmpty?: boolean; className?: string }) {
   const [params] = useSearchParams()
   const search = params.get('search_key') || ''
   const category = Number(params.get('category')) || undefined

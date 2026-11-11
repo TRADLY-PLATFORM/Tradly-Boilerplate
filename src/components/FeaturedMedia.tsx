@@ -7,7 +7,7 @@ import { getMedia } from '@/src/features/media/media'
  * The newest video or audio listing as one large tile (for a hero). Renders nothing until the creator has published
  * something, so the hero simply stays a one-column hero.
  */
-export default function FeaturedMedia({ orderType = 'video_listing', className = '' }: { orderType?: string; className?: string }) {
+export default function FeaturedMedia({ orderType = 'video', className = '' }: { orderType?: string; className?: string }) {
   const { data } = useGetListingsQuery({ order_type: orderType, page: 1, limit: 1 })
   const item = data?.listings?.[0]
   if (!item) return null

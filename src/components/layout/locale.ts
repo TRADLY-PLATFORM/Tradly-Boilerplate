@@ -76,6 +76,7 @@ export const locale = {
     watchNotFound: 'We could not find that one.',
     watchNoFile: 'The creator has not added the file yet.',
     watchBy: 'By',
+    listen: 'Listen',
     watchMore: 'More from this creator',
     mediaEmptyTitle: 'Nothing published yet',
     mediaEmptyText: 'Add your first one from your account: Manage listings.',

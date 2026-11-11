@@ -611,7 +611,7 @@ export default function ListingDetailPage() {
 								{locale.labels.enquire}
 							</Button>
 						)}
-						{orderType === "video_listing" && (
+						{["video_listing", "video", "audio"].includes(orderType) && (
 							<Button
 								className="btn-hero flex-1"
 								onClick={() =>
@@ -620,7 +620,7 @@ export default function ListingDetailPage() {
 									)
 								}
 							>
-								{locale.labels.watch}
+								{orderType === "audio" ? locale.labels.listen : locale.labels.watch}
 							</Button>
 						)}
 						{orderType === "requests" && (
