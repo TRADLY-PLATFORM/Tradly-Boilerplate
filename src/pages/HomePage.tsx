@@ -20,6 +20,10 @@ import GallerySection from "../components/GallerySection";
 import TestimonialsSection from "../components/TestimonialsSection";
 import ContactBlock from "../components/ContactBlock";
 import NearMeButton from "../components/NearMeButton";
+import FeaturedMedia from "../components/FeaturedMedia";
+import TrackList from "../components/TrackList";
+import MediaGrid from "../components/MediaGrid";
+import MediaCard from "../components/MediaCard";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
 /** How far "Near me" looks, in kilometres (Tradly's `max_distance`). */
