@@ -74,7 +74,9 @@ export default function DynamicTradlyForm({ formId }: { formId: number | string 
         if (id == null) return null
         const name = `attribute-${String(id)}`
         const label = getText(field, ['name', 'title', 'label'], `${locale.labels.formField} ${index + 1}`)
-        const type = getText(field, ['input_type', 'type', 'field_type'], 'text').toLowerCase()
+        const rawType = getText(field, ['input_type', 'type', 'field_type'], 'text').toLowerCase()
+        // Tradly stores the kind as a number (3 = text, 6 = long text); the label tells email and phone fields apart.
+        const type = rawType === '6' ? 'textarea' : /e-?mail/i.test(label) ? 'email' : /phone|mobile|whatsapp/i.test(label) && rawType === '3' ? 'tel' : rawType
         const required = field.required === true || field.required === 1 || field.is_required === true || field.is_required === 1 || field.mandatory === true
         const choices = getChoices(field)
         const shared = { id: name, name, required, className: 'mt-1 w-full rounded-lg border border-input bg-background px-3 py-2 text-foreground' }
