@@ -16,6 +16,10 @@ import { useStayAvailability } from "@/src/features/rental/useStayAvailability";
 import WorkshopsSection from "../components/WorkshopsSection";
 import HeroMedia from "../components/HeroMedia";
 import SellersSection from "../components/SellersSection";
+import GallerySection from "../components/GallerySection";
+import TestimonialsSection from "../components/TestimonialsSection";
+import ContactBlock from "../components/ContactBlock";
+import NearMeButton from "../components/NearMeButton";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
 /** Dates and guests chosen in StaySearch ride along to the listing page, which reads them to prefill its picker. */
@@ -63,7 +67,7 @@ function ListingCard({ listing }: { listing: Listing }) {
 
         {/* Info */}
         <div className="p-4">
-          <p className="text-xs text-muted-foreground mb-1">{listing.account?.name}</p>
+          <p className="text-xs text-muted-foreground mb-1">{listing.account?.name}{listing.distance > 0 && <span> · {locale.labels.nearMeAway.replace("{d}", listing.distance < 1000 ? `${Math.round(listing.distance)} m` : `${(listing.distance / 1000).toFixed(1)} km`)}</span>}</p>
           <h3 className="font-display text-sm font-semibold text-foreground mb-2 line-clamp-2 leading-snug">
             {listing.title}
           </h3>
@@ -170,19 +174,27 @@ export default function HomePage() {
 
   // ?category= is set by the category tabs (CategoriesSection variant="tabs"); empty means all listings.
   const categoryId = Number(searchParams.get("category")) || undefined;
+  // ?lat=&lon= is set by NearMeButton; Tradly then fills each listing's `distance` (metres, 0 when it has no location).
+  const latParam = Number(searchParams.get("lat"));
+  const lonParam = Number(searchParams.get("lon"));
+  const near = searchParams.get("lat") && searchParams.get("lon") && Number.isFinite(latParam) && Number.isFinite(lonParam) ? { lat: latParam, lon: lonParam } : undefined;
 
   const { data, isLoading, isFetching, isError } = useGetListingsQuery({
     page,
     limit: 20,
     ...(search ? { search_key: search } : {}),
     ...(categoryId ? { category_id: categoryId } : {}),
+    ...(near ? { lat: near.lat, lon: near.lon } : {}),
   });
 
   // Prefetch cart so header count is populated
   useGetCartQuery(undefined, { skip: !isAuthenticated });
 
   const stay = useStayAvailability(data?.listings ?? []);
-  const listings = stay.listings;
+  // Near me: the closest listings first; ones without a location go last (stable order otherwise).
+  const listings = near
+    ? [...stay.listings].sort((x, y) => (x.distance > 0 ? x.distance : Infinity) - (y.distance > 0 ? y.distance : Infinity))
+    : stay.listings;
   const totalRecords = data?.total_records ?? 0;
   const totalPages = Math.ceil(totalRecords / 20);
 

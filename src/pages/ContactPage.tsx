@@ -3,7 +3,9 @@ import Layout from '@/src/components/Layout'
 import DynamicTradlyForm from '@/src/features/forms/DynamicTradlyForm'
 import { useGetFormsQuery } from '@/state/forms/api'
 import { useGetListingDetailQuery } from '@/state/listing/api'
+import ContactBlock from '@/src/components/ContactBlock'
 import { locale } from '@/src/components/layout/locale'
+import { contact } from '@/src/config/contact'
 
 type FormRecord = Record<string, unknown>
 const formsFrom = (data: FormRecord | undefined): FormRecord[] => {
@@ -25,6 +27,7 @@ export default function ContactPage() {
   const listing = useGetListingDetailQuery({ slug: listingParam, id: /^\d+$/.test(listingParam) }, { skip: !listingParam })
   const list = formsFrom(forms.data)
   const form = list.find((f) => /enquir|inquir|contact/i.test(titleOf(f))) ?? list[0]
+  const hasContact = Boolean(contact.whatsapp || contact.phone || contact.email || contact.address)
   const listingTitle = listing.data?.listing?.title
   const listingHref = listing.data?.listing ? `/l/${listing.data.listing.slug || listing.data.listing.id}` : ''
 
@@ -38,11 +41,13 @@ export default function ContactPage() {
           </p>
         )}
         {forms.isLoading && <p className="py-10 text-sm text-muted-foreground">{locale.labels.formLoading}</p>}
-        {forms.isError && <p role="alert" className="py-10 text-sm text-destructive">{locale.labels.formsLoadError}</p>}
-        {!forms.isLoading && !forms.isError && !form && (
+        {forms.isError && !hasContact && <p role="alert" className="py-10 text-sm text-destructive">{locale.labels.formsLoadError}</p>}
+        {!forms.isLoading && !forms.isError && !form && !hasContact && (
           <p className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">{locale.labels.enquiryNoForm}</p>
         )}
         {form && idOf(form) && <DynamicTradlyForm formId={idOf(form)} />}
+        {/* Contact details (WhatsApp, phone, email, map) from src/config/contact.ts: the way to reach the business when there is no form. */}
+        <ContactBlock className="mt-8" message={listingTitle ? `${locale.labels.enquiryAbout} ${listingTitle}` : ''} />
       </div>
     </Layout>
   )
