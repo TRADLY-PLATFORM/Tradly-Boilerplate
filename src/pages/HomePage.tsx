@@ -22,6 +22,9 @@ import ContactBlock from "../components/ContactBlock";
 import NearMeButton from "../components/NearMeButton";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
+/** How far "Near me" looks, in kilometres (Tradly's `max_distance`). */
+const NEAR_ME_KM = 25;
+
 /** Dates and guests chosen in StaySearch ride along to the listing page, which reads them to prefill its picker. */
 const STAY_PARAMS = ["start_at", "end_at", "adults", "children"];
 
@@ -174,7 +177,8 @@ export default function HomePage() {
 
   // ?category= is set by the category tabs (CategoriesSection variant="tabs"); empty means all listings.
   const categoryId = Number(searchParams.get("category")) || undefined;
-  // ?lat=&lon= is set by NearMeButton; Tradly then fills each listing's `distance` (metres, 0 when it has no location).
+  // ?lat=&lon= is set by NearMeButton. Tradly then returns only listings within NEAR_ME_KM of that point, nearest first,
+  // and fills each listing's `distance` (metres).
   const latParam = Number(searchParams.get("lat"));
   const lonParam = Number(searchParams.get("lon"));
   const near = searchParams.get("lat") && searchParams.get("lon") && Number.isFinite(latParam) && Number.isFinite(lonParam) ? { lat: latParam, lon: lonParam } : undefined;
@@ -184,17 +188,14 @@ export default function HomePage() {
     limit: 20,
     ...(search ? { search_key: search } : {}),
     ...(categoryId ? { category_id: categoryId } : {}),
-    ...(near ? { lat: near.lat, lon: near.lon } : {}),
+    ...(near ? { latitude: near.lat, longitude: near.lon, max_distance: NEAR_ME_KM, sort: "nearest_distance" } : {}),
   });
 
   // Prefetch cart so header count is populated
   useGetCartQuery(undefined, { skip: !isAuthenticated });
 
   const stay = useStayAvailability(data?.listings ?? []);
-  // Near me: the closest listings first; ones without a location go last (stable order otherwise).
-  const listings = near
-    ? [...stay.listings].sort((x, y) => (x.distance > 0 ? x.distance : Infinity) - (y.distance > 0 ? y.distance : Infinity))
-    : stay.listings;
+  const listings = stay.listings;
   const totalRecords = data?.total_records ?? 0;
   const totalPages = Math.ceil(totalRecords / 20);
 
@@ -264,7 +265,7 @@ export default function HomePage() {
 
       {!isLoading && listings.length === 0 && !isError && (
         <div className="text-center py-20">
-          <p className="text-muted-foreground text-sm">No listings found.</p>
+          <p className="text-muted-foreground text-sm">{near ? locale.labels.nearMeNone.replace("{r}", String(NEAR_ME_KM)) : "No listings found."}</p>
         </div>
       )}
 

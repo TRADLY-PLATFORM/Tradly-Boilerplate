@@ -83,7 +83,7 @@ export const locale = {
     nearMeLocating: 'Finding your location…',
     nearMeDenied: 'We could not get your location. Allow location access in your browser and try again.',
     nearMeAway: '{d} away',
-    nearMeNone: 'Nothing found nearby. Showing is limited to {r} km; tap Near me to clear.',
+    nearMeNone: 'Nothing found within {r} km. Tap Near me again to see everything.',
     rentalStartDate: 'Pickup date',
     rentalEndDate: 'Return date',
     rentalUnits: 'Units',
