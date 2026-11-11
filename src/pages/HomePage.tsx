@@ -24,6 +24,7 @@ import FeaturedMedia from "../components/FeaturedMedia";
 import TrackList from "../components/TrackList";
 import MediaGrid from "../components/MediaGrid";
 import MediaCard from "../components/MediaCard";
+import PackagesSection from "../components/PackagesSection";
 import HomeMarketplaceSections from "@/src/features/home/HomeMarketplaceSections";
 
 /** How far "Near me" looks, in kilometres (Tradly's `max_distance`). */
