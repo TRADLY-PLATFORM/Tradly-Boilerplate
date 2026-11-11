@@ -39,7 +39,7 @@ export default function WatchPage() {
               <iframe key={media.src} title={listing.title} src={media.src} className="aspect-video w-full" allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
             )}
             {media.kind === 'audio' && (
-              <div className="flex flex-col items-center gap-5 bg-gradient-to-br from-[hsl(var(--hero-from,var(--coffee-primary)))] to-[hsl(var(--hero-to,var(--coffee-accent)))] p-8 sm:flex-row">
+              <div className="flex flex-col items-center gap-5 bg-coffee-primary p-8 sm:flex-row">
                 {listing.images?.[0] && <img src={listing.images[0]} alt="" className="h-40 w-40 shrink-0 rounded-xl object-cover shadow-lg" />}
                 <audio key={media.src} controls preload="metadata" src={media.src} className="w-full" />
               </div>

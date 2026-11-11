@@ -4,7 +4,7 @@
  * - `posterUrl`: the picture shown while the video loads, and kept as the still on phones, on data-saver and for
  *   people who asked their device to reduce motion.
  * With no `videoUrl` the hero shows a soft animated WebGL2 background in the palette's hero colours; browsers
- * without WebGL2 (or with reduced motion) get the plain gradient.
+ * without WebGL2 (or with reduced motion) get a flat colour.
  */
 export const heroMedia: { videoUrl: string; posterUrl: string } = {
   videoUrl: '',

@@ -57,9 +57,9 @@
   .font-display { font-family: 'Playfair Display', serif; }
   .font-sans { font-family: 'Inter', sans-serif; }
   /* @sky:slot-end */
-  .gradient-coffee { background: linear-gradient(135deg, hsl(var(--coffee-accent)) 0%, hsl(var(--coffee-primary)) 100%); }
+  .gradient-coffee { background: hsl(var(--coffee-primary)); }
   /* --hero-from / --hero-to let a template recolour the home hero from the palette slot without touching this rule */
-  .gradient-warm { background: linear-gradient(135deg, hsl(var(--hero-from, var(--coffee-warm))) 0%, hsl(var(--hero-to, var(--coffee-secondary))) 100%); }
+  .gradient-warm { background: hsl(var(--hero-from, var(--coffee-warm))); }
 }
 
 @layer components {

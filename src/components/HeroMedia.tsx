@@ -134,6 +134,12 @@ function startShader(canvas: HTMLCanvasElement): (() => void) | null {
  * poster (or the plain gradient). Decorative only: hidden from screen readers.
  */
 export default function HeroMedia({ videoUrl = heroMedia.videoUrl, posterUrl = heroMedia.posterUrl, className = '' }: Props) {
+  // No video or picture configured: the hero stays a flat colour (no generated gradient animation).
+  if (!videoUrl && !posterUrl) return null
+  return <HeroMediaPlayer videoUrl={videoUrl} posterUrl={posterUrl} className={className} />
+}
+
+function HeroMediaPlayer({ videoUrl = '', posterUrl = '', className = '' }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [still, setStill] = useState(false)
 

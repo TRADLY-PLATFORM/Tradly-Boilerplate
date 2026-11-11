@@ -173,7 +173,7 @@ export default function CategoriesSection({ limit = 12, title, subtitle, variant
               {cat.image ? (
                 <>
                   <img src={cat.image} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  <span aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  <span aria-hidden="true" className="absolute inset-0 bg-black/35" />
                 </>
               ) : (
                 <span aria-hidden="true" className="absolute right-4 top-1 font-display text-7xl font-bold opacity-25">{initial(cat)}</span>

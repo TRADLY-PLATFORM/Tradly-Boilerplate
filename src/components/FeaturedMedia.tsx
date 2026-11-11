@@ -15,7 +15,7 @@ export default function FeaturedMedia({ orderType = 'video', className = '' }: {
   return (
     <Link to={`/watch/${item.slug || item.id}`} className={`group relative block aspect-video overflow-hidden rounded-2xl bg-black shadow-2xl ${className}`}>
       {item.images?.[0] && <img src={item.images[0]} alt={item.title} className="h-full w-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105" />}
-      <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+      <span className="absolute inset-0 bg-black/35" />
       {media.kind !== 'none' && <span className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black shadow-lg transition-transform group-hover:scale-110"><Play className="h-7 w-7 translate-x-0.5 fill-current" /></span>}
       <span className="absolute inset-x-0 bottom-0 p-5 text-left text-white">
         <span className="block font-display text-xl font-bold leading-snug line-clamp-2">{item.title}</span>
