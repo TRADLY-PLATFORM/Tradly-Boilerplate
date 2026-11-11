@@ -1,8 +1,10 @@
 // Design-only: the whole body of a listing page (gallery, title, price, purchase controls, details, seller,
 // related items). Sky Builder may regenerate this file for each site. It reads everything from `data` and renders
 // `children` (the purchase controls) once. No fetching, state or API calls here: that lives in ListingDetailPage.
+// Templates fill the slots listing-top, listing-details and listing-extra (templates/<id>/files/src/components/listing/ListingHero.tsx.regions).
 import { Link } from 'react-router-dom'
-import { Star } from 'lucide-react'
+// Icons and parts a template's slots may use (the slots cannot add imports).
+import { Star, Check, Clock3, CalendarDays, MapPin, ShieldCheck, Sparkles, Truck, ArrowRight, Heart, Users, Zap } from 'lucide-react'
 import { Badge } from '@/src/components/ui/badge'
 import { Separator } from '@/src/components/ui/separator'
 import type { ListingHeroProps } from './listingHero.types'
@@ -12,6 +14,7 @@ export default function ListingHero({ data, children }: ListingHeroProps) {
 
   return (
     <div className="space-y-14">
+      {/* @sky:slot listing-top — gallery, title, price and the purchase controls. Render {children} exactly once; `data` and `main` (the large image) are in scope */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div>
           <div className={`${main ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden rounded-2xl bg-coffee-secondary/20 mb-3`}>
@@ -87,7 +90,9 @@ export default function ListingHero({ data, children }: ListingHeroProps) {
 
         </div>
       </div>
+      {/* @sky:slot-end */}
 
+      {/* @sky:slot listing-details — the description and the facts (data.descriptionHtml, data.facts) */}
       {(data.descriptionHtml || data.facts.length > 0) && (
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
           {data.descriptionHtml && (
@@ -114,6 +119,10 @@ export default function ListingHero({ data, children }: ListingHeroProps) {
           )}
         </div>
       )}
+      {/* @sky:slot-end */}
+
+      {/* @sky:slot listing-extra — optional sections for this kind of business (how it works, what to expect, guarantees) */}
+      {/* @sky:slot-end */}
 
       {data.seller && (
         <div>
