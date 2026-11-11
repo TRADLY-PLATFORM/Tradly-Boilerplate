@@ -202,10 +202,10 @@ export default function HomePage() {
   return (
     <Layout className="py-8">
       {/* Hero strip */}
-      <div className="gradient-warm relative overflow-hidden rounded-2xl px-8 py-10 mb-10 text-center">
+      <div className={/* @sky:slot hero-class — the hero container: background, padding, shape and alignment (a grid here puts the copy and hero-aside side by side) */ "gradient-warm relative overflow-hidden rounded-2xl px-8 py-10 mb-10 text-center" /* @sky:slot-end */}>
         {/* @sky:slot hero-media — optional moving background for the hero: <HeroMedia /> (video or WebGL2 animation) */}
         {/* @sky:slot-end */}
-        <div className="relative z-10">
+        <div className={/* @sky:slot hero-inner-class — the copy column */ "relative z-10" /* @sky:slot-end */}>
         {/* @sky:design hero-copy — headline + subtitle. Freely rewrite copy/markup; keep the search block below untouched. */}
         <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
           Discover Amazing Products
@@ -214,6 +214,7 @@ export default function HomePage() {
           Browse our curated marketplace and find exactly what you're looking for.
         </p>
         {/* @sky:end */}
+        <div className={/* @sky:slot hero-search-class — wrapper of the search box (for example "[&>div]:mx-0 [&>div]:max-w-xl" to align it left) */ "" /* @sky:slot-end */}>
         {/* @sky:logic search — DO NOT EDIT (bound to search/page state) */}
         <div className="relative max-w-md mx-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -226,6 +227,9 @@ export default function HomePage() {
         </div>
         {/* @sky:end */}
         </div>
+        </div>
+        {/* @sky:slot hero-aside — optional second column of the hero (a picture, a featured item, a player); `listings` is in scope */}
+        {/* @sky:slot-end */}
       </div>
 
       {/* @sky:slot home-trust — optional strip under the hero (trust, delivery, guarantees) */}

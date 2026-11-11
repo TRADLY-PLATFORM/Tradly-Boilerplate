@@ -4,6 +4,10 @@ export const layoutConfig = {
   tagline: 'Your trusted marketplace for quality products.',
   // https URL of the customer's logo; empty means show the brand name only. Sky Builder fills it in.
   logoUrl: '',
+  /* @sky:slot style — how the header and footer look. Header: 'classic' (logo left, links, account), 'split' (links left, logo centred, account right), plus '-dark' for a solid brand-colour bar ('dark', 'split-dark'). Footer: 'columns' (brand colour, columns), 'centered' (light, brand and links in the middle), 'light' (columns on a light background). */
+  headerStyle: 'classic' as 'classic' | 'split' | 'dark' | 'split-dark',
+  footerStyle: 'columns' as 'columns' | 'centered' | 'light',
+  /* @sky:slot-end */
   cart: true,
   orders: true,
   signIn: true,

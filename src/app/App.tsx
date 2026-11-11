@@ -25,6 +25,7 @@ import ManageListingsPage from '../pages/ManageListingsPage'
 import SellerInsightsPage from '../pages/SellerInsightsPage'
 import FormsPage from '../pages/FormsPage'
 import PolicyPage from '@/src/pages/PolicyPage'
+import WatchPage from '@/src/pages/WatchPage'
 import SellerPage from '@/src/pages/SellerPage'
 import ContactPage from '../pages/ContactPage'
 import CollectionPage from '../pages/CollectionPage'
@@ -97,6 +98,7 @@ export default function App() {
           <Route path="/lc/:slug" element={<CategoryListingsPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/policy/:slug" element={<PolicyPage />} />
+          <Route path="/watch/:slug" element={<WatchPage />} />
           <Route path="/s/:id" element={<SellerPage />} />
           <Route path="/forms" element={<FormsPage />} />
           <Route path="/forms/:formId" element={<FormsPage />} />
