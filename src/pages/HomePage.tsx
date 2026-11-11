@@ -9,7 +9,7 @@ import StaySearch from "../components/StaySearch";
 import { Button } from "@/src/components/ui/button";
 import { Badge } from "@/src/components/ui/badge";
 import { Skeleton } from "@/src/components/ui/skeleton";
-import { Search, ShoppingCart, Heart, ArrowRight, Check, Star, Users, Zap } from "lucide-react";
+import { Search, ShoppingCart, Heart, ArrowRight, Check, Star, Users, Zap, Truck, Clock3, CalendarDays, ShieldCheck, Sparkles, MapPin } from "lucide-react";
 import type { Listing } from "@/types/listing.types";
 import { locale } from "@/src/components/layout/locale";
 import { useStayAvailability } from "@/src/features/rental/useStayAvailability";
