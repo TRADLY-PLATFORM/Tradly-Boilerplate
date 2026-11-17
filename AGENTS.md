@@ -242,3 +242,13 @@ Ask the API for categories with its own type names: `type: 'listings'` or `type:
 `'listing'` and `'account'` return an empty list. A category is optional when creating a seller account
 or a listing, and a new tenant may have no account categories, so never block a form on one. Send
 `category_id` only when the user picked one.
+
+## Analytics (Tradly tracker)
+
+`src/components/TradlyAnalytics.tsx` (mounted in `src/app/App.tsx`) loads the Tradly analytics tracker. The store's tenant id is its
+analytics project (each business owns its own): it is read from the public key (`tenantIdFromKey` in `src/lib/analytics.ts`) and used
+as both `data-project` and `data-tenant-id`, as the Tradly storefront does. Do not hard-code a project id and do not put the tracker
+back in `index.html`. No tenant id means no tracker. The tracker itself reports page views, clicks, browser errors and failed requests.
+`src/lib/analytics.ts` adds `identifyAnalyticsUser` (`tenant:<id>:user:<id>`), `trackEvent`, and the commerce events `listing_view`,
+`checkout_started` and `purchase_completed` (already called from the listing, checkout and thank-you pages). For a new kind of
+conversion (a booking, an enquiry) call `trackEvent('name', { ... })`. These calls never throw.
