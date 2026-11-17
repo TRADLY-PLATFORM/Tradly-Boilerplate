@@ -12,6 +12,8 @@ const BRAND_NAME = 'Tradly'
 // own title (a listing page) keep it; only the default "<brand>" title and the generic description are filled in.
 function useBrandMeta(brand: string, tagline: string) {
   useEffect(() => {
+    // A site that has not been given its own name yet keeps the neutral page title; never show the platform's name.
+    if (!brand || brand.trim().toLowerCase() === 'tradly') return
     if (!document.title || document.title === 'Online store' || document.title === 'Tradly App') document.title = brand
     const set = (selector: string, attr: string, value: string) => {
       const el = document.head.querySelector(selector)
