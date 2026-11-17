@@ -45,6 +45,7 @@ import Layout from "../components/Layout";
 import { Button } from "@/src/components/ui/button";
 import { Separator } from "@/src/components/ui/separator";
 import { Loader2 } from "lucide-react";
+import { trackCheckoutStarted } from "@/src/lib/analytics";
 import type {
 	FullCheckoutPayload,
 	Address,
@@ -370,6 +371,7 @@ export default function CheckoutPage() {
 	const activeCartData = cartCommEntries.length > 0 && commCartData ? commCartData : cartData;
 	const items = activeCartData?.cart_details ?? [];
 	const summary = activeCartData?.cart ?? null;
+	useEffect(() => { if (summary && items.length > 0) trackCheckoutStarted({ cart: summary, cartDetails: items }) }, [summary, items]);
 
 	const firstListing = (items[0] as any)?.listing;
 	const checkoutType = firstListing?.type === "membership"

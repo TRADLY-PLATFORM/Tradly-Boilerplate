@@ -22,6 +22,7 @@ import { Skeleton } from "@/src/components/ui/skeleton";
 import { Separator } from "@/src/components/ui/separator";
 import ListingHero from "@/src/components/listing/ListingHero";
 import type { ListingHeroData } from "@/src/components/listing/listingHero.types";
+import { trackListingView } from "@/src/lib/analytics";
 import { locale } from "@/src/components/layout/locale";
 import { layoutConfig } from "@/src/components/layout/layout.config";
 import { buildHeroExtras, useListingHeroExtras } from "@/src/features/listing-hero/useListingHeroExtras";
@@ -60,6 +61,7 @@ export default function ListingDetailPage() {
 	const heroState = useListingHeroExtras(data?.listing);
 	const isBundle = data?.listing.type === "bundle";
 	const isMembership = data?.listing.type === "membership" || data?.listing.order_type === "membership";
+	useEffect(() => { if (data?.listing) trackListingView(data.listing) }, [data?.listing?.id]);
 	const { data: variants = [], isLoading: variantsLoading } = useGetListingVariantsQuery(listingId!, { skip: !listingId || !data || data.listing.order_type !== "listings" || isBundle || isMembership });
 	const { data: bundleItems, isLoading: bundleItemsLoading, isError: bundleItemsError } = useGetBundleItemsQuery(listingId!, { skip: !listingId || !isBundle || data?.listing.metadata?.bundle_mode === "mix_match" });
 	const { data: bundlePool, isLoading: bundlePoolLoading, isError: bundlePoolError } = useGetBundlePoolQuery(listingId!, { skip: !listingId || !isBundle || data?.listing.metadata?.bundle_mode !== "mix_match" });

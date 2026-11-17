@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useGetOrderDetailQuery } from "@/state/orders/api";
 import Layout from "../components/Layout";
@@ -8,6 +8,7 @@ import { CheckCircle2 } from "lucide-react";
 import { formatOrderDateTimeRange, getItemOrderType, isBookingOrderType } from '@/src/features/orders/order-item-display'
 import RentalItemSummary from '@/src/features/orders/RentalItemSummary'
 import { locale } from '@/src/components/layout/locale'
+import { trackCompletedPurchase } from '@/src/lib/analytics'
 
 export default function ThankYouPage() {
   const { reference = "" } = useParams<{ reference: string }>();
@@ -17,6 +18,7 @@ export default function ThankYouPage() {
     skip: !reference,
   });
   const order = (data as any)?.order;
+  useEffect(() => { if (order) trackCompletedPurchase(order) }, [order]);
 
   const items: any[] = order?.order_details ?? [];
   const grandTotal = order?.customer_pricing?.grand_total ?? order?.grand_total;

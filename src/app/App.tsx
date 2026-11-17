@@ -33,6 +33,7 @@ import DonationsPage from '../pages/DonationsPage'
 import SavedListingsPage from '../pages/SavedListingsPage'
 import SellerAccountsPage from '../pages/SellerAccountsPage'
 import { layoutConfig } from '@/src/components/layout/layout.config'
+import TradlyAnalytics from '@/src/components/TradlyAnalytics'
 
 function LegacyListingRedirect() {
   const { slug = '' } = useParams<{ slug: string }>()
@@ -78,6 +79,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <TradlyAnalytics />
       <AppInitializer>
         <Routes>
           {/* Auth */}
