@@ -28,6 +28,35 @@ export function tenantIdFromKey(key: string): string {
   }
 }
 
+/**
+ * Fallback for a key that does not carry the tenant id: ask Tradly which tenant owns this domain, the same public lookup the
+ * Tradly storefront uses (`/skua/tenants/pk_by_domain`). Remembered for the browser session. Empty when it cannot be found.
+ */
+export async function tenantIdFromDomain(domain: string, env = 'production'): Promise<string> {
+  const host = (domain || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '')
+  if (!host) return ''
+  const cacheKey = `tradly-tenant:${host}`
+  try {
+    const cached = window.sessionStorage.getItem(cacheKey)
+    if (cached) return cached
+  } catch {
+    /* storage unavailable */
+  }
+  try {
+    const res = await fetch(`https://skua.tradly.app/skua/tenants/pk_by_domain?domain=${encodeURIComponent(host)}&env=${encodeURIComponent(env)}`)
+    if (!res.ok) return ''
+    const body = await res.json()
+    const id = body?.data?.tenant_id
+    const found = id == null ? '' : String(id).trim()
+    if (found) {
+      try { window.sessionStorage.setItem(cacheKey, found) } catch { /* ignore */ }
+    }
+    return found
+  } catch {
+    return ''
+  }
+}
+
 function queue(entry: QueueEntry) {
   const w = win()
   if (!w) return
