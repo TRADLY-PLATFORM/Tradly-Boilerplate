@@ -3,6 +3,8 @@
 import type { ReactNode } from 'react'
 
 export interface ListingHeroData {
+  /** The listing's id, for links such as an "Apply now" button to `/contact?listing=<id>`. */
+  listingId: string
   title: string
   sellerName: string
   /** Every image URL, main image first. Empty when the listing has none. */

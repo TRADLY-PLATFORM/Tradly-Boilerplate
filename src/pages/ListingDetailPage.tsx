@@ -329,6 +329,7 @@ export default function ListingDetailPage() {
 		? offerAmount(selectedVariantList) > offerAmount(selectedVariantOffer)
 		: listing.offer_percent > 0;
 	const heroData: ListingHeroData = {
+		listingId: String(listing.id),
 		title: listing.title,
 		sellerName: listing.account?.name ?? locale.labels.unknownSeller,
 		images: listing.images,

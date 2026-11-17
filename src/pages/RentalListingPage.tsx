@@ -112,6 +112,7 @@ export default function RentalListingPage() {
   if (!['rental', 'rentals'].includes(listing.order_type)) return <Layout><div className="py-20 text-center">{locale.labels.rentalTypeMismatch}</div></Layout>
 
   const heroData: ListingHeroData = {
+    listingId: String(listing.id),
     title: listing.title,
     sellerName: listing.account?.name ?? locale.labels.unknownSeller,
     images: listing.images ?? [],
