@@ -59,6 +59,16 @@ test('a network failure is reported and still thrown to the caller', async () =>
   respond.throw = false
 })
 
+test('blocked analytics calls are not reported (ad blockers, not a template bug)', async () => {
+  const before = posts.length
+  respond.throw = true
+  await assert.rejects(() => globalThis.window.fetch('https://analytics.tradly.dev/track'), /Failed to fetch/)
+  respond.throw = false
+  fire('error', { target: { tagName: 'SCRIPT', src: 'https://analytics.tradly.dev/tracker.js' } })
+  await settle()
+  assert.equal(posts.length, before)
+})
+
 test('at most 8 different reports per page load, and reporting never reports itself', async () => {
   for (let i = 0; i < 20; i++) fire('error', { message: `unique ${i}`, filename: 'f', target: globalThis.window })
   await settle()

@@ -5,6 +5,9 @@
 
 const REPORT_URL = 'https://vibe.tradly.app/api/client-errors'
 const MAX_PER_PAGE_LOAD = 8
+// The analytics script and its calls are blocked by ad blockers and tracking protection; that is not a template bug.
+const IGNORED_HOSTS = ['analytics.tradly.dev']
+const ignored = (url?: string) => !!url && IGNORED_HOSTS.some((host) => url.includes(host))
 
 let installed = false
 
@@ -17,6 +20,7 @@ export function installDemoErrorReporter(templateId: string) {
 
   const report = (kind: string, message: string, endpoint?: string, status?: number) => {
     try {
+      if (ignored(endpoint)) return
       const text = `${kind}: ${String(message || '').replace(/\s+/g, ' ').slice(0, 200)}`
       if (seen.size >= MAX_PER_PAGE_LOAD || seen.has(text)) return
       seen.add(text)
