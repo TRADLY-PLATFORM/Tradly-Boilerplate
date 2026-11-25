@@ -155,12 +155,12 @@ export default function CategoryListingsPage() {
                 </div>
 
                 <div className="p-3">
-                  <p className="text-[11px] text-muted-foreground mb-0.5">{listing.account.name}</p>
+                  <p className="text-[11px] text-muted-foreground mb-0.5">{listing.account?.name ?? ''}</p>
                   <p className="text-xs font-semibold text-foreground mb-1.5 line-clamp-2 leading-snug">{listing.title}</p>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-display text-sm font-bold text-coffee-accent">{listing.offer_price.formatted}</span>
+                    <span className="font-display text-sm font-bold text-coffee-accent">{listing.offer_price?.formatted}</span>
                     {listing.offer_percent > 0 && (
-                      <span className="text-[11px] text-muted-foreground line-through">{listing.list_price.formatted}</span>
+                      <span className="text-[11px] text-muted-foreground line-through">{listing.list_price?.formatted}</span>
                     )}
                   </div>
                   {listing.rating_data?.rating_average > 0 && (
