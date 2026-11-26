@@ -51,6 +51,12 @@ function formatVariantPrice(value: number | { amount: number; formatted?: string
 	}
 }
 
+// Tradly says "You have different listing types in your cart, you need to clear conflicting items before you can add." (or
+// that the cart has items from another seller) when the cart cannot hold what is being added. Whatever code it comes with, that
+// is a conflict the visitor can fix, so it opens the clear-cart prompt instead of showing the sentence as a toast.
+const isCartConflictMessage = (message: unknown) =>
+	/clear conflicting|different listing types|another seller|different seller/i.test(String(message ?? ''));
+
 export default function ListingDetailPage() {
 	const { slug = "" } = useParams<{ slug: string }>();
 	const navigate = useNavigate();
@@ -154,7 +160,7 @@ export default function ListingDetailPage() {
 				error: string;
 				data?: { code: number };
 			};
-			if (e.data?.code === 480) {
+			if (e.data?.code === 480 || isCartConflictMessage(e.error)) {
 				setPendingInput(input);
 				setClearModal(true);
 				return false;
@@ -373,11 +379,16 @@ export default function ListingDetailPage() {
 			{clearModal && (
 				<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
 					<div className="bg-card rounded-2xl p-7 max-w-sm w-full shadow-2xl">
-						<p className="text-sm text-foreground mb-5 leading-relaxed">
-							Your cart has items from
-							another seller. Clear cart and
-							add this item?
+						<p className="text-sm text-foreground mb-2 leading-relaxed">
+							Your cart already has a different kind of item, or items from another seller, so this one cannot be added next to them. Clear your cart and add this item?
 						</p>
+						<button
+							type="button"
+							className="mb-5 text-sm underline text-muted-foreground hover:text-foreground"
+							onClick={() => { setClearModal(false); navigate("/cart"); }}
+						>
+							View my cart first
+						</button>
 						<div className="flex gap-3 justify-end">
 							<Button
 								variant="outline"

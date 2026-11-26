@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import { useAuthSelector } from '@/state/auth/selectors'
 import { useCartItemCount } from '@/state/cart/selectors'
+import { useGetCartQuery } from '@/state/cart/api'
 import { logout as logoutAction } from '@/state/auth/slice'
 import { useGetCategoriesQuery } from '@/state/categories/api'
 import type { Category } from '../../../types/category.types'
@@ -57,6 +58,10 @@ export function useLayoutData(brandName: string): LayoutData {
   const isAuthenticated = useAuthSelector(s => s.isAuthenticated)
   const firstName = useAuthSelector(s => s.firstName)
   const profilePic = useAuthSelector(s => s.profilePic)
+  // Load the cart on every page, for guests too (their cart is kept by device id). The count and the Cart link below only know
+  // about a cart that has been fetched; without this a visitor whose cart already holds something (from an earlier visit)
+  // gets "clear conflicting items" on adding and has no Cart link to go and clear it.
+  useGetCartQuery()
   const cartCount = useCartItemCount()
   const dispatch = useDispatch<AppDispatch>()
   const navigate = useNavigate()
